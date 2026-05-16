@@ -4,19 +4,20 @@ from datetime import datetime, timezone
 from models.database import get_connection
 
 
-def save_uploaded_recipe(audio_filename, transcript, recipe_data):
+def save_uploaded_recipe(project_id, audio_filename, transcript, recipe_data):
     recipe_id = str(uuid.uuid4())
     conn = get_connection()
     conn.execute(
         """INSERT INTO recipes
-           (recipe_id, audio_filename, raw_transcript, recipe_title,
+           (project_id, recipe_id, audio_filename, raw_transcript, recipe_title,
             alternate_names_json, category, family_note, serves,
             prep_time_minutes, cook_time_minutes, difficulty,
             ingredients_json, method_steps_json, moms_tips_json,
             serving_suggestion, storage_notes,
             unclear_items_for_review_json, status)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
+            project_id,
             recipe_id,
             audio_filename,
             transcript,
@@ -52,6 +53,16 @@ def get_recipe(recipe_id):
     if row is None:
         return None
     return _row_to_dict(row)
+
+
+def get_project_recipes(project_id):
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM recipes WHERE project_id = ? ORDER BY sort_order, created_at DESC",
+        (project_id,),
+    ).fetchall()
+    conn.close()
+    return [_row_to_dict(r) for r in rows]
 
 
 def get_all_recipes():

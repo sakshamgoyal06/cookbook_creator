@@ -3,6 +3,12 @@
 {% block title %}{{ recipe.recipe_title }} – Mom's Cookbook Studio{% endblock %}
 
 {% block content %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard') }}">Projects</a> &rsaquo;
+    <a href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.title }}</a> &rsaquo;
+    {{ recipe.recipe_title or 'Recipe' }}
+</div>
+
 <div class="page-header">
     <h1>{{ recipe.recipe_title or 'Untitled Recipe' }}</h1>
     <span class="badge badge-{{ recipe.status }}">{{ recipe.status | replace('_', ' ') | title }}</span>
@@ -102,11 +108,11 @@
 </div>
 
 <div class="action-buttons">
-    <a href="{{ url_for('recipe_edit', recipe_id=recipe.id) }}" class="btn btn-primary">Edit Recipe</a>
-    <form method="POST" action="{{ url_for('recipe_approve', recipe_id=recipe.id) }}" style="display:inline">
+    <a href="{{ url_for('recipe_edit', project_id=project.id, recipe_id=recipe.id) }}" class="btn btn-primary">Edit Recipe</a>
+    <form method="POST" action="{{ url_for('recipe_approve', project_id=project.id, recipe_id=recipe.id) }}" style="display:inline">
         <button type="submit" class="btn btn-success">Approve Recipe</button>
     </form>
-    <form method="POST" action="{{ url_for('recipe_generate_pdf', recipe_id=recipe.id) }}" style="display:inline">
+    <form method="POST" action="{{ url_for('recipe_generate_pdf', project_id=project.id, recipe_id=recipe.id) }}" style="display:inline">
         <button type="submit" class="btn btn-accent">Generate PDF</button>
     </form>
     {% if recipe.pdf_filename %}

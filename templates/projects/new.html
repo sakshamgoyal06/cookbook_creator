@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}New Project – Mom's Cookbook Studio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Create New Cookbook Project</h1>
+</div>
+
+<form method="POST" class="edit-form">
+    <h2 class="form-section-title">Basic Info</h2>
+    <div class="form-group">
+        <label for="title">Cookbook Title *</label>
+        <input type="text" id="title" name="title" required placeholder="e.g., Mom's Kitchen Treasures">
+    </div>
+    <div class="form-group">
+        <label for="subtitle">Subtitle</label>
+        <input type="text" id="subtitle" name="subtitle" placeholder="e.g., Family Recipes Passed Down Through Generations">
+    </div>
+    <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" rows="2" placeholder="Brief description of this cookbook"></textarea>
+    </div>
+
+    <h2 class="form-section-title">Design & Limits</h2>
+    <div class="form-row">
+        <div class="form-group">
+            <label for="theme">Design Theme</label>
+            <select id="theme" name="theme">
+                {% for key, t in themes.items() %}
+                <option value="{{ key }}">{{ t.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="max_recipes">Max Recipes</label>
+            <input type="number" id="max_recipes" name="max_recipes" value="50" min="1">
+        </div>
+        <div class="form-group">
+            <label for="max_pages">Max Pages</label>
+            <input type="number" id="max_pages" name="max_pages" value="100" min="1">
+        </div>
+    </div>
+
+    <h2 class="form-section-title">Cookbook Sections</h2>
+    <div class="form-group">
+        <label for="dedication">Dedication</label>
+        <textarea id="dedication" name="dedication" rows="2" placeholder="e.g., For my mother, who taught me that love is the secret ingredient..."></textarea>
+    </div>
+    <div class="form-group">
+        <label for="introduction">Introduction</label>
+        <textarea id="introduction" name="introduction" rows="4" placeholder="The story behind this cookbook..."></textarea>
+    </div>
+    <div class="form-group">
+        <label for="about_author">About the Author</label>
+        <textarea id="about_author" name="about_author" rows="3" placeholder="Tell readers about yourself..."></textarea>
+    </div>
+    <div class="form-group">
+        <label for="acknowledgement">Acknowledgements</label>
+        <textarea id="acknowledgement" name="acknowledgement" rows="3" placeholder="People you'd like to thank..."></textarea>
+    </div>
+    <div class="form-group">
+        <label for="cover_note">Cover Note / Tagline</label>
+        <input type="text" id="cover_note" name="cover_note" placeholder="A short line for the cover">
+    </div>
+
+    <div class="action-buttons">
+        <button type="submit" class="btn btn-primary">Create Project</button>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+{% endblock %}

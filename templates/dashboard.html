@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}My Projects – Mom's Cookbook Studio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>My Cookbook Projects</h1>
+    <a href="{{ url_for('project_new') }}" class="btn btn-primary">New Project</a>
+</div>
+
+{% if projects %}
+<div class="project-grid">
+    {% for project in projects %}
+    <div class="project-card">
+        <div class="project-card-header" style="border-left: 4px solid {{ config.COOKBOOK_THEMES.get(project.theme, {}).get('primary', '#5c1a1a') }}">
+            <h3><a href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.title }}</a></h3>
+            {% if project.subtitle %}<p class="project-subtitle">{{ project.subtitle }}</p>{% endif %}
+        </div>
+        <div class="project-card-body">
+            <span class="badge badge-{{ project.status }}">{{ project.status | title }}</span>
+            <span class="meta-small">Theme: {{ config.COOKBOOK_THEMES.get(project.theme, {}).get('name', 'Classic') }}</span>
+        </div>
+        <div class="card-actions">
+            <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn btn-sm">Open</a>
+            <a href="{{ url_for('project_edit', project_id=project.id) }}" class="btn btn-sm">Settings</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>No projects yet</h2>
+    <p>Create your first cookbook project to start collecting recipes.</p>
+    <a href="{{ url_for('project_new') }}" class="btn btn-primary">Create First Project</a>
+</div>
+{% endif %}
+{% endblock %}
