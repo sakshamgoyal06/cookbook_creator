@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}My Projects – Mom's Cookbook Studio{% endblock %}
+
+{% block content %}
+<div class="dashboard-hero">
+    <h1>Your Cookbooks</h1>
+    <p>Curate your family's culinary heritage, one recipe at a time.</p>
+</div>
+
+<div class="page-header">
+    <div></div>
+    <a href="{{ url_for('project_new') }}" class="btn btn-primary">+ New Cookbook</a>
+</div>
+
+{% if projects %}
+<div class="project-grid">
+    {% for project in projects %}
+    <div class="project-card">
+        <div class="project-card-header" style="border-left: 4px solid {{ config.COOKBOOK_THEMES.get(project.theme, {}).get('accent', '#c9a96e') }}">
+            <h3><a href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.title }}</a></h3>
+            {% if project.subtitle %}<p class="project-subtitle">{{ project.subtitle }}</p>{% endif %}
+        </div>
+        <div class="project-card-body">
+            <span class="badge badge-{{ project.status }}">{{ project.status | replace('_', ' ') | title }}</span>
+            <span class="meta-small">{{ config.COOKBOOK_THEMES.get(project.theme, {}).get('name', 'Classic') }}</span>
+        </div>
+        <div class="card-actions">
+            <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn btn-sm btn-primary">Open</a>
+            <a href="{{ url_for('project_edit', project_id=project.id) }}" class="btn btn-sm btn-secondary">Settings</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h2>Start Your First Cookbook</h2>
+    <p>Create a project to begin collecting and preserving your family's recipes.</p>
+    <a href="{{ url_for('project_new') }}" class="btn btn-primary">Create Cookbook</a>
+</div>
+{% endif %}
+{% endblock %}

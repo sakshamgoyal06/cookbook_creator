@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.title }} – Mom's Cookbook Studio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ project.title }}</h1>
+    <span class="badge badge-{{ project.status }}">{{ project.status | title }}</span>
+</div>
+
+{% if project.subtitle %}
+<p class="project-subtitle-detail">{{ project.subtitle }}</p>
+{% endif %}
+
+<div class="project-meta-bar">
+    <span>Theme: <strong>{{ themes.get(project.theme, {}).get('name', 'Classic') }}</strong></span>
+    <span>Recipes: <strong>{{ recipes | length }} / {{ project.max_recipes }}</strong></span>
+    <span>Max Pages: <strong>{{ project.max_pages }}</strong></span>
+</div>
+
+<div class="project-actions">
+    <a href="{{ url_for('upload', project_id=project.id) }}" class="btn btn-primary">Upload Recipe</a>
+    <a href="{{ url_for('project_edit', project_id=project.id) }}" class="btn btn-secondary">Project Settings</a>
+</div>
+
+<h2 class="section-title">Recipes</h2>
+
+{% if recipes %}
+<div class="recipe-grid">
+    {% for recipe in recipes %}
+    <div class="recipe-card">
+        <h3><a href="{{ url_for('recipe_detail', project_id=project.id, recipe_id=recipe.id) }}">{{ recipe.recipe_title or 'Untitled' }}</a></h3>
+        <div class="recipe-meta">
+            <span class="badge badge-{{ recipe.status }}">{{ recipe.status | replace('_', ' ') | title }}</span>
+            {% if recipe.category %}<span class="category">{{ recipe.category }}</span>{% endif %}
+        </div>
+        <p class="recipe-date">{{ recipe.created_at }}</p>
+        <div class="card-actions">
+            <a href="{{ url_for('recipe_detail', project_id=project.id, recipe_id=recipe.id) }}" class="btn btn-sm">View</a>
+            <a href="{{ url_for('recipe_edit', project_id=project.id, recipe_id=recipe.id) }}" class="btn btn-sm">Edit</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No recipes yet. <a href="{{ url_for('upload', project_id=project.id) }}">Upload your first voice note!</a></p>
+</div>
+{% endif %}
+
+{% if project.dedication or project.introduction or project.about_author or project.acknowledgement %}
+<h2 class="section-title">Cookbook Sections Preview</h2>
+<div class="sections-preview">
+    {% if project.dedication %}
+    <div class="preview-section"><strong>Dedication:</strong> {{ project.dedication }}</div>
+    {% endif %}
+    {% if project.introduction %}
+    <div class="preview-section"><strong>Introduction:</strong> {{ project.introduction[:200] }}{% if project.introduction|length > 200 %}...{% endif %}</div>
+    {% endif %}
+    {% if project.about_author %}
+    <div class="preview-section"><strong>About the Author:</strong> {{ project.about_author[:200] }}{% if project.about_author|length > 200 %}...{% endif %}</div>
+    {% endif %}
+    {% if project.acknowledgement %}
+    <div class="preview-section"><strong>Acknowledgements:</strong> {{ project.acknowledgement[:200] }}{% if project.acknowledgement|length > 200 %}...{% endif %}</div>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

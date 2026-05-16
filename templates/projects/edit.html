@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ project.title }} – Mom's Cookbook Studio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Project Settings</h1>
+</div>
+
+<form method="POST" class="edit-form">
+    <h2 class="form-section-title">Basic Info</h2>
+    <div class="form-group">
+        <label for="title">Cookbook Title *</label>
+        <input type="text" id="title" name="title" required value="{{ project.title }}">
+    </div>
+    <div class="form-group">
+        <label for="subtitle">Subtitle</label>
+        <input type="text" id="subtitle" name="subtitle" value="{{ project.subtitle or '' }}">
+    </div>
+    <div class="form-group">
+        <label for="description">Description</label>
+        <textarea id="description" name="description" rows="2">{{ project.description or '' }}</textarea>
+    </div>
+
+    <h2 class="form-section-title">Design & Limits</h2>
+    <div class="form-row">
+        <div class="form-group">
+            <label for="theme">Design Theme</label>
+            <select id="theme" name="theme">
+                {% for key, t in themes.items() %}
+                <option value="{{ key }}" {% if project.theme == key %}selected{% endif %}>{{ t.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="max_recipes">Max Recipes</label>
+            <input type="number" id="max_recipes" name="max_recipes" value="{{ project.max_recipes }}" min="1">
+        </div>
+        <div class="form-group">
+            <label for="max_pages">Max Pages</label>
+            <input type="number" id="max_pages" name="max_pages" value="{{ project.max_pages }}" min="1">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="status">Project Status</label>
+        <select id="status" name="status">
+            <option value="draft" {% if project.status == 'draft' %}selected{% endif %}>Draft</option>
+            <option value="in_progress" {% if project.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+            <option value="completed" {% if project.status == 'completed' %}selected{% endif %}>Completed</option>
+            <option value="published" {% if project.status == 'published' %}selected{% endif %}>Published</option>
+        </select>
+    </div>
+
+    <h2 class="form-section-title">Cookbook Sections</h2>
+    <div class="form-group">
+        <label for="dedication">Dedication</label>
+        <textarea id="dedication" name="dedication" rows="2">{{ project.dedication or '' }}</textarea>
+    </div>
+    <div class="form-group">
+        <label for="introduction">Introduction</label>
+        <textarea id="introduction" name="introduction" rows="4">{{ project.introduction or '' }}</textarea>
+    </div>
+    <div class="form-group">
+        <label for="about_author">About the Author</label>
+        <textarea id="about_author" name="about_author" rows="3">{{ project.about_author or '' }}</textarea>
+    </div>
+    <div class="form-group">
+        <label for="acknowledgement">Acknowledgements</label>
+        <textarea id="acknowledgement" name="acknowledgement" rows="3">{{ project.acknowledgement or '' }}</textarea>
+    </div>
+    <div class="form-group">
+        <label for="cover_note">Cover Note / Tagline</label>
+        <input type="text" id="cover_note" name="cover_note" value="{{ project.cover_note or '' }}">
+    </div>
+
+    <div class="action-buttons">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+
+<div class="danger-zone">
+    <h3>Danger Zone</h3>
+    <form method="POST" action="{{ url_for('project_delete', project_id=project.id) }}" onsubmit="return confirm('Are you sure? This will delete the project and ALL its recipes.')">
+        <button type="submit" class="btn btn-danger">Delete Project</button>
+    </form>
+</div>
+{% endblock %}
