@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}All Recipes – Mom's Cookbook Studio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>All Recipes</h1>
+    <a href="{{ url_for('upload') }}" class="btn btn-primary">Upload New</a>
+</div>
+
+{% if recipes %}
+<div class="recipe-grid">
+    {% for recipe in recipes %}
+    <div class="recipe-card">
+        <h3><a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}">{{ recipe.recipe_title or 'Untitled' }}</a></h3>
+        <div class="recipe-meta">
+            <span class="badge badge-{{ recipe.status }}">{{ recipe.status | replace('_', ' ') | title }}</span>
+            {% if recipe.category %}<span class="category">{{ recipe.category }}</span>{% endif %}
+        </div>
+        <p class="recipe-date">{{ recipe.created_at }}</p>
+        <div class="card-actions">
+            <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="btn btn-sm">View</a>
+            <a href="{{ url_for('recipe_edit', recipe_id=recipe.id) }}" class="btn btn-sm">Edit</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No recipes yet. <a href="{{ url_for('upload') }}">Upload your first voice note!</a></p>
+</div>
+{% endif %}
+{% endblock %}

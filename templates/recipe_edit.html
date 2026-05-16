@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ recipe.recipe_title }} – Mom's Cookbook Studio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Edit Recipe</h1>
+</div>
+
+<form method="POST" class="edit-form">
+    <div class="form-group">
+        <label for="recipe_title">Title</label>
+        <input type="text" id="recipe_title" name="recipe_title" value="{{ recipe.recipe_title or '' }}">
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label for="category">Category</label>
+            <input type="text" id="category" name="category" value="{{ recipe.category or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="difficulty">Difficulty</label>
+            <input type="text" id="difficulty" name="difficulty" value="{{ recipe.difficulty or '' }}">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="family_note">Family Note</label>
+        <textarea id="family_note" name="family_note" rows="2">{{ recipe.family_note or '' }}</textarea>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label for="serves">Serves</label>
+            <input type="text" id="serves" name="serves" value="{{ recipe.serves or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="prep_time_minutes">Prep Time (min)</label>
+            <input type="number" id="prep_time_minutes" name="prep_time_minutes" value="{{ recipe.prep_time_minutes or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="cook_time_minutes">Cook Time (min)</label>
+            <input type="number" id="cook_time_minutes" name="cook_time_minutes" value="{{ recipe.cook_time_minutes or '' }}">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="ingredients_json">Ingredients (JSON)</label>
+        <textarea id="ingredients_json" name="ingredients_json" rows="8">{{ recipe.ingredients_json }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="method_steps_json">Method Steps (JSON)</label>
+        <textarea id="method_steps_json" name="method_steps_json" rows="8">{{ recipe.method_steps_json }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="moms_tips_json">Mom's Tips (JSON)</label>
+        <textarea id="moms_tips_json" name="moms_tips_json" rows="4">{{ recipe.moms_tips_json }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="serving_suggestion">Serving Suggestion</label>
+        <textarea id="serving_suggestion" name="serving_suggestion" rows="2">{{ recipe.serving_suggestion or '' }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="storage_notes">Storage Notes</label>
+        <textarea id="storage_notes" name="storage_notes" rows="2">{{ recipe.storage_notes or '' }}</textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="unclear_items_for_review_json">Unclear Items for Review (JSON)</label>
+        <textarea id="unclear_items_for_review_json" name="unclear_items_for_review_json" rows="4">{{ recipe.unclear_items_for_review_json }}</textarea>
+    </div>
+
+    <div class="action-buttons">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+{% endblock %}
