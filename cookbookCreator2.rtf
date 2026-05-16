@@ -1,0 +1,423 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 You are an expert full-stack Python engineer and product architect.\
+\
+Build an end-to-end MVP called \'93Mom\'92s Cookbook Studio\'94.\
+\
+Goal:\
+Create a system where my mother can send or upload a recipe voice note. The app transcribes the audio, converts it into a professional cookbook-style recipe, stores it, lets me review/edit it, and generates a beautifully formatted cookbook recipe page using a reusable design template.\
+\
+Build this as a production-quality MVP, simple but extensible.\
+\
+Tech stack:\
+- Backend: Python + Flask\
+- Frontend: Simple Flask templates with HTML/CSS\
+- Database: SQLite for MVP\
+- AI: OpenAI API\
+- Audio transcription: OpenAI speech-to-text\
+- Recipe formatting: OpenAI chat/response model\
+- PDF generation: HTML/CSS to PDF using WeasyPrint\
+- Environment variables via `.env`\
+- No complex authentication for now\
+- Make it easy to later connect WhatsApp/Twilio\
+\
+Core user flow:\
+1. User opens web app.\
+2. User uploads an audio file of a recipe voice note.\
+3. Backend saves audio file.\
+4. Backend sends audio to OpenAI transcription.\
+5. Backend sends transcript to OpenAI recipe formatter.\
+6. AI returns structured recipe JSON.\
+7. Recipe is saved in SQLite.\
+8. User can review/edit the recipe.\
+9. User can generate a designed PDF recipe page.\
+10. User can see all saved recipes in a recipe dashboard.\
+11. Later all approved recipes can be combined into a cookbook.\
+\
+Important:\
+The cookbook design should be stored as reusable template files so every new recipe page follows the same format.\
+\
+Project name:\
+mom-cookbook-studio\
+\
+Create the following folder structure:\
+\
+mom-cookbook-studio/\
+  app.py\
+  config.py\
+  requirements.txt\
+  .env.example\
+  README.md\
+  /instance\
+  /uploads\
+  /outputs\
+  /prompts\
+    recipe_editor_prompt.txt\
+  /templates\
+    base.html\
+    index.html\
+    upload.html\
+    recipe_detail.html\
+    recipe_edit.html\
+    recipes.html\
+    cookbook_recipe_template.html\
+  /static\
+    style.css\
+    cookbook.css\
+  /services\
+    __init__.py\
+    openai_service.py\
+    recipe_service.py\
+    pdf_service.py\
+  /models\
+    __init__.py\
+    database.py\
+\
+Database:\
+Use SQLite.\
+\
+Create a `recipes` table with these fields:\
+- id\
+- recipe_id\
+- audio_filename\
+- raw_transcript\
+- recipe_title\
+- alternate_names_json\
+- category\
+- family_note\
+- serves\
+- prep_time_minutes\
+- cook_time_minutes\
+- difficulty\
+- ingredients_json\
+- method_steps_json\
+- moms_tips_json\
+- serving_suggestion\
+- storage_notes\
+- unclear_items_for_review_json\
+- status\
+- created_at\
+- updated_at\
+\
+Statuses:\
+- uploaded\
+- transcribed\
+- structured\
+- needs_review\
+- approved\
+- pdf_generated\
+\
+Recipe JSON schema:\
+The AI should always return this shape:\
+\
+\{\
+  "recipe_title": "",\
+  "alternate_names": [],\
+  "category": "",\
+  "family_note": "",\
+  "serves": "",\
+  "prep_time_minutes": null,\
+  "cook_time_minutes": null,\
+  "difficulty": "",\
+  "ingredients": [\
+    \{\
+      "item": "",\
+      "quantity": "",\
+      "unit": "",\
+      "preparation_note": ""\
+    \}\
+  ],\
+  "method_steps": [\
+    \{\
+      "step_number": 1,\
+      "instruction": "",\
+      "flame_level": "",\
+      "timing": "",\
+      "sensory_cue": ""\
+    \}\
+  ],\
+  "moms_tips": [],\
+  "serving_suggestion": "",\
+  "storage_notes": "",\
+  "unclear_items_for_review": []\
+\}\
+\
+Prompt:\
+Create `/prompts/recipe_editor_prompt.txt` with this content:\
+\
+You are a professional Indian cookbook editor.\
+\
+Convert the transcript of a mother explaining a homemade recipe into a polished cookbook recipe.\
+\
+Preserve warmth, family memory, Indian home-cooking style, and practical cooking wisdom.\
+\
+Do not invent ingredients.\
+Do not silently guess important quantities or cooking steps.\
+If the transcript says things like \'93thoda sa\'94, \'93as needed\'94, \'93jab tak pak jaye\'94, or gives unclear timing, make a careful approximate estimate only if safe, and add the uncertainty to `unclear_items_for_review`.\
+\
+The output must be valid JSON only.\
+Do not include markdown.\
+Do not include explanation outside JSON.\
+\
+Use this exact JSON schema:\
+\{\
+  "recipe_title": "",\
+  "alternate_names": [],\
+  "category": "",\
+  "family_note": "",\
+  "serves": "",\
+  "prep_time_minutes": null,\
+  "cook_time_minutes": null,\
+  "difficulty": "",\
+  "ingredients": [\
+    \{\
+      "item": "",\
+      "quantity": "",\
+      "unit": "",\
+      "preparation_note": ""\
+    \}\
+  ],\
+  "method_steps": [\
+    \{\
+      "step_number": 1,\
+      "instruction": "",\
+      "flame_level": "",\
+      "timing": "",\
+      "sensory_cue": ""\
+    \}\
+  ],\
+  "moms_tips": [],\
+  "serving_suggestion": "",\
+  "storage_notes": "",\
+  "unclear_items_for_review": []\
+\}\
+\
+Transcript:\
+\{\{TRANSCRIPT\}\}\
+\
+OpenAI service:\
+Create `/services/openai_service.py`.\
+\
+Functions:\
+1. `transcribe_audio(file_path: str) -> str`\
+   - Opens the audio file.\
+   - Calls OpenAI transcription.\
+   - Returns transcript text.\
+\
+2. `structure_recipe(transcript: str) -> dict`\
+   - Loads prompt from `/prompts/recipe_editor_prompt.txt`\
+   - Replaces `\{\{TRANSCRIPT\}\}`\
+   - Calls OpenAI model\
+   - Parses JSON safely\
+   - Returns Python dict\
+   - If JSON parsing fails, raise clear error.\
+\
+Use `.env`:\
+OPENAI_API_KEY=\
+OPENAI_TRANSCRIBE_MODEL=gpt-4o-transcribe\
+OPENAI_RECIPE_MODEL=gpt-4.1\
+\
+Routes:\
+Create these Flask routes:\
+\
+1. `/`\
+   - Home page\
+   - Buttons: Upload Recipe Voice Note, View Recipes\
+\
+2. `/upload`\
+   - GET: Upload form\
+   - POST:\
+     - Accept audio file\
+     - Save to `/uploads`\
+     - Transcribe audio\
+     - Structure recipe\
+     - Save to DB\
+     - Redirect to recipe detail page\
+\
+3. `/recipes`\
+   - Show all recipes in table/card layout\
+   - Show title, category, status, created date\
+   - Link to view/edit/generate PDF\
+\
+4. `/recipes/<int:id>`\
+   - Show full recipe detail\
+   - Show transcript\
+   - Show formatted recipe\
+   - Show unclear review items prominently\
+   - Buttons: Edit, Approve, Generate PDF\
+\
+5. `/recipes/<int:id>/edit`\
+   - GET: form with editable fields\
+   - POST: update recipe fields\
+   - Allow editing:\
+     - title\
+     - category\
+     - family_note\
+     - serves\
+     - prep_time\
+     - cook_time\
+     - difficulty\
+     - ingredients JSON textarea\
+     - method steps JSON textarea\
+     - tips JSON textarea\
+     - serving suggestion\
+     - storage notes\
+     - unclear review items\
+\
+6. `/recipes/<int:id>/approve`\
+   - POST\
+   - Set status to approved\
+\
+7. `/recipes/<int:id>/generate-pdf`\
+   - POST\
+   - Render recipe through cookbook template\
+   - Save PDF in `/outputs`\
+   - Set status to pdf_generated\
+   - Redirect to detail page with PDF link\
+\
+8. `/outputs/<filename>`\
+   - Serve generated PDF files\
+\
+Cookbook design:\
+Create `templates/cookbook_recipe_template.html`.\
+\
+Design requirements:\
+- A4 portrait page\
+- Warm cream background\
+- Deep maroon headings\
+- Muted gold accents\
+- Premium Indian home cookbook feeling\
+- Recipe title at top\
+- Family note below title\
+- Metadata strip:\
+  - Serves\
+  - Prep time\
+  - Cook time\
+  - Difficulty\
+- Ingredients in left column\
+- Method in right column\
+- Mom\'92s Tips box\
+- Serving suggestion and storage notes at bottom\
+- Space placeholder for future food photo\
+- Footer with text: \'93Mom\'92s Cookbook Studio\'94\
+\
+Create `static/cookbook.css` specifically for PDF styling.\
+\
+Create `static/style.css` for the web app dashboard.\
+\
+PDF:\
+Use WeasyPrint.\
+Function in `/services/pdf_service.py`:\
+`generate_recipe_pdf(recipe: dict) -> str`\
+- Render cookbook_recipe_template.html\
+- Convert to PDF\
+- Save as `/outputs/\{recipe_id\}_\{slugified_title\}.pdf`\
+- Return filename\
+\
+Recipe service:\
+Create `/services/recipe_service.py`.\
+Functions:\
+- save_uploaded_recipe(...)\
+- get_recipe(id)\
+- get_all_recipes()\
+- update_recipe(id, data)\
+- approve_recipe(id)\
+- mark_pdf_generated(id, filename)\
+\
+Database helper:\
+Create `/models/database.py`.\
+- Initialize SQLite DB\
+- Create tables if not exist\
+- Provide query helper methods if needed.\
+\
+App startup:\
+When running `python app.py`, the app should:\
+- Load `.env`\
+- Ensure `/uploads` and `/outputs` folders exist\
+- Initialize database\
+- Start Flask server on localhost:5000\
+\
+Frontend pages:\
+Use clean, simple UI.\
+\
+Home page:\
+Title: Mom\'92s Cookbook Studio\
+Subtitle: Turn family voice notes into a professional cookbook.\
+Buttons:\
+- Upload Voice Note\
+- View Recipes\
+\
+Upload page:\
+- File input accepting audio files: .mp3, .m4a, .wav, .ogg\
+- Submit button\
+- Show note: \'93Upload a recipe voice note. The system will transcribe it and create a draft cookbook recipe.\'94\
+\
+Recipe detail page:\
+Show:\
+- Recipe title\
+- Status badge\
+- Category\
+- Family note\
+- Prep/cook/serves/difficulty\
+- Ingredients formatted as bullet list\
+- Method formatted as numbered steps\
+- Mom\'92s tips\
+- Serving suggestion\
+- Storage notes\
+- Unclear items for review in highlighted warning box\
+- Raw transcript collapsible or lower section\
+- Buttons:\
+  - Edit Recipe\
+  - Approve Recipe\
+  - Generate PDF\
+  - Download PDF if available\
+\
+Validation:\
+- Handle missing audio file.\
+- Handle OpenAI API errors gracefully.\
+- Handle bad JSON from AI gracefully.\
+- Handle empty transcript.\
+- Do not crash the app.\
+\
+README:\
+Write a complete README with:\
+1. Project overview\
+2. Features\
+3. Setup steps\
+4. How to create `.env`\
+5. How to install dependencies\
+6. How to run the app\
+7. How to upload a voice note\
+8. How to review/edit recipes\
+9. How to generate PDF\
+10. Future WhatsApp/Twilio integration plan\
+\
+Requirements:\
+Include:\
+Flask\
+python-dotenv\
+openai\
+weasyprint\
+werkzeug\
+\
+Implementation guidance:\
+- Keep the code simple and readable.\
+- Add comments where useful.\
+- Use secure filenames for uploads.\
+- Use UUIDs for recipe_id.\
+- Store lists/dicts as JSON strings in SQLite.\
+- Convert JSON strings back to Python objects before rendering pages.\
+- Make the UI functional and clean, not over-engineered.\
+- Make sure all routes work end-to-end.\
+\
+After building:\
+1. Show me the final folder structure.\
+2. Tell me exactly what files were created.\
+3. Tell me the terminal commands to run.\
+4. Tell me how to test the full flow with one audio file.\
+5. Mention any dependencies that may need system installation for WeasyPrint.}
