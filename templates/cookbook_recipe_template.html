@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ recipe.recipe_title }}</title>
+    <link rel="stylesheet" href="cookbook.css">
+</head>
+<body>
+<div class="cookbook-page">
+    <header class="recipe-header">
+        <h1 class="recipe-title">{{ recipe.recipe_title }}</h1>
+        {% if recipe.alternate_names and recipe.alternate_names | length > 0 %}
+        <p class="alternate-names">Also known as: {{ recipe.alternate_names | join(', ') }}</p>
+        {% endif %}
+        {% if recipe.family_note %}
+        <p class="family-note">"{{ recipe.family_note }}"</p>
+        {% endif %}
+    </header>
+
+    <div class="meta-strip">
+        {% if recipe.serves %}<span class="meta-item"><strong>Serves</strong><br>{{ recipe.serves }}</span>{% endif %}
+        {% if recipe.prep_time_minutes %}<span class="meta-item"><strong>Prep</strong><br>{{ recipe.prep_time_minutes }} min</span>{% endif %}
+        {% if recipe.cook_time_minutes %}<span class="meta-item"><strong>Cook</strong><br>{{ recipe.cook_time_minutes }} min</span>{% endif %}
+        {% if recipe.difficulty %}<span class="meta-item"><strong>Difficulty</strong><br>{{ recipe.difficulty }}</span>{% endif %}
+        {% if recipe.category %}<span class="meta-item"><strong>Category</strong><br>{{ recipe.category }}</span>{% endif %}
+    </div>
+
+    <div class="photo-placeholder">
+        <span>[ Photo ]</span>
+    </div>
+
+    <div class="two-column">
+        <div class="col-left">
+            <h2>Ingredients</h2>
+            {% if recipe.ingredients %}
+            <ul class="ingredients">
+                {% for ing in recipe.ingredients %}
+                <li>{{ ing.quantity }} {{ ing.unit }} {{ ing.item }}{% if ing.preparation_note %}, {{ ing.preparation_note }}{% endif %}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        <div class="col-right">
+            <h2>Method</h2>
+            {% if recipe.method_steps %}
+            <ol class="method">
+                {% for step in recipe.method_steps %}
+                <li>
+                    {{ step.instruction }}
+                    {% if step.flame_level or step.timing or step.sensory_cue %}
+                    <div class="step-details">
+                        {% if step.flame_level %}<span>{{ step.flame_level }}</span>{% endif %}
+                        {% if step.timing %}<span>{{ step.timing }}</span>{% endif %}
+                        {% if step.sensory_cue %}<span>{{ step.sensory_cue }}</span>{% endif %}
+                    </div>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ol>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if recipe.moms_tips and recipe.moms_tips | length > 0 %}
+    <div class="tips-box">
+        <h2>Mom's Tips</h2>
+        <ul>
+            {% for tip in recipe.moms_tips %}
+            <li>{{ tip }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="bottom-section">
+        {% if recipe.serving_suggestion %}
+        <div class="serving"><strong>Serving Suggestion:</strong> {{ recipe.serving_suggestion }}</div>
+        {% endif %}
+        {% if recipe.storage_notes %}
+        <div class="storage"><strong>Storage:</strong> {{ recipe.storage_notes }}</div>
+        {% endif %}
+    </div>
+
+    <footer class="cookbook-footer">
+        <p>Mom's Cookbook Studio</p>
+    </footer>
+</div>
+</body>
+</html>

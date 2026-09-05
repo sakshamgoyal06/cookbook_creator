@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}{{ recipe.recipe_title }} – Mom's Cookbook Studio{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard') }}">Projects</a> &rsaquo;
+    <a href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.title }}</a> &rsaquo;
+    {{ recipe.recipe_title or 'Recipe' }}
+</div>
+
+<div class="page-header">
+    <h1>{{ recipe.recipe_title or 'Untitled Recipe' }}</h1>
+    <span class="badge badge-{{ recipe.status }}">{{ recipe.status | replace('_', ' ') | title }}</span>
+</div>
+
+{% if recipe.unclear_items_for_review and recipe.unclear_items_for_review | length > 0 %}
+<div class="warning-box">
+    <h3>Items Needing Review</h3>
+    <ul>
+        {% for item in recipe.unclear_items_for_review %}
+        <li>{{ item }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="recipe-details">
+    {% if recipe.family_note %}
+    <div class="family-note">
+        <em>"{{ recipe.family_note }}"</em>
+    </div>
+    {% endif %}
+
+    <div class="meta-strip">
+        {% if recipe.category %}<span><strong>Category:</strong> {{ recipe.category }}</span>{% endif %}
+        {% if recipe.serves %}<span><strong>Serves:</strong> {{ recipe.serves }}</span>{% endif %}
+        {% if recipe.prep_time_minutes %}<span><strong>Prep:</strong> {{ recipe.prep_time_minutes }} min</span>{% endif %}
+        {% if recipe.cook_time_minutes %}<span><strong>Cook:</strong> {{ recipe.cook_time_minutes }} min</span>{% endif %}
+        {% if recipe.difficulty %}<span><strong>Difficulty:</strong> {{ recipe.difficulty }}</span>{% endif %}
+    </div>
+
+    <div class="recipe-columns">
+        <div class="ingredients-section">
+            <h2>Ingredients</h2>
+            {% if recipe.ingredients %}
+            <ul class="ingredients-list">
+                {% for ing in recipe.ingredients %}
+                <li>
+                    {{ ing.quantity }} {{ ing.unit }} {{ ing.item }}
+                    {% if ing.preparation_note %}<span class="prep-note">({{ ing.preparation_note }})</span>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p>No ingredients listed.</p>
+            {% endif %}
+        </div>
+
+        <div class="method-section">
+            <h2>Method</h2>
+            {% if recipe.method_steps %}
+            <ol class="method-list">
+                {% for step in recipe.method_steps %}
+                <li>
+                    {{ step.instruction }}
+                    {% if step.flame_level %}<span class="detail">🔥 {{ step.flame_level }}</span>{% endif %}
+                    {% if step.timing %}<span class="detail">⏱ {{ step.timing }}</span>{% endif %}
+                    {% if step.sensory_cue %}<span class="detail">👀 {{ step.sensory_cue }}</span>{% endif %}
+                </li>
+                {% endfor %}
+            </ol>
+            {% else %}
+            <p>No method steps listed.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if recipe.moms_tips and recipe.moms_tips | length > 0 %}
+    <div class="tips-box">
+        <h2>Mom's Tips</h2>
+        <ul>
+            {% for tip in recipe.moms_tips %}
+            <li>{{ tip }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if recipe.serving_suggestion %}
+    <div class="info-section">
+        <h3>Serving Suggestion</h3>
+        <p>{{ recipe.serving_suggestion }}</p>
+    </div>
+    {% endif %}
+
+    {% if recipe.storage_notes %}
+    <div class="info-section">
+        <h3>Storage Notes</h3>
+        <p>{{ recipe.storage_notes }}</p>
+    </div>
+    {% endif %}
+
+    <details class="transcript-section">
+        <summary>Raw Transcript</summary>
+        <p>{{ recipe.raw_transcript }}</p>
+    </details>
+</div>
+
+<div class="action-buttons">
+    <a href="{{ url_for('recipe_edit', project_id=project.id, recipe_id=recipe.id) }}" class="btn btn-primary">Edit Recipe</a>
+    <form method="POST" action="{{ url_for('recipe_approve', project_id=project.id, recipe_id=recipe.id) }}" style="display:inline">
+        <button type="submit" class="btn btn-success">Approve Recipe</button>
+    </form>
+    <form method="POST" action="{{ url_for('recipe_generate_pdf', project_id=project.id, recipe_id=recipe.id) }}" style="display:inline">
+        <button type="submit" class="btn btn-accent">Generate PDF</button>
+    </form>
+    {% if recipe.pdf_filename %}
+    <a href="{{ url_for('serve_output', filename=recipe.pdf_filename) }}" class="btn btn-secondary" target="_blank">Download PDF</a>
+    {% endif %}
+</div>
+{% endblock %}

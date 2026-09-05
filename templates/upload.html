@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Recipe – {{ project.title }}{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard') }}">Projects</a> &rsaquo;
+    <a href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.title }}</a> &rsaquo;
+    Upload
+</div>
+
+<div class="page-header">
+    <h1>Upload Recipe Voice Note</h1>
+</div>
+<p class="note">Upload a recipe voice note. The system will transcribe it and create a draft cookbook recipe.</p>
+
+<form method="POST" enctype="multipart/form-data" class="upload-form">
+    <div class="form-group">
+        <label for="audio_file">Select Audio File</label>
+        <input type="file" id="audio_file" name="audio_file" accept="audio/*,.mp3,.m4a,.mp4,.wav,.ogg" required>
+        <small>Supported formats: .mp3, .m4a, .mp4, .wav, .ogg (including iPhone voice memos)</small>
+    </div>
+    <button type="submit" class="btn btn-primary">Upload &amp; Process</button>
+</form>
+{% endblock %}
