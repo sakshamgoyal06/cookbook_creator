@@ -8,6 +8,9 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 OPENAI_TRANSCRIBE_MODEL = os.getenv("OPENAI_TRANSCRIBE_MODEL", "gpt-4o-transcribe")
 ANTHROPIC_RECIPE_MODEL = os.getenv("ANTHROPIC_RECIPE_MODEL", "claude-sonnet-4-5-20250929")
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "dev-secret-key")
+FLASK_HOST = os.getenv("FLASK_HOST", "0.0.0.0")
+FLASK_PORT = int(os.getenv("FLASK_PORT", "5000"))
+FLASK_DEBUG = os.getenv("FLASK_DEBUG", "true").lower() in {"1", "true", "yes"}
 
 # Google OAuth (optional, for SSO)
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")

@@ -40,10 +40,56 @@ cp .env.example .env
 ### 4. Run the App
 
 ```bash
-python app.py
+python3 app.py
 ```
 
-The app starts at **http://localhost:5000**.
+The app starts on **http://localhost:5000**.
+
+When it starts, the terminal also prints a **phone URL** like `http://192.168.x.x:5000`. Use that on your phone if both devices are on the same Wi-Fi.
+
+## Use from your phone
+
+You do **not** run this app on the phone itself. Run it on your Mac or laptop, then open it in your phone's browser.
+
+### One-time setup on your computer
+
+1. Pull the latest code:
+   ```bash
+   git pull origin main
+   ```
+2. Install dependencies if you have not already:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Create or update `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+   Set at least:
+   - `OPENAI_API_KEY`
+   - `ANTHROPIC_API_KEY`
+   - `ANTHROPIC_RECIPE_MODEL=claude-sonnet-4-5-20250929`
+4. Start the app:
+   ```bash
+   python3 app.py
+   ```
+
+### On your phone
+
+1. Connect your phone to the **same Wi-Fi** as your computer.
+2. Look at the terminal where the app is running and copy the line that says:
+   `On your phone (same Wi-Fi): http://192.168.x.x:5000`
+3. Open that URL in **Safari** (iPhone) or **Chrome** (Android).
+4. Register or log in.
+5. Create a project, then upload a voice memo:
+   - iPhone: choose **Browse** or **Voice Memos** when selecting a file
+   - Android: choose your voice recorder or Files app
+
+### Important notes
+
+- Keep your computer awake and leave `python3 app.py` running while you use the app from your phone.
+- If the phone cannot connect, check that both devices are on the same Wi-Fi and that your firewall allows incoming connections on port `5000`.
+- After `git pull`, restart the app so your phone gets the latest fixes.
 
 ## Usage
 

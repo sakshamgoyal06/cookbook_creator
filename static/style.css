@@ -683,12 +683,39 @@ body {
 /* ─── Responsive ─────────────────────────────────── */
 
 @media (max-width: 768px) {
-    .navbar { padding: 1rem 1.5rem; }
-    .nav-links { gap: 1rem; }
+    .navbar {
+        padding: 1rem 1.25rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.9rem;
+    }
+    .nav-brand { font-size: 1.25rem; }
+    .nav-links {
+        gap: 0.9rem 1.2rem;
+        flex-wrap: wrap;
+    }
+    .nav-links a {
+        font-size: 0.8rem;
+    }
     .hero { padding: 4rem 1.5rem; margin: -2.5rem -1rem 2rem; }
     .hero h1 { font-size: 2.2rem; }
+    .hero-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .btn { width: 100%; text-align: center; }
     .recipe-columns { grid-template-columns: 1fr; }
     .form-row { flex-direction: column; gap: 0; }
     .project-grid { grid-template-columns: 1fr; }
     .container { padding: 1.5rem 1rem; }
+    .upload-form input[type="file"] {
+        width: 100%;
+        font-size: 1rem;
+    }
+    .mobile-tip {
+        background: rgba(201, 169, 110, 0.12);
+        border-left: 3px solid var(--accent);
+        padding: 0.9rem 1rem;
+        border-radius: var(--radius-sm);
+    }
 }
