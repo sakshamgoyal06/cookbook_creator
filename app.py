@@ -1,5 +1,6 @@
 import os
 import json
+import socket
 from flask import (
     Flask,
     render_template,
@@ -459,9 +460,34 @@ def _to_int(value):
         return None
 
 
+def _lan_ip():
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("8.8.8.8", 80))
+            return sock.getsockname()[0]
+    except OSError:
+        return None
+
+
+def _print_startup_urls():
+  port = config.FLASK_PORT
+  print("\nMom's Cookbook Studio is running:")
+  print(f"  On this computer: http://127.0.0.1:{port}")
+
+  lan_ip = _lan_ip()
+  if lan_ip:
+      print(f"  On your phone (same Wi-Fi): http://{lan_ip}:{port}")
+      print("  Open that address in Safari or Chrome on your phone.")
+  else:
+      print("  Could not detect a local network IP. Use your computer's Wi-Fi IP with port 5000.")
+
+  print("  Keep this computer awake while you use the app from your phone.\n")
+
+
 if __name__ == "__main__":
     os.makedirs(config.UPLOAD_FOLDER, exist_ok=True)
     os.makedirs(config.OUTPUT_FOLDER, exist_ok=True)
     os.makedirs(config.INSTANCE_FOLDER, exist_ok=True)
     init_db()
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    _print_startup_urls()
+    app.run(debug=config.FLASK_DEBUG, host=config.FLASK_HOST, port=config.FLASK_PORT)

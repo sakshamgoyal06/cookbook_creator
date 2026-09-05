@@ -14,6 +14,8 @@ python3 app.py
 
 Starts on `http://localhost:5000` in debug mode. Uses `python3` (not `python`).
 
+When testing from a phone on the same Wi-Fi, start the app and use the printed URL like `http://192.168.x.x:5000` in the phone browser. The computer running `python3 app.py` must stay on and awake.
+
 ### Key services
 
 | Service | How to run | Notes |
