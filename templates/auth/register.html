@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Register – Mom's Cookbook Studio{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <h1>Create Account</h1>
+    <form method="POST" class="auth-form">
+        <div class="form-group">
+            <label for="name">Full Name</label>
+            <input type="text" id="name" name="name" required placeholder="Your name">
+        </div>
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required placeholder="you@example.com">
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required placeholder="At least 6 characters">
+        </div>
+        <div class="form-group">
+            <label for="confirm_password">Confirm Password</label>
+            <input type="password" id="confirm_password" name="confirm_password" required placeholder="••••••">
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+    </form>
+
+    {% if config.GOOGLE_CLIENT_ID %}
+    <div class="auth-divider"><span>or</span></div>
+    <a href="{{ url_for('login_google') }}" class="btn btn-google btn-full">Sign up with Google</a>
+    {% endif %}
+
+    <p class="auth-link">Already have an account? <a href="{{ url_for('login') }}">Sign in</a></p>
+</div>
+{% endblock %}

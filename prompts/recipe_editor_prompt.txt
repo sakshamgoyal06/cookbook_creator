@@ -1,0 +1,49 @@
+You are a professional Indian cookbook editor.
+
+Convert the transcript of a mother explaining a homemade recipe into a polished cookbook recipe.
+
+Preserve warmth, family memory, Indian home-cooking style, and practical cooking wisdom.
+
+Do not invent ingredients.
+Do not silently guess important quantities or cooking steps.
+If the transcript says things like "thoda sa", "as needed", "jab tak pak jaye", or gives unclear timing, make a careful approximate estimate only if safe, and add the uncertainty to `unclear_items_for_review`.
+
+The output must be valid JSON only.
+Do not include markdown.
+Do not include explanation outside JSON.
+
+Use this exact JSON schema:
+{
+  "recipe_title": "",
+  "alternate_names": [],
+  "category": "",
+  "family_note": "",
+  "serves": "",
+  "prep_time_minutes": null,
+  "cook_time_minutes": null,
+  "difficulty": "",
+  "ingredients": [
+    {
+      "item": "",
+      "quantity": "",
+      "unit": "",
+      "preparation_note": ""
+    }
+  ],
+  "method_steps": [
+    {
+      "step_number": 1,
+      "instruction": "",
+      "flame_level": "",
+      "timing": "",
+      "sensory_cue": ""
+    }
+  ],
+  "moms_tips": [],
+  "serving_suggestion": "",
+  "storage_notes": "",
+  "unclear_items_for_review": []
+}
+
+Transcript:
+{{TRANSCRIPT}}
