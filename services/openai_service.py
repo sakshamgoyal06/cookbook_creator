@@ -1,5 +1,7 @@
 import json
 import os
+import subprocess
+import tempfile
 from openai import OpenAI
 from anthropic import Anthropic
 import config
@@ -42,14 +44,40 @@ def _parse_recipe_json(text: str) -> dict:
         raise ValueError(f"AI returned invalid JSON: {e}\nRaw response:\n{text}")
 
 
+def _prepare_audio_for_transcription(file_path: str) -> tuple[str, bool]:
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext != ".opus":
+        return file_path, False
+
+    with tempfile.NamedTemporaryFile(suffix=".ogg", delete=False) as tmp:
+        temp_path = tmp.name
+
+    result = subprocess.run(
+        ["ffmpeg", "-y", "-i", file_path, "-c:a", "libopus", temp_path],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        os.unlink(temp_path)
+        stderr = result.stderr.strip() or "unknown ffmpeg error"
+        raise ValueError(f"Could not convert .opus audio for transcription: {stderr}")
+
+    return temp_path, True
+
+
 def transcribe_audio(file_path: str) -> str:
-    client = _get_openai_client()
-    with open(file_path, "rb") as audio_file:
-        result = client.audio.transcriptions.create(
-            model=config.OPENAI_TRANSCRIBE_MODEL,
-            file=audio_file,
-        )
-    return result.text
+    transcribe_path, is_temp = _prepare_audio_for_transcription(file_path)
+    try:
+        client = _get_openai_client()
+        with open(transcribe_path, "rb") as audio_file:
+            result = client.audio.transcriptions.create(
+                model=config.OPENAI_TRANSCRIBE_MODEL,
+                file=audio_file,
+            )
+        return result.text
+    finally:
+        if is_temp:
+            os.unlink(transcribe_path)
 
 
 def structure_recipe(transcript: str) -> dict:

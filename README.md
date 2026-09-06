@@ -4,7 +4,7 @@ Turn family recipe voice notes into a professional cookbook.
 
 ## Features
 
-- Upload audio voice notes (.mp3, .m4a, .wav, .ogg)
+- Upload audio voice notes (.mp3, .m4a, .wav, .ogg, .opus)
 - AI-powered transcription via OpenAI
 - Automatic recipe structuring into cookbook format
 - Review, edit, and approve recipes
@@ -19,7 +19,7 @@ WeasyPrint requires native libraries:
 
 ```bash
 # Ubuntu / Debian
-sudo apt-get install -y libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev libcairo2
+sudo apt-get install -y libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev libcairo2 ffmpeg
 ```
 
 ### 2. Python Dependencies

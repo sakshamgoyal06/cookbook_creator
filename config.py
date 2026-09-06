@@ -20,7 +20,7 @@ INSTANCE_FOLDER = os.path.join(BASE_DIR, "instance")
 PROMPTS_FOLDER = os.path.join(BASE_DIR, "prompts")
 DATABASE_PATH = os.path.join(INSTANCE_FOLDER, "cookbook.db")
 
-ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".m4a", ".wav", ".ogg"}
+ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".m4a", ".wav", ".ogg", ".opus"}
 
 COOKBOOK_THEMES = {
     "classic": {"name": "Classic Indian", "primary": "#5c1a1a", "accent": "#d4a84b", "bg": "#fdf8f0"},

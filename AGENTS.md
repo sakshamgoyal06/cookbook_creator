@@ -32,6 +32,7 @@ flake8 --max-line-length=120 --exclude=__pycache__,instance,uploads,outputs,.git
 ### Important caveats
 
 - **WeasyPrint system deps**: Requires `libpango-1.0-0`, `libpangocairo-1.0-0`, `libgdk-pixbuf2.0-0`, `libffi-dev`, `libcairo2` installed at OS level. Without these, PDF generation will fail.
+- **ffmpeg**: Required to convert uploaded `.opus` voice notes into a format supported by OpenAI transcription.
 - **No `python` symlink**: Use `python3` explicitly.
 - **API keys**: The upload flow needs both `OPENAI_API_KEY` (transcription) and `ANTHROPIC_API_KEY` (structuring). All other flows (view, edit, approve, PDF generation) work without them.
 - **PATH**: pip installs scripts to `~/.local/bin` — ensure it's on PATH (`export PATH="$HOME/.local/bin:$PATH"`).
