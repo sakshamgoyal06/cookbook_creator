@@ -301,7 +301,7 @@ def upload(project_id):
         return redirect(url_for("upload", project_id=project_id))
 
     if not _allowed_file(file.filename):
-        flash("Invalid file type. Please upload .mp3, .m4a, .wav, or .ogg.", "error")
+        flash("Invalid file type. Please upload .mp3, .m4a, .wav, .ogg, or .opus.", "error")
         return redirect(url_for("upload", project_id=project_id))
 
     recipe_count = project_service.get_project_recipe_count(project_id)
