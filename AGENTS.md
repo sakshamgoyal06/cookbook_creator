@@ -21,7 +21,7 @@ Starts on `http://localhost:5000` in debug mode. Uses `python3` (not `python`).
 | Flask dev server | `python3 app.py` | Runs on port 5000, debug mode with hot reload |
 | SQLite DB | Auto-created at `instance/cookbook.db` on first run | No separate process needed |
 | OpenAI API | Requires `OPENAI_API_KEY` in `.env` | Used for audio transcription (`gpt-4o-transcribe`) |
-| Anthropic API | Requires `ANTHROPIC_API_KEY` in `.env` | Used for recipe structuring via Claude |
+| Anthropic API | Requires `ANTHROPIC_API_KEY` in `.env` | Used for recipe structuring via Claude (`claude-sonnet-5`) |
 
 ### Linting
 

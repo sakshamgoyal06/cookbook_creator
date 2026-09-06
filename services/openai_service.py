@@ -35,10 +35,13 @@ def structure_recipe(transcript: str) -> dict:
         model=config.ANTHROPIC_RECIPE_MODEL,
         max_tokens=4096,
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
     )
 
-    content = response.content[0].text.strip()
+    content = ""
+    for block in response.content:
+        if block.type == "text":
+            content += block.text
+    content = content.strip()
 
     if content.startswith("```"):
         lines = content.split("\n")
