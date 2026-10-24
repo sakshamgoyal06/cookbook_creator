@@ -25,7 +25,8 @@ ANTHROPIC_RECIPE_TEMPERATURE = float(_recipe_temperature) if _recipe_temperature
 PLACEHOLDER_SECRET_KEYS = {"", "dev-secret-key", "change-me-to-a-random-string"}
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "dev-secret-key")
 FLASK_HOST = os.getenv("FLASK_HOST", "0.0.0.0")
-FLASK_PORT = int(os.getenv("FLASK_PORT", "5000"))
+# Hosts such as Railway set PORT; FLASK_PORT is for local runs.
+FLASK_PORT = int(os.getenv("PORT") or os.getenv("FLASK_PORT", "5000"))
 FLASK_DEBUG = os.getenv("FLASK_DEBUG", "false").lower() in {"1", "true", "yes"}
 
 # File storage: "local" (uploads/ and outputs/ folders) or "s3" (AWS S3 or an
