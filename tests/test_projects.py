@@ -100,6 +100,6 @@ def test_generate_pdf(auth_client):
 
     recipe = recipe_service.get_recipe(row_id)
     assert recipe["status"] == "pdf_generated"
-    response = auth_client.get(f"/outputs/{recipe['pdf_filename']}")
+    response = auth_client.get(f"/projects/{project_id}/recipes/{row_id}/pdf")
     assert response.status_code == 200
     assert response.data.startswith(b"%PDF")

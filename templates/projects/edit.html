@@ -8,6 +8,7 @@
 </div>
 
 <form method="POST" class="edit-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <h2 class="form-section-title">Basic Info</h2>
     <div class="form-group">
         <label for="title">Cookbook Title *</label>
@@ -83,6 +84,7 @@
 <div class="danger-zone">
     <h3>Danger Zone</h3>
     <form method="POST" action="{{ url_for('project_delete', project_id=project.id) }}" onsubmit="return confirm('Are you sure? This will delete the project and ALL its recipes.')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-danger">Delete Project</button>
     </form>
 </div>

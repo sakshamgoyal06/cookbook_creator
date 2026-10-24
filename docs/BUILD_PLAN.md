@@ -8,7 +8,7 @@
 > - If scope changes, update the PRD first, then this plan.
 > - Every code change: `flake8` clean, tests passing, run the app once locally.
 
-**Status:** M0 in progress (AI pipeline, tests and CI done) · Last updated 2026-10-24
+**Status:** M0 in progress (tests and CI, security fixes, AI pipeline done; infrastructure next) · Last updated 2026-10-24
 
 | Milestone | Theme | PRD refs | Target |
 |---|---|---|---|
@@ -55,10 +55,10 @@ Goal: a hosted, safe, testable base that every later milestone builds on.
 - [x] GitHub Actions: flake8 + pytest on every push to main and every PR (`.github/workflows/ci.yml`)
 
 ### Security fixes (PRD §17)
-- [ ] `/outputs/<filename>`: check the file belongs to a project the user owns (or serve via signed URL)
-- [ ] Refuse to start with the default `FLASK_SECRET_KEY` when `FLASK_DEBUG` is off
-- [ ] CSRF protection on all POST forms (Flask-WTF `CSRFProtect`)
-- [ ] Turn off debug mode in production config
+- [x] `/outputs/<filename>` replaced by `/projects/<id>/recipes/<id>/pdf`, which checks that the user owns the project and recipe
+- [x] Refuse to start with a placeholder `FLASK_SECRET_KEY` when `FLASK_DEBUG` is off
+- [x] CSRF protection on all POST forms (Flask-WTF `CSRFProtect`, token in every form)
+- [x] Debug mode is off unless `FLASK_DEBUG` is set (`.env.example` turns it on for local development)
 
 ### AI pipeline (AI-3)
 - [x] Transcription stays on `gpt-4o-transcribe`; structuring moved to Claude Sonnet 5.5 (`claude-sonnet-5-5`, effort `medium`)

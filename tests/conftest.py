@@ -4,6 +4,8 @@ import sys
 import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# The app refuses to start with a placeholder secret key outside debug mode.
+os.environ["FLASK_SECRET_KEY"] = "test-secret-key"
 
 import config  # noqa: E402
 from models.database import get_connection, init_db  # noqa: E402
@@ -46,6 +48,8 @@ def app(tmp_path, monkeypatch):
 
     init_db()
     app_module.app.config["TESTING"] = True
+    # CSRF has its own tests (test_security.py); the other tests post forms without tokens.
+    monkeypatch.setitem(app_module.app.config, "WTF_CSRF_ENABLED", False)
     return app_module.app
 
 
