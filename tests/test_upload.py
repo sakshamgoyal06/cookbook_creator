@@ -1,6 +1,10 @@
 import io
 
 from conftest import SAMPLE_RECIPE, create_project
+from sqlalchemy import select
+
+from models.database import get_engine
+from models.schema import pipeline_runs
 from services import ai_service, recipe_service
 
 
@@ -36,7 +40,7 @@ def test_upload_rejects_non_audio(auth_client):
     assert recipe_service.get_project_recipes(project_id) == []
 
 
-def test_upload_shows_structuring_error(auth_client, monkeypatch):
+def test_upload_failure_shows_friendly_message_and_logs_error(auth_client, monkeypatch):
     def fail(transcript):
         raise ValueError("The AI declined to structure this transcript.")
 
@@ -47,5 +51,13 @@ def test_upload_shows_structuring_error(auth_client, monkeypatch):
     response = _upload(auth_client, project_id)
     assert response.headers["Location"].endswith(f"/projects/{project_id}/upload")
     page = auth_client.get(response.headers["Location"])
-    assert b"declined to structure" in page.data
-    assert recipe_service.get_project_recipes(project_id) == []
+    assert b"couldn&#39;t turn this recording into a recipe" in page.data
+    assert b"declined to structure" not in page.data
+
+    [recipe] = recipe_service.get_project_recipes(project_id)
+    assert recipe["status"] == "failed"
+    assert recipe["raw_transcript"] == "some words"
+    with get_engine().connect() as conn:
+        runs = conn.execute(select(pipeline_runs).order_by(pipeline_runs.c.id)).mappings().all()
+    assert [(r["stage"], r["status"]) for r in runs] == [("transcribe", "succeeded"), ("structure", "failed")]
+    assert "declined to structure" in runs[1]["error"]

@@ -32,11 +32,13 @@ When testing from a phone on the same Wi-Fi, start the app and use the printed U
 
 Railway builds the `Dockerfile` (see `railway.json`) runs `python wsgi.py migrate` (Alembic migrations), then `gunicorn wsgi:app` on `$PORT`, with `/healthz` as the health check. Set these service variables in Railway: `FLASK_SECRET_KEY` (required: the app refuses to start without a real key when `FLASK_DEBUG` is off), `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and `DATABASE_URL` (reference the Railway Postgres service's `DATABASE_URL`; without it the app falls back to SQLite, which Railway wipes on every redeploy). Leave `FLASK_DEBUG` unset in production.
 
+**Background worker (optional, recommended once real families use it).** Without `REDIS_URL`, uploads are transcribed and structured inside the request. To move that off the request: add Railway Redis, set `REDIS_URL=${{Redis.REDIS_URL}}` on the web service, and add a second service from this repo with start command `python worker.py` and the same variables. The worker runs `services/pipeline_service.process_recipe` with retries (30 s, 2 min, 10 min) and never runs migrations. Because the worker is a separate container, it also needs `STORAGE_BACKEND=s3` and the `S3_*` variables (Cloudflare R2) so it can read uploaded audio. Each stage is logged in `pipeline_runs` (errors included); users only see the recipe status.
+
 ### Linting and tests
 
 ```bash
 pip install -r requirements-dev.txt
-flake8 --max-line-length=120 --exclude=__pycache__,instance,uploads,outputs,.git app.py config.py models/ services/ tests/ migrations/ scripts/
+flake8 --max-line-length=120 --exclude=__pycache__,instance,uploads,outputs,.git app.py config.py worker.py models/ services/ tests/ migrations/ scripts/
 pytest -q
 ```
 

@@ -22,7 +22,14 @@ from flask_login import (
 from flask_wtf.csrf import CSRFProtect
 import config
 from models.database import init_db
-from services import ai_service, recipe_service, pdf_service, user_service, project_service, storage_service
+from services import (
+    pdf_service,
+    pipeline_service,
+    project_service,
+    recipe_service,
+    storage_service,
+    user_service,
+)
 from services.audio_utils import SUPPORTED_FORMATS_LABEL, build_storage_filename, is_allowed_audio
 
 if not config.FLASK_DEBUG and config.FLASK_SECRET_KEY in config.PLACEHOLDER_SECRET_KEYS:
@@ -309,25 +316,17 @@ def upload(project_id):
     finally:
         os.remove(temp_path)
 
-    try:
-        with storage_service.local_copy("audio", filename) as audio_path:
-            transcript = ai_service.transcribe_audio(audio_path)
-    except Exception as e:
-        flash(f"Transcription failed: {e}", "error")
-        return redirect(url_for("upload", project_id=project_id))
+    row_id = recipe_service.create_received_recipe(project_id, filename)
+    pipeline_service.enqueue_processing(row_id)
 
-    if not transcript or not transcript.strip():
-        flash("Transcription returned empty text.", "error")
+    status = recipe_service.get_recipe(row_id)["status"]
+    if status == "failed":
+        flash("We couldn't turn this recording into a recipe. Please try again or upload another note.", "error")
         return redirect(url_for("upload", project_id=project_id))
-
-    try:
-        recipe_data = ai_service.structure_recipe(transcript)
-    except Exception as e:
-        flash(f"Recipe structuring failed: {e}", "error")
-        return redirect(url_for("upload", project_id=project_id))
-
-    row_id = recipe_service.save_uploaded_recipe(project_id, filename, transcript, recipe_data)
-    flash("Recipe uploaded and processed successfully!", "success")
+    if status == "needs_review":
+        flash("Recipe uploaded and processed successfully!", "success")
+    else:
+        flash("Got it! We're writing the recipe down. Refresh this page in a minute.", "success")
     return redirect(url_for("recipe_detail", project_id=project_id, recipe_id=row_id))
 
 
