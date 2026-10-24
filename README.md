@@ -2,6 +2,8 @@
 
 Turn family recipe voice notes into a professional cookbook.
 
+> **Product direction lives in [`docs/PRD.md`](docs/PRD.md).** It is the north star for what we build and why. Read it before starting new work. The build order and checklist are in [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md).
+
 ## Features
 
 - Upload audio voice notes (.mp3, .m4a, .mp4, .wav, .ogg)
@@ -30,11 +32,11 @@ pip install -r requirements.txt
 
 ### 3. Environment Variables
 
-Copy `.env.example` to `.env` and fill in your OpenAI API key:
+Copy `.env.example` to `.env` and fill in both API keys:
 
 ```bash
 cp .env.example .env
-# Edit .env and set OPENAI_API_KEY
+# Edit .env and set OPENAI_API_KEY (transcription) and ANTHROPIC_API_KEY (recipe structuring)
 ```
 
 ### 4. Run the App
@@ -93,7 +95,7 @@ You do **not** run this app on the phone itself. Run it on your Mac or laptop, t
 
 ## Usage
 
-1. **Upload** a recipe voice note from the home page
+1. **Create a project** (one cookbook), then **upload** a recipe voice note to it
 2. The system transcribes the audio and structures it into a cookbook recipe
 3. **Review** the recipe — unclear items are highlighted for your attention
 4. **Edit** any fields that need adjustment
@@ -104,13 +106,10 @@ You do **not** run this app on the phone itself. Run it on your Mac or laptop, t
 
 - **Backend:** Python + Flask
 - **Database:** SQLite
-- **AI:** OpenAI API (transcription + recipe formatting)
+- **AI:** OpenAI (transcription) + Anthropic Claude (recipe structuring)
 - **PDF:** WeasyPrint (HTML/CSS to PDF)
 - **Config:** python-dotenv
 
-## Future Plans
+## Roadmap
 
-- WhatsApp / Twilio integration for voice note submission
-- Multi-cookbook compilation
-- Food photo integration
-- User authentication
+See [`docs/PRD.md`](docs/PRD.md) for the full roadmap (WhatsApp capture, QR voice playback, the full digital cookbook, payments) and [`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md) for the milestone checklist.

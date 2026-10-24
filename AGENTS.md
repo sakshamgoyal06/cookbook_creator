@@ -4,6 +4,9 @@
 
 Mom's Cookbook Studio — a Flask web app that converts recipe voice notes into structured cookbook recipes with PDF generation.
 
+Product requirements, priorities (P0/P1/P2) and the build order are in `docs/PRD.md`. Check new work against it.
+The milestone checklist is `docs/BUILD_PLAN.md`: pick the next unticked item, and tick it in the same commit as the work.
+
 ## Cursor Cloud specific instructions
 
 ### Running the app
