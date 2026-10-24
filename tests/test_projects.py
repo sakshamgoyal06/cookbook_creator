@@ -99,7 +99,7 @@ def test_generate_pdf(auth_client):
     auth_client.post(f"/projects/{project_id}/recipes/{row_id}/generate-pdf")
 
     recipe = recipe_service.get_recipe(row_id)
-    assert recipe["status"] == "pdf_generated"
+    assert recipe["pdf_filename"]
     response = auth_client.get(f"/projects/{project_id}/recipes/{row_id}/pdf")
     assert response.status_code == 200
     assert response.data.startswith(b"%PDF")

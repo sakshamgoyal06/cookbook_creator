@@ -105,7 +105,7 @@ You do **not** run this app on the phone itself. Run it on your Mac or laptop, t
 ## Tech Stack
 
 - **Backend:** Python + Flask
-- **Database:** SQLite
+- **Database:** SQLite locally, Postgres when hosted (SQLAlchemy + Alembic, see [`docs/DATABASE.md`](docs/DATABASE.md))
 - **AI:** OpenAI (transcription) + Anthropic Claude (recipe structuring)
 - **PDF:** WeasyPrint (HTML/CSS to PDF)
 - **Config:** python-dotenv

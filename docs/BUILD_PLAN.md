@@ -8,7 +8,7 @@
 > - If scope changes, update the PRD first, then this plan.
 > - Every code change: `flake8` clean, tests passing, run the app once locally.
 
-**Status:** M0 in progress (tests and CI, security fixes, AI pipeline done; infrastructure next) · Last updated 2026-10-24
+**Status:** M0 in progress (tests and CI, security fixes, AI pipeline, database layer done; storage, worker and hosting next) · Last updated 2026-10-24
 
 | Milestone | Theme | PRD refs | Target |
 |---|---|---|---|
@@ -68,7 +68,7 @@ Goal: a hosted, safe, testable base that every later milestone builds on.
 - [x] Handle `stop_reason == "refusal"` and `max_tokens` with clear errors
 
 ### Infrastructure (§15)
-- [ ] Postgres via SQLAlchemy (or keep raw SQL with a thin adapter); migration script from SQLite schema
+- [x] Postgres via SQLAlchemy (or keep raw SQL with a thin adapter); migration script from SQLite schema (SQLAlchemy Core + Alembic, `scripts/migrate_sqlite_to_postgres.py`, `docs/DATABASE.md`)
 - [ ] Object storage (Cloudflare R2 or S3) for audio and generated files; `storage_service` with put/get/signed-url
   - [x] `services/storage_service.py`: local backend (today's folders) and S3/R2 backend with signed URLs, set by `STORAGE_BACKEND`
   - [ ] Wire upload, transcription and PDF routes through it (after the Postgres PR, which adds `recipe_audio` and `generated_files`)
@@ -87,9 +87,9 @@ Goal: a hosted, safe, testable base that every later milestone builds on.
 Goal: every recipe page plays Mom's real voice. This is the signature feature (PRD §8.5).
 
 ### Data
-- [ ] `recipes.listen_token` (≥ 128-bit, `secrets.token_urlsafe(16)`), `recipes.listen_revoked_at` (QR-3)
-- [ ] `recipe_audio` table: `recipe_id, storage_key, duration_s, kind (original|followup|story), play_order` (§14)
-- [ ] Backfill: existing recipes get a token and their `audio_filename` becomes a `recipe_audio` row
+- [x] `recipes.listen_token` (≥ 128-bit, `secrets.token_urlsafe(16)`), `recipes.listen_revoked_at` (QR-3)
+- [x] `recipe_audio` table: `recipe_id, storage_key, duration_s, kind (original|followup|story), play_order` (§14)
+- [x] Backfill: existing recipes get a token and their `audio_filename` becomes a `recipe_audio` row
 
 ### Listen page
 - [ ] Public route `/l/<token>` (no login) (QR-2): recipe title, Mom's name, recording date, one large play button, plays clips in order
@@ -246,6 +246,7 @@ Record decisions that change the plan (newest first).
 
 | Date | Decision | Why |
 |---|---|---|
+| 2026-10-24 | Database: Postgres via SQLAlchemy Core + Alembic; SQLite kept for local runs and tests; tables added milestone by milestone | Smallest change to the services; schema changes stay safe on live data |
 | 2026-10-24 | Structuring moves to Claude Sonnet 5.5 at `medium` effort; transcription stays on `gpt-4o-transcribe` | Saksham's call; better structuring at a lower price per token than Sonnet 4.5 |
 | 2026-10-24 | Keep `gpt-4o-transcribe` and Claude Sonnet 4.5; add structured outputs and make models and credentials configurable instead of upgrading | Transcription quality across languages matters most; swapping models stays a config change, decided by eval |
 | 2026-10-24 | Digital-first at ₹999 for 10 recipes; print deferred to P2 | 60% margin after GST; low-risk test of demand |

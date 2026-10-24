@@ -1,95 +1,61 @@
-from datetime import datetime, timezone
-from models.database import get_connection
+from sqlalchemy import delete, func, insert, select, update
+
+from models.database import get_engine, new_token
+from models.schema import projects, recipes
+
+EDITABLE_FIELDS = {
+    "title": "",
+    "subtitle": "",
+    "description": "",
+    "theme": "classic",
+    "max_recipes": 50,
+    "max_pages": 100,
+    "acknowledgement": "",
+    "about_author": "",
+    "dedication": "",
+    "introduction": "",
+    "cover_note": "",
+}
 
 
 def create_project(user_id, title, **kwargs):
-    conn = get_connection()
-    conn.execute(
-        """INSERT INTO projects
-           (user_id, title, subtitle, description, theme, max_recipes, max_pages,
-            acknowledgement, about_author, dedication, introduction, cover_note)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (
-            user_id,
-            title,
-            kwargs.get("subtitle", ""),
-            kwargs.get("description", ""),
-            kwargs.get("theme", "classic"),
-            kwargs.get("max_recipes", 50),
-            kwargs.get("max_pages", 100),
-            kwargs.get("acknowledgement", ""),
-            kwargs.get("about_author", ""),
-            kwargs.get("dedication", ""),
-            kwargs.get("introduction", ""),
-            kwargs.get("cover_note", ""),
-        ),
-    )
-    conn.commit()
-    project_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
-    conn.close()
-    return project_id
+    values = {field: kwargs.get(field, default) for field, default in EDITABLE_FIELDS.items()}
+    values.update(user_id=user_id, title=title, book_token=new_token())
+    with get_engine().begin() as conn:
+        return conn.execute(insert(projects).values(**values).returning(projects.c.id)).scalar_one()
 
 
 def get_project(project_id):
-    conn = get_connection()
-    row = conn.execute("SELECT * FROM projects WHERE id = ?", (project_id,)).fetchone()
-    conn.close()
+    with get_engine().connect() as conn:
+        row = conn.execute(select(projects).where(projects.c.id == project_id)).mappings().first()
     return dict(row) if row else None
 
 
 def get_user_projects(user_id):
-    conn = get_connection()
-    rows = conn.execute(
-        "SELECT * FROM projects WHERE user_id = ? ORDER BY updated_at DESC",
-        (user_id,),
-    ).fetchall()
-    conn.close()
+    with get_engine().connect() as conn:
+        rows = conn.execute(
+            select(projects)
+            .where(projects.c.user_id == user_id)
+            .order_by(projects.c.updated_at.desc(), projects.c.id.desc())
+        ).mappings().all()
     return [dict(r) for r in rows]
 
 
 def update_project(project_id, data):
-    conn = get_connection()
-    now = datetime.now(timezone.utc).isoformat()
-    conn.execute(
-        """UPDATE projects SET
-           title = ?, subtitle = ?, description = ?, theme = ?,
-           max_recipes = ?, max_pages = ?,
-           acknowledgement = ?, about_author = ?, dedication = ?,
-           introduction = ?, cover_note = ?, status = ?, updated_at = ?
-           WHERE id = ?""",
-        (
-            data.get("title", ""),
-            data.get("subtitle", ""),
-            data.get("description", ""),
-            data.get("theme", "classic"),
-            data.get("max_recipes", 50),
-            data.get("max_pages", 100),
-            data.get("acknowledgement", ""),
-            data.get("about_author", ""),
-            data.get("dedication", ""),
-            data.get("introduction", ""),
-            data.get("cover_note", ""),
-            data.get("status", "draft"),
-            now,
-            project_id,
-        ),
-    )
-    conn.commit()
-    conn.close()
+    values = {field: data.get(field, default) for field, default in EDITABLE_FIELDS.items()}
+    values.update(status=data.get("status", "draft"), updated_at=func.now())
+    with get_engine().begin() as conn:
+        conn.execute(update(projects).where(projects.c.id == project_id).values(**values))
 
 
 def delete_project(project_id):
-    conn = get_connection()
-    conn.execute("DELETE FROM recipes WHERE project_id = ?", (project_id,))
-    conn.execute("DELETE FROM projects WHERE id = ?", (project_id,))
-    conn.commit()
-    conn.close()
+    # Recipes, audio rows and generated files go with it (ON DELETE CASCADE).
+    with get_engine().begin() as conn:
+        conn.execute(delete(projects).where(projects.c.id == project_id))
 
 
 def get_project_recipe_count(project_id):
-    conn = get_connection()
-    count = conn.execute(
-        "SELECT COUNT(*) FROM recipes WHERE project_id = ?", (project_id,)
-    ).fetchone()[0]
-    conn.close()
-    return count
+    with get_engine().connect() as conn:
+        return conn.execute(
+            select(func.count()).select_from(recipes).where(recipes.c.project_id == project_id)
+        ).scalar_one()

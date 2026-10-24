@@ -50,6 +50,8 @@ OUTPUT_FOLDER = os.path.join(BASE_DIR, "outputs")
 INSTANCE_FOLDER = os.path.join(BASE_DIR, "instance")
 PROMPTS_FOLDER = os.path.join(BASE_DIR, "prompts")
 DATABASE_PATH = os.path.join(INSTANCE_FOLDER, "cookbook.db")
+# Postgres when hosted (postgresql://user:pass@host/db). Empty = local SQLite file.
+DATABASE_URL = os.getenv("DATABASE_URL", "") or f"sqlite:///{DATABASE_PATH}"
 
 COOKBOOK_THEMES = {
     "classic": {"name": "Classic Indian", "primary": "#5c1a1a", "accent": "#d4a84b", "bg": "#fdf8f0"},

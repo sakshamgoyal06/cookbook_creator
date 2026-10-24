@@ -7,7 +7,8 @@ def test_save_and_read_back(auth_client):
     row_id = recipe_service.save_uploaded_recipe(project_id, "abc.m4a", "transcript", SAMPLE_RECIPE)
 
     recipe = recipe_service.get_recipe(row_id)
-    assert recipe["audio_filename"] == "abc.m4a"
+    assert [clip["storage_key"] for clip in recipe["audio_clips"]] == ["abc.m4a"]
+    assert len(recipe["listen_token"]) >= 22
     assert recipe["alternate_names"] == ["Rajma Masala"]
     assert recipe["ingredients"] == SAMPLE_RECIPE["ingredients"]
     assert recipe["method_steps"] == SAMPLE_RECIPE["method_steps"]
@@ -25,5 +26,6 @@ def test_mark_pdf_generated(auth_client):
     row_id = recipe_service.save_uploaded_recipe(project_id, "abc.m4a", "t", SAMPLE_RECIPE)
     recipe_service.mark_pdf_generated(row_id, "rajma.pdf")
     recipe = recipe_service.get_recipe(row_id)
-    assert recipe["status"] == "pdf_generated"
+    # A PDF is a file, not a review state: the recipe keeps its status.
+    assert recipe["status"] == "needs_review"
     assert recipe["pdf_filename"] == "rajma.pdf"
