@@ -1,0 +1,159 @@
+import io
+import os
+import re
+import time
+
+from conftest import SAMPLE_RECIPE, create_project, register
+from PIL import Image
+
+import config
+from models.database import get_engine
+from models.schema import projects
+from services import listen_service, qr_service, recipe_service
+from sqlalchemy import select
+from test_storage_service import s3  # noqa: F401  (pytest fixture)
+
+
+def _recipe_with_audio(client, audio=b"mom's voice"):
+    project_id = create_project(client)
+    with open(os.path.join(config.UPLOAD_FOLDER, "abc.m4a"), "wb") as f:
+        f.write(audio)
+    row_id = recipe_service.save_uploaded_recipe(project_id, "abc.m4a", "t", SAMPLE_RECIPE)
+    return project_id, row_id, recipe_service.get_recipe(row_id)["listen_token"]
+
+
+def test_tokens_are_long_random_and_unique(auth_client):
+    project_id = create_project(auth_client)
+    tokens = {recipe_service.get_recipe(
+        recipe_service.save_uploaded_recipe(project_id, f"{i}.m4a", "t", SAMPLE_RECIPE))["listen_token"]
+        for i in range(20)}
+    assert len(tokens) == 20
+    assert all(re.fullmatch(r"[A-Za-z0-9_-]{22}", t) for t in tokens)  # 128 bits, URL-safe
+
+
+def test_listen_page_works_logged_out_and_has_no_db_ids(auth_client, client):
+    project_id, row_id, token = _recipe_with_audio(auth_client)
+    auth_client.get("/logout")
+
+    page = client.get(f"/l/{token}")
+    assert page.status_code == 200
+    assert b"Rajma" in page.data
+    assert f"/l/{token}/audio/1".encode() in page.data
+    assert f"/projects/{project_id}".encode() not in page.data
+    assert b"abc.m4a" not in page.data  # never by filename (QR-5)
+
+    audio = client.get(f"/l/{token}/audio/1")
+    assert audio.status_code == 200
+    assert audio.get_data() == b"mom's voice"
+    assert audio.headers["Cache-Control"] == "private, no-store"
+    assert client.get(f"/l/{token}/audio/2").status_code == 404
+
+
+def test_unknown_token_shows_private_page(client):
+    response = client.get("/l/not-a-real-token")
+    assert response.status_code == 404
+    assert b"This recording is private" in response.data
+    assert client.get("/l/not-a-real-token/audio/1").status_code == 404
+
+
+def test_revoke_makes_old_qr_private_and_regenerate_issues_new_link(auth_client):
+    project_id, row_id, token = _recipe_with_audio(auth_client)
+
+    auth_client.post(f"/projects/{project_id}/recipes/{row_id}/listen-link/revoke")
+    revoked = auth_client.get(f"/l/{token}")
+    assert revoked.status_code == 404 and b"This recording is private" in revoked.data
+    assert auth_client.get(f"/l/{token}/audio/1").status_code == 404
+    assert b"listen link is off" in auth_client.get(f"/projects/{project_id}/recipes/{row_id}").data
+
+    auth_client.post(f"/projects/{project_id}/recipes/{row_id}/listen-link/regenerate")
+    new_token = recipe_service.get_recipe(row_id)["listen_token"]
+    assert new_token != token
+    assert auth_client.get(f"/l/{new_token}").status_code == 200
+    assert auth_client.get(f"/l/{token}").status_code == 404
+
+
+def test_other_user_cannot_manage_listen_link(client):
+    register(client, email="owner@example.com")
+    project_id, row_id, token = _recipe_with_audio(client)
+    client.get("/logout")
+    register(client, email="intruder@example.com")
+
+    client.post(f"/projects/{project_id}/recipes/{row_id}/listen-link/revoke")
+    assert client.get(f"/projects/{project_id}/recipes/{row_id}/qr.png").status_code == 302
+    assert recipe_service.get_recipe(row_id)["listen_revoked_at"] is None
+
+
+def test_plays_are_counted(auth_client, client):
+    project_id, row_id, token = _recipe_with_audio(auth_client)
+    assert client.post(f"/l/{token}/played").status_code == 204
+    assert client.post(f"/l/{token}/played").status_code == 204
+    assert client.post("/l/nope/played").status_code == 404
+    assert listen_service.play_count(row_id) == 2
+    assert b"played 2 times" in auth_client.get(f"/projects/{project_id}/recipes/{row_id}").data
+
+
+def test_listen_audio_redirects_to_short_lived_signed_url_on_s3(auth_client, client, s3, monkeypatch):  # noqa: F811
+    monkeypatch.setattr(config, "S3_SIGNED_URL_SECONDS", 300)
+    project_id = create_project(auth_client)
+    s3.put_object(Bucket="cookbook-test", Key="prod/audio/abc.m4a", Body=b"voice")
+    row_id = recipe_service.save_uploaded_recipe(project_id, "abc.m4a", "t", SAMPLE_RECIPE)
+    token = recipe_service.get_recipe(row_id)["listen_token"]
+
+    response = client.get(f"/l/{token}/audio/1")
+    assert response.status_code == 302
+    location = response.headers["Location"]
+    assert "Signature=" in location
+    expires = int(re.search(r"Expires=(\d+)", location).group(1))
+    assert 0 < expires - time.time() <= 301
+
+
+def test_qr_codes_encode_the_public_listen_url(auth_client, monkeypatch):
+    monkeypatch.setattr(config, "PUBLIC_BASE_URL", "https://cookbook.example.com")
+    project_id, row_id, token = _recipe_with_audio(auth_client)
+
+    png = auth_client.get(f"/projects/{project_id}/recipes/{row_id}/qr.png?download=1")
+    assert png.mimetype == "image/png"
+    assert "attachment" in png.headers["Content-Disposition"]
+    Image.open(io.BytesIO(png.data)).verify()
+    svg = auth_client.get(f"/projects/{project_id}/recipes/{row_id}/qr.svg")
+    assert svg.mimetype == "image/svg+xml" and b"<svg" in svg.data
+    assert auth_client.get(f"/projects/{project_id}/recipes/{row_id}/qr.gif").status_code == 404
+
+    page = auth_client.get(f"/projects/{project_id}/recipes/{row_id}").data
+    assert f"https://cookbook.example.com/l/{token}".encode() in page
+
+    qr = qr_service._qr(f"https://cookbook.example.com/l/{token}")
+    assert qr.error in ("M", "Q", "H")
+
+
+def test_pdf_includes_qr_and_listen_link(auth_client, monkeypatch):
+    monkeypatch.setattr(config, "PUBLIC_BASE_URL", "https://cookbook.example.com")
+    project_id, row_id, token = _recipe_with_audio(auth_client)
+    captured = {}
+    from services import pdf_service
+
+    real_render = pdf_service.render_template
+
+    def spy(name, **context):
+        captured.update(context)
+        return real_render(name, **context)
+
+    monkeypatch.setattr(pdf_service, "render_template", spy)
+    auth_client.post(f"/projects/{project_id}/recipes/{row_id}/generate-pdf")
+    assert captured["listen_url"] == f"https://cookbook.example.com/l/{token}"
+    assert captured["qr_data_uri"].startswith("data:image/svg+xml")
+
+
+def test_book_page_lists_recipes_with_players(auth_client, client):
+    project_id, row_id, token = _recipe_with_audio(auth_client)
+    with get_engine().connect() as conn:
+        book_token = conn.execute(select(projects.c.book_token).where(projects.c.id == project_id)).scalar_one()
+
+    page = client.get(f"/b/{book_token}")
+    assert page.status_code == 200
+    assert b"Rajma" in page.data and f"/l/{token}".encode() in page.data
+
+    auth_client.post(f"/projects/{project_id}/recipes/{row_id}/listen-link/revoke")
+    assert f"/l/{token}".encode() not in client.get(f"/b/{book_token}").data
+    assert client.get("/b/unknown").status_code == 404
+    assert auth_client.get(f"/projects/{project_id}/qr.svg").status_code == 200

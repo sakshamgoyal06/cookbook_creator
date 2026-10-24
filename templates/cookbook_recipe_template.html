@@ -81,6 +81,16 @@
         {% endif %}
     </div>
 
+    {% if listen_url %}
+    <div class="listen-qr" style="display:flex;align-items:center;gap:0.4cm;margin:0.6cm 0;page-break-inside:avoid">
+        <img src="{{ qr_data_uri }}" alt="QR code" style="width:2.6cm;height:2.6cm;margin-right:0.4cm">
+        <div>
+            <p style="margin:0;font-weight:bold"><a href="{{ listen_url }}" style="color:#1a1a2e;text-decoration:none">&#9654; Listen to Mom</a></p>
+            <p style="margin:0.1cm 0 0;font-size:0.8rem;color:#666">Scan with your phone camera to hear her tell this recipe.</p>
+        </div>
+    </div>
+    {% endif %}
+
     <footer class="cookbook-footer">
         <p>Mom's Cookbook Studio</p>
     </footer>
