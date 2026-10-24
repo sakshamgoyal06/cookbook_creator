@@ -1,8 +1,10 @@
 import os
 import re
+import tempfile
 from flask import render_template
 from weasyprint import HTML
 import config
+from services import storage_service
 
 
 def generate_recipe_pdf(recipe: dict) -> str:
@@ -11,13 +13,18 @@ def generate_recipe_pdf(recipe: dict) -> str:
     slug = _slugify(recipe.get("recipe_title", "recipe"))
     recipe_id = recipe.get("recipe_id", "unknown")
     filename = f"{recipe_id}_{slug}.pdf"
-    output_path = os.path.join(config.OUTPUT_FOLDER, filename)
 
     css_path = os.path.join(config.BASE_DIR, "static", "cookbook.css")
-    HTML(string=html_content).write_pdf(
-        output_path,
-        stylesheets=[css_path] if os.path.exists(css_path) else [],
-    )
+    handle, temp_path = tempfile.mkstemp(suffix=".pdf")
+    os.close(handle)
+    try:
+        HTML(string=html_content).write_pdf(
+            temp_path,
+            stylesheets=[css_path] if os.path.exists(css_path) else [],
+        )
+        storage_service.save_file("pdfs", filename, temp_path, content_type="application/pdf")
+    finally:
+        os.remove(temp_path)
     return filename
 
 

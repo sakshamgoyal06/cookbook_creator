@@ -79,3 +79,42 @@ def test_rejects_unsafe_names(app, name):
 def test_rejects_unknown_namespace(app):
     with pytest.raises(ValueError):
         storage_service.exists("secrets", "x.txt")
+
+
+def test_upload_and_pdf_go_through_s3(auth_client, s3, monkeypatch):
+    import io
+
+    from conftest import SAMPLE_RECIPE, create_project
+    from services import ai_service, recipe_service
+
+    seen = {}
+
+    def fake_transcribe(path):
+        seen["audio"] = open(path, "rb").read()
+        return "Rajma banane ke liye..."
+
+    monkeypatch.setattr(ai_service, "transcribe_audio", fake_transcribe)
+    monkeypatch.setattr(ai_service, "structure_recipe", lambda transcript: SAMPLE_RECIPE)
+    project_id = create_project(auth_client)
+
+    response = auth_client.post(
+        f"/projects/{project_id}/upload",
+        data={"audio_file": (io.BytesIO(b"fake audio"), "note.m4a", "audio/m4a")},
+        content_type="multipart/form-data",
+    )
+    row_id = int(response.headers["Location"].rstrip("/").split("/")[-1])
+    audio_key = recipe_service.get_recipe(row_id)["audio_clips"][0]["storage_key"]
+    stored = s3.get_object(Bucket="cookbook-test", Key=f"prod/audio/{audio_key}")
+    assert stored["Body"].read() == b"fake audio"
+    assert seen["audio"] == b"fake audio"
+    assert os.listdir(config.UPLOAD_FOLDER) == []
+
+    auth_client.post(f"/projects/{project_id}/recipes/{row_id}/generate-pdf")
+    pdf_name = recipe_service.get_recipe(row_id)["pdf_filename"]
+    pdf = s3.get_object(Bucket="cookbook-test", Key=f"prod/pdfs/{pdf_name}")
+    assert pdf["Body"].read().startswith(b"%PDF")
+    assert os.listdir(config.OUTPUT_FOLDER) == []
+
+    response = auth_client.get(f"/projects/{project_id}/recipes/{row_id}/pdf")
+    assert response.status_code == 302
+    assert "Signature=" in response.headers["Location"]

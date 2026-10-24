@@ -1,6 +1,7 @@
 import os
 import json
 import socket
+import tempfile
 from flask import (
     Flask,
     render_template,
@@ -21,7 +22,7 @@ from flask_login import (
 from flask_wtf.csrf import CSRFProtect
 import config
 from models.database import init_db
-from services import ai_service, recipe_service, pdf_service, user_service, project_service
+from services import ai_service, recipe_service, pdf_service, user_service, project_service, storage_service
 from services.audio_utils import SUPPORTED_FORMATS_LABEL, build_storage_filename, is_allowed_audio
 
 if not config.FLASK_DEBUG and config.FLASK_SECRET_KEY in config.PLACEHOLDER_SECRET_KEYS:
@@ -300,11 +301,17 @@ def upload(project_id):
         return redirect(url_for("project_detail", project_id=project_id))
 
     filename = build_storage_filename(file.filename, file.mimetype)
-    filepath = os.path.join(config.UPLOAD_FOLDER, filename)
-    file.save(filepath)
+    handle, temp_path = tempfile.mkstemp(suffix=os.path.splitext(filename)[1])
+    os.close(handle)
+    try:
+        file.save(temp_path)
+        storage_service.save_file("audio", filename, temp_path, content_type=file.mimetype)
+    finally:
+        os.remove(temp_path)
 
     try:
-        transcript = ai_service.transcribe_audio(filepath)
+        with storage_service.local_copy("audio", filename) as audio_path:
+            transcript = ai_service.transcribe_audio(audio_path)
     except Exception as e:
         flash(f"Transcription failed: {e}", "error")
         return redirect(url_for("upload", project_id=project_id))
@@ -433,7 +440,7 @@ def recipe_pdf(project_id, recipe_id):
     recipe = _get_project_recipe(project_id, recipe_id)
     if recipe is None or not recipe["pdf_filename"]:
         return _recipe_not_found(project_id)
-    return send_from_directory(config.OUTPUT_FOLDER, recipe["pdf_filename"])
+    return storage_service.send("pdfs", recipe["pdf_filename"])
 
 
 def _get_owned_project(project_id):
