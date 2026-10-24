@@ -177,6 +177,19 @@ def healthz():
     return {"status": "ok"}
 
 
+@app.route("/sw.js")
+def service_worker():
+    # Served from the root so the worker can control every page, not just /static/.
+    response = send_from_directory(app.static_folder, "sw.js", mimetype="application/javascript")
+    response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
+@app.route("/offline")
+def offline():
+    return render_template("offline.html")
+
+
 @app.route("/")
 def index():
     if current_user.is_authenticated:
