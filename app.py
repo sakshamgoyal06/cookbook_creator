@@ -172,6 +172,11 @@ if config.GOOGLE_CLIENT_ID and config.GOOGLE_CLIENT_SECRET:
 
 # ─── Public Routes ──────────────────────────────────────────────
 
+@app.route("/healthz")
+def healthz():
+    return {"status": "ok"}
+
+
 @app.route("/")
 def index():
     if current_user.is_authenticated:

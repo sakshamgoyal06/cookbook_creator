@@ -28,6 +28,10 @@ When testing from a phone on the same Wi-Fi, start the app and use the printed U
 | OpenAI API | Requires `OPENAI_API_KEY` in `.env` | Used for audio transcription (`gpt-4o-transcribe`) |
 | Anthropic API | Requires `ANTHROPIC_API_KEY` in `.env` | Used for recipe structuring via Claude |
 
+### Deploying (Railway)
+
+Railway builds the `Dockerfile` (see `railway.json`) runs `python wsgi.py migrate` (Alembic migrations), then `gunicorn wsgi:app` on `$PORT`, with `/healthz` as the health check. Set these service variables in Railway: `FLASK_SECRET_KEY` (required: the app refuses to start without a real key when `FLASK_DEBUG` is off), `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and `DATABASE_URL` (reference the Railway Postgres service's `DATABASE_URL`; without it the app falls back to SQLite, which Railway wipes on every redeploy). Leave `FLASK_DEBUG` unset in production.
+
 ### Linting and tests
 
 ```bash
