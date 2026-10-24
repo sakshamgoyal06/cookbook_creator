@@ -28,11 +28,15 @@ When testing from a phone on the same Wi-Fi, start the app and use the printed U
 | OpenAI API | Requires `OPENAI_API_KEY` in `.env` | Used for audio transcription (`gpt-4o-transcribe`) |
 | Anthropic API | Requires `ANTHROPIC_API_KEY` in `.env` | Used for recipe structuring via Claude |
 
-### Linting
+### Linting and tests
 
 ```bash
-flake8 --max-line-length=120 --exclude=__pycache__,instance,uploads,outputs,.git app.py config.py models/ services/
+pip install -r requirements-dev.txt
+flake8 --max-line-length=120 --exclude=__pycache__,instance,uploads,outputs,.git app.py config.py models/ services/ tests/
+pytest -q
 ```
+
+Tests use a temporary SQLite database and mock the OpenAI and Anthropic clients, so they need no API keys. CI (`.github/workflows/ci.yml`) runs both on every PR.
 
 ### Important caveats
 
