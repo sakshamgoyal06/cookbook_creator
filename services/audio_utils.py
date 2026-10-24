@@ -1,7 +1,7 @@
 import os
 import uuid
 
-import config
+ALLOWED_AUDIO_EXTENSIONS = (".mp3", ".m4a", ".mp4", ".wav", ".ogg")
 
 MIME_TO_EXTENSION = {
     "audio/mpeg": ".mp3",
@@ -21,7 +21,7 @@ MIME_TO_EXTENSION = {
 
 ALLOWED_AUDIO_MIMETYPES = set(MIME_TO_EXTENSION.keys())
 
-SUPPORTED_FORMATS_LABEL = ".mp3, .m4a, .mp4, .wav, or .ogg"
+SUPPORTED_FORMATS_LABEL = ", ".join(ALLOWED_AUDIO_EXTENSIONS[:-1]) + ", or " + ALLOWED_AUDIO_EXTENSIONS[-1]
 
 
 def _normalize_mimetype(mimetype):
@@ -32,7 +32,7 @@ def _normalize_mimetype(mimetype):
 
 def extension_for_upload(filename, mimetype=None):
     ext = os.path.splitext(filename or "")[1].lower()
-    if ext in config.ALLOWED_AUDIO_EXTENSIONS:
+    if ext in ALLOWED_AUDIO_EXTENSIONS:
         return ext
 
     normalized_mimetype = _normalize_mimetype(mimetype)

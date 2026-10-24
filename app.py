@@ -20,7 +20,7 @@ from flask_login import (
 )
 import config
 from models.database import init_db
-from services import openai_service, recipe_service, pdf_service, user_service, project_service
+from services import ai_service, recipe_service, pdf_service, user_service, project_service
 from services.audio_utils import SUPPORTED_FORMATS_LABEL, build_storage_filename, is_allowed_audio
 
 app = Flask(__name__)
@@ -191,36 +191,22 @@ def project_new():
     if request.method == "GET":
         return render_template("projects/new.html", themes=config.COOKBOOK_THEMES)
 
-    title = request.form.get("title", "").strip()
-    if not title:
+    data = _project_form_data()
+    if not data["title"]:
         flash("Project title is required.", "error")
         return redirect(url_for("project_new"))
 
-    project_id = project_service.create_project(
-        user_id=current_user.id,
-        title=title,
-        subtitle=request.form.get("subtitle", ""),
-        description=request.form.get("description", ""),
-        theme=request.form.get("theme", "classic"),
-        max_recipes=_to_int(request.form.get("max_recipes")) or 50,
-        max_pages=_to_int(request.form.get("max_pages")) or 100,
-        acknowledgement=request.form.get("acknowledgement", ""),
-        about_author=request.form.get("about_author", ""),
-        dedication=request.form.get("dedication", ""),
-        introduction=request.form.get("introduction", ""),
-        cover_note=request.form.get("cover_note", ""),
-    )
-    flash(f'Project "{title}" created!', "success")
+    project_id = project_service.create_project(user_id=current_user.id, **data)
+    flash(f'Project "{data["title"]}" created!', "success")
     return redirect(url_for("project_detail", project_id=project_id))
 
 
 @app.route("/projects/<int:project_id>")
 @login_required
 def project_detail(project_id):
-    project = project_service.get_project(project_id)
-    if not project or project["user_id"] != current_user.id:
-        flash("Project not found.", "error")
-        return redirect(url_for("dashboard"))
+    project = _get_owned_project(project_id)
+    if project is None:
+        return _project_not_found()
     recipes = recipe_service.get_project_recipes(project_id)
     return render_template(
         "projects/detail.html", project=project, recipes=recipes, themes=config.COOKBOOK_THEMES
@@ -230,28 +216,14 @@ def project_detail(project_id):
 @app.route("/projects/<int:project_id>/edit", methods=["GET", "POST"])
 @login_required
 def project_edit(project_id):
-    project = project_service.get_project(project_id)
-    if not project or project["user_id"] != current_user.id:
-        flash("Project not found.", "error")
-        return redirect(url_for("dashboard"))
+    project = _get_owned_project(project_id)
+    if project is None:
+        return _project_not_found()
 
     if request.method == "GET":
         return render_template("projects/edit.html", project=project, themes=config.COOKBOOK_THEMES)
 
-    data = {
-        "title": request.form.get("title", "").strip(),
-        "subtitle": request.form.get("subtitle", ""),
-        "description": request.form.get("description", ""),
-        "theme": request.form.get("theme", "classic"),
-        "max_recipes": _to_int(request.form.get("max_recipes")) or 50,
-        "max_pages": _to_int(request.form.get("max_pages")) or 100,
-        "acknowledgement": request.form.get("acknowledgement", ""),
-        "about_author": request.form.get("about_author", ""),
-        "dedication": request.form.get("dedication", ""),
-        "introduction": request.form.get("introduction", ""),
-        "cover_note": request.form.get("cover_note", ""),
-        "status": request.form.get("status", "draft"),
-    }
+    data = _project_form_data()
 
     if not data["title"]:
         flash("Title is required.", "error")
@@ -265,10 +237,9 @@ def project_edit(project_id):
 @app.route("/projects/<int:project_id>/delete", methods=["POST"])
 @login_required
 def project_delete(project_id):
-    project = project_service.get_project(project_id)
-    if not project or project["user_id"] != current_user.id:
-        flash("Project not found.", "error")
-        return redirect(url_for("dashboard"))
+    project = _get_owned_project(project_id)
+    if project is None:
+        return _project_not_found()
 
     project_service.delete_project(project_id)
     flash("Project deleted.", "success")
@@ -280,10 +251,9 @@ def project_delete(project_id):
 @app.route("/projects/<int:project_id>/upload", methods=["GET", "POST"])
 @login_required
 def upload(project_id):
-    project = project_service.get_project(project_id)
-    if not project or project["user_id"] != current_user.id:
-        flash("Project not found.", "error")
-        return redirect(url_for("dashboard"))
+    project = _get_owned_project(project_id)
+    if project is None:
+        return _project_not_found()
 
     if request.method == "GET":
         return render_template("upload.html", project=project)
@@ -311,7 +281,7 @@ def upload(project_id):
     file.save(filepath)
 
     try:
-        transcript = openai_service.transcribe_audio(filepath)
+        transcript = ai_service.transcribe_audio(filepath)
     except Exception as e:
         flash(f"Transcription failed: {e}", "error")
         return redirect(url_for("upload", project_id=project_id))
@@ -321,7 +291,7 @@ def upload(project_id):
         return redirect(url_for("upload", project_id=project_id))
 
     try:
-        recipe_data = openai_service.structure_recipe(transcript)
+        recipe_data = ai_service.structure_recipe(transcript)
     except Exception as e:
         flash(f"Recipe structuring failed: {e}", "error")
         return redirect(url_for("upload", project_id=project_id))
@@ -331,44 +301,29 @@ def upload(project_id):
     return redirect(url_for("recipe_detail", project_id=project_id, recipe_id=row_id))
 
 
-@app.route("/projects/<int:project_id>/recipes")
-@login_required
-def recipes(project_id):
-    project = project_service.get_project(project_id)
-    if not project or project["user_id"] != current_user.id:
-        flash("Project not found.", "error")
-        return redirect(url_for("dashboard"))
-    all_recipes = recipe_service.get_project_recipes(project_id)
-    return render_template("recipes.html", recipes=all_recipes, project=project)
-
-
 @app.route("/projects/<int:project_id>/recipes/<int:recipe_id>")
 @login_required
 def recipe_detail(project_id, recipe_id):
-    project = project_service.get_project(project_id)
-    if not project or project["user_id"] != current_user.id:
-        flash("Project not found.", "error")
-        return redirect(url_for("dashboard"))
+    project = _get_owned_project(project_id)
+    if project is None:
+        return _project_not_found()
 
-    recipe = recipe_service.get_recipe(recipe_id)
-    if recipe is None or recipe["project_id"] != project_id:
-        flash("Recipe not found.", "error")
-        return redirect(url_for("project_detail", project_id=project_id))
+    recipe = _get_project_recipe(project_id, recipe_id)
+    if recipe is None:
+        return _recipe_not_found(project_id)
     return render_template("recipe_detail.html", recipe=recipe, project=project)
 
 
 @app.route("/projects/<int:project_id>/recipes/<int:recipe_id>/edit", methods=["GET", "POST"])
 @login_required
 def recipe_edit(project_id, recipe_id):
-    project = project_service.get_project(project_id)
-    if not project or project["user_id"] != current_user.id:
-        flash("Project not found.", "error")
-        return redirect(url_for("dashboard"))
+    project = _get_owned_project(project_id)
+    if project is None:
+        return _project_not_found()
 
-    recipe = recipe_service.get_recipe(recipe_id)
-    if recipe is None or recipe["project_id"] != project_id:
-        flash("Recipe not found.", "error")
-        return redirect(url_for("project_detail", project_id=project_id))
+    recipe = _get_project_recipe(project_id, recipe_id)
+    if recipe is None:
+        return _recipe_not_found(project_id)
 
     if request.method == "GET":
         return render_template("recipe_edit.html", recipe=recipe, project=project)
@@ -411,10 +366,12 @@ def recipe_edit(project_id, recipe_id):
 @app.route("/projects/<int:project_id>/recipes/<int:recipe_id>/approve", methods=["POST"])
 @login_required
 def recipe_approve(project_id, recipe_id):
-    project = project_service.get_project(project_id)
-    if not project or project["user_id"] != current_user.id:
-        flash("Project not found.", "error")
-        return redirect(url_for("dashboard"))
+    project = _get_owned_project(project_id)
+    if project is None:
+        return _project_not_found()
+
+    if _get_project_recipe(project_id, recipe_id) is None:
+        return _recipe_not_found(project_id)
 
     recipe_service.approve_recipe(recipe_id)
     flash("Recipe approved!", "success")
@@ -424,15 +381,13 @@ def recipe_approve(project_id, recipe_id):
 @app.route("/projects/<int:project_id>/recipes/<int:recipe_id>/generate-pdf", methods=["POST"])
 @login_required
 def recipe_generate_pdf(project_id, recipe_id):
-    project = project_service.get_project(project_id)
-    if not project or project["user_id"] != current_user.id:
-        flash("Project not found.", "error")
-        return redirect(url_for("dashboard"))
+    project = _get_owned_project(project_id)
+    if project is None:
+        return _project_not_found()
 
-    recipe = recipe_service.get_recipe(recipe_id)
-    if recipe is None or recipe["project_id"] != project_id:
-        flash("Recipe not found.", "error")
-        return redirect(url_for("project_detail", project_id=project_id))
+    recipe = _get_project_recipe(project_id, recipe_id)
+    if recipe is None:
+        return _recipe_not_found(project_id)
 
     try:
         pdf_filename = pdf_service.generate_recipe_pdf(recipe)
@@ -449,6 +404,48 @@ def recipe_generate_pdf(project_id, recipe_id):
 @login_required
 def serve_output(filename):
     return send_from_directory(config.OUTPUT_FOLDER, filename)
+
+
+def _get_owned_project(project_id):
+    project = project_service.get_project(project_id)
+    if not project or project["user_id"] != current_user.id:
+        return None
+    return project
+
+
+def _get_project_recipe(project_id, recipe_id):
+    recipe = recipe_service.get_recipe(recipe_id)
+    if recipe is None or recipe["project_id"] != project_id:
+        return None
+    return recipe
+
+
+def _project_not_found():
+    flash("Project not found.", "error")
+    return redirect(url_for("dashboard"))
+
+
+def _recipe_not_found(project_id):
+    flash("Recipe not found.", "error")
+    return redirect(url_for("project_detail", project_id=project_id))
+
+
+def _project_form_data():
+    form = request.form
+    return {
+        "title": form.get("title", "").strip(),
+        "subtitle": form.get("subtitle", ""),
+        "description": form.get("description", ""),
+        "theme": form.get("theme", "classic"),
+        "max_recipes": _to_int(form.get("max_recipes")) or 50,
+        "max_pages": _to_int(form.get("max_pages")) or 100,
+        "acknowledgement": form.get("acknowledgement", ""),
+        "about_author": form.get("about_author", ""),
+        "dedication": form.get("dedication", ""),
+        "introduction": form.get("introduction", ""),
+        "cover_note": form.get("cover_note", ""),
+        "status": form.get("status", "draft"),
+    }
 
 
 def _to_int(value):
@@ -470,18 +467,18 @@ def _lan_ip():
 
 
 def _print_startup_urls():
-  port = config.FLASK_PORT
-  print("\nMom's Cookbook Studio is running:")
-  print(f"  On this computer: http://127.0.0.1:{port}")
+    port = config.FLASK_PORT
+    print("\nMom's Cookbook Studio is running:")
+    print(f"  On this computer: http://127.0.0.1:{port}")
 
-  lan_ip = _lan_ip()
-  if lan_ip:
-      print(f"  On your phone (same Wi-Fi): http://{lan_ip}:{port}")
-      print("  Open that address in Safari or Chrome on your phone.")
-  else:
-      print("  Could not detect a local network IP. Use your computer's Wi-Fi IP with port 5000.")
+    lan_ip = _lan_ip()
+    if lan_ip:
+        print(f"  On your phone (same Wi-Fi): http://{lan_ip}:{port}")
+        print("  Open that address in Safari or Chrome on your phone.")
+    else:
+        print("  Could not detect a local network IP. Use your computer's Wi-Fi IP with port 5000.")
 
-  print("  Keep this computer awake while you use the app from your phone.\n")
+    print("  Keep this computer awake while you use the app from your phone.\n")
 
 
 if __name__ == "__main__":
