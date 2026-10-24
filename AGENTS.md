@@ -24,7 +24,7 @@ When testing from a phone on the same Wi-Fi, start the app and use the printed U
 | Service | How to run | Notes |
 |---------|-----------|-------|
 | Flask dev server | `python3 app.py` | Runs on port 5000, debug mode with hot reload |
-| SQLite DB | Auto-created at `instance/cookbook.db` on first run | No separate process needed |
+| Database | SQLite at `instance/cookbook.db` by default; Postgres when `DATABASE_URL` is set (`make db-up` starts one in Docker) | Schema changes go through Alembic migrations, see `docs/DATABASE.md` |
 | OpenAI API | Requires `OPENAI_API_KEY` in `.env` | Used for audio transcription (`gpt-4o-transcribe`) |
 | Anthropic API | Requires `ANTHROPIC_API_KEY` in `.env` | Used for recipe structuring via Claude |
 
@@ -32,7 +32,7 @@ When testing from a phone on the same Wi-Fi, start the app and use the printed U
 
 ```bash
 pip install -r requirements-dev.txt
-flake8 --max-line-length=120 --exclude=__pycache__,instance,uploads,outputs,.git app.py config.py models/ services/ tests/
+flake8 --max-line-length=120 --exclude=__pycache__,instance,uploads,outputs,.git app.py config.py models/ services/ tests/ migrations/ scripts/
 pytest -q
 ```
 
@@ -44,4 +44,4 @@ Tests use a temporary SQLite database and mock the OpenAI and Anthropic clients,
 - **No `python` symlink**: Use `python3` explicitly.
 - **API keys**: The upload flow needs both `OPENAI_API_KEY` (transcription) and `ANTHROPIC_API_KEY` (structuring). All other flows (view, edit, approve, PDF generation) work without them.
 - **PATH**: pip installs scripts to `~/.local/bin` — ensure it's on PATH (`export PATH="$HOME/.local/bin:$PATH"`).
-- **Database**: Auto-initializes on first `python3 app.py` run. No migrations needed.
+- **Database**: `python3 app.py` applies pending migrations on start. Never edit tables by hand or in `init_db()`: add a migration in `migrations/versions/` and update `models/schema.py` to match (`tests/test_database.py` checks they agree). Set `TEST_POSTGRES_URL` to also run the migration tests on Postgres.

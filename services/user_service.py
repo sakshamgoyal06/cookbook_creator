@@ -1,41 +1,37 @@
+from sqlalchemy import insert, select
+from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
-from models.database import get_connection
+
+from models.database import get_engine
+from models.schema import users
 
 
 def create_user(email, name, password=None, auth_provider="email", auth_provider_id=None):
-    conn = get_connection()
     password_hash = generate_password_hash(password) if password else None
     try:
-        conn.execute(
-            """INSERT INTO users (email, name, password_hash, auth_provider, auth_provider_id)
-               VALUES (?, ?, ?, ?, ?)""",
-            (email.lower().strip(), name, password_hash, auth_provider, auth_provider_id),
-        )
-        conn.commit()
-        user = conn.execute(
-            "SELECT * FROM users WHERE email = ?", (email.lower().strip(),)
-        ).fetchone()
-        conn.close()
-        return dict(user)
-    except Exception:
-        conn.close()
+        with get_engine().begin() as conn:
+            row = conn.execute(
+                insert(users)
+                .values(
+                    email=_normalize_email(email),
+                    name=name,
+                    password_hash=password_hash,
+                    auth_provider=auth_provider,
+                    auth_provider_id=auth_provider_id,
+                )
+                .returning(*users.c)
+            ).mappings().one()
+    except IntegrityError:
         return None
+    return dict(row)
 
 
 def get_user_by_email(email):
-    conn = get_connection()
-    user = conn.execute(
-        "SELECT * FROM users WHERE email = ?", (email.lower().strip(),)
-    ).fetchone()
-    conn.close()
-    return dict(user) if user else None
+    return _get_one(users.c.email == _normalize_email(email))
 
 
 def get_user_by_id(user_id):
-    conn = get_connection()
-    user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-    conn.close()
-    return dict(user) if user else None
+    return _get_one(users.c.id == user_id)
 
 
 def verify_password(user, password):
@@ -54,3 +50,13 @@ def get_or_create_oauth_user(email, name, provider, provider_id):
         auth_provider=provider,
         auth_provider_id=provider_id,
     )
+
+
+def _get_one(condition):
+    with get_engine().connect() as conn:
+        row = conn.execute(select(users).where(condition)).mappings().first()
+    return dict(row) if row else None
+
+
+def _normalize_email(email):
+    return email.lower().strip()

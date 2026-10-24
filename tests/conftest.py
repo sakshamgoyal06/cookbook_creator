@@ -8,7 +8,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["FLASK_SECRET_KEY"] = "test-secret-key"
 
 import config  # noqa: E402
-from models.database import get_connection, init_db  # noqa: E402
+from models.database import get_engine, init_db, new_token  # noqa: E402
+from models.schema import recipes  # noqa: E402
 
 SAMPLE_RECIPE = {
     "recipe_title": "Rajma",
@@ -34,10 +35,7 @@ SAMPLE_RECIPE = {
 @pytest.fixture
 def app(tmp_path, monkeypatch):
     db_path = tmp_path / "test.db"
-    # DATABASE_URL is what the upcoming database layer reads; DATABASE_PATH is what the
-    # current SQLite code reads. Setting both keeps the fixture working across that change.
-    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
-    monkeypatch.setattr(config, "DATABASE_PATH", str(db_path))
+    monkeypatch.setattr(config, "DATABASE_URL", f"sqlite:///{db_path}")
     monkeypatch.setattr(config, "INSTANCE_FOLDER", str(tmp_path))
     for name in ("UPLOAD_FOLDER", "OUTPUT_FOLDER"):
         folder = tmp_path / name.lower()
@@ -77,12 +75,15 @@ def create_project(client, title="Mom's Kitchen"):
 
 
 def insert_recipe(project_id, title="Rajma", status="needs_review"):
-    conn = get_connection()
-    cursor = conn.execute(
-        "INSERT INTO recipes (project_id, recipe_id, recipe_title, status) VALUES (?, ?, ?, ?)",
-        (project_id, f"r-{title}-{project_id}", title, status),
-    )
-    conn.commit()
-    row_id = cursor.lastrowid
-    conn.close()
-    return row_id
+    with get_engine().begin() as conn:
+        return conn.execute(
+            recipes.insert()
+            .values(
+                project_id=project_id,
+                recipe_id=f"r-{title}-{project_id}",
+                listen_token=new_token(),
+                recipe_title=title,
+                status=status,
+            )
+            .returning(recipes.c.id)
+        ).scalar_one()

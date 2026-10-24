@@ -1,139 +1,151 @@
 import json
 import uuid
-from datetime import datetime, timezone
-from models.database import get_connection
+
+from sqlalchemy import func, insert, select, update
+
+from models.database import get_engine, new_token
+from models.schema import generated_files, recipe_audio, recipes
+
+JSON_FIELDS = [
+    "alternate_names_json",
+    "ingredients_json",
+    "method_steps_json",
+    "moms_tips_json",
+    "unclear_items_for_review_json",
+]
+
+_latest_pdf = (
+    select(generated_files.c.storage_key)
+    .where(generated_files.c.recipe_id == recipes.c.id, generated_files.c.kind == "recipe_pdf")
+    .order_by(generated_files.c.id.desc())
+    .limit(1)
+    .scalar_subquery()
+    .label("pdf_filename")
+)
 
 
 def save_uploaded_recipe(project_id, audio_filename, transcript, recipe_data):
-    recipe_id = str(uuid.uuid4())
-    conn = get_connection()
-    conn.execute(
-        """INSERT INTO recipes
-           (project_id, recipe_id, audio_filename, raw_transcript, recipe_title,
-            alternate_names_json, category, family_note, serves,
-            prep_time_minutes, cook_time_minutes, difficulty,
-            ingredients_json, method_steps_json, moms_tips_json,
-            serving_suggestion, storage_notes,
-            unclear_items_for_review_json, status)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (
-            project_id,
-            recipe_id,
-            audio_filename,
-            transcript,
-            recipe_data.get("recipe_title", "Untitled"),
-            json.dumps(recipe_data.get("alternate_names", [])),
-            recipe_data.get("category", ""),
-            recipe_data.get("family_note", ""),
-            recipe_data.get("serves", ""),
-            recipe_data.get("prep_time_minutes"),
-            recipe_data.get("cook_time_minutes"),
-            recipe_data.get("difficulty", ""),
-            json.dumps(recipe_data.get("ingredients", [])),
-            json.dumps(recipe_data.get("method_steps", [])),
-            json.dumps(recipe_data.get("moms_tips", [])),
-            recipe_data.get("serving_suggestion", ""),
-            recipe_data.get("storage_notes", ""),
-            json.dumps(recipe_data.get("unclear_items_for_review", [])),
-            "needs_review",
-        ),
-    )
-    conn.commit()
-    row_id = conn.execute(
-        "SELECT id FROM recipes WHERE recipe_id = ?", (recipe_id,)
-    ).fetchone()["id"]
-    conn.close()
+    with get_engine().begin() as conn:
+        row_id = conn.execute(
+            insert(recipes)
+            .values(
+                project_id=project_id,
+                recipe_id=str(uuid.uuid4()),
+                listen_token=new_token(),
+                raw_transcript=transcript,
+                recipe_title=recipe_data.get("recipe_title", "Untitled"),
+                alternate_names_json=recipe_data.get("alternate_names", []),
+                category=recipe_data.get("category", ""),
+                family_note=recipe_data.get("family_note", ""),
+                serves=recipe_data.get("serves", ""),
+                prep_time_minutes=recipe_data.get("prep_time_minutes"),
+                cook_time_minutes=recipe_data.get("cook_time_minutes"),
+                difficulty=recipe_data.get("difficulty", ""),
+                ingredients_json=recipe_data.get("ingredients", []),
+                method_steps_json=recipe_data.get("method_steps", []),
+                moms_tips_json=recipe_data.get("moms_tips", []),
+                serving_suggestion=recipe_data.get("serving_suggestion", ""),
+                storage_notes=recipe_data.get("storage_notes", ""),
+                unclear_items_for_review_json=recipe_data.get("unclear_items_for_review", []),
+                status="needs_review",
+            )
+            .returning(recipes.c.id)
+        ).scalar_one()
+        if audio_filename:
+            conn.execute(
+                insert(recipe_audio).values(
+                    recipe_id=row_id, storage_key=audio_filename, kind="original", play_order=1, source="web"
+                )
+            )
     return row_id
 
 
 def get_recipe(recipe_id):
-    conn = get_connection()
-    row = conn.execute("SELECT * FROM recipes WHERE id = ?", (recipe_id,)).fetchone()
-    conn.close()
-    if row is None:
-        return None
-    return _row_to_dict(row)
+    with get_engine().connect() as conn:
+        row = conn.execute(select(recipes, _latest_pdf).where(recipes.c.id == recipe_id)).mappings().first()
+        if row is None:
+            return None
+        recipe = _row_to_dict(row)
+        recipe["audio_clips"] = [
+            dict(r)
+            for r in conn.execute(
+                select(recipe_audio)
+                .where(recipe_audio.c.recipe_id == recipe_id)
+                .order_by(recipe_audio.c.play_order, recipe_audio.c.id)
+            ).mappings()
+        ]
+    return recipe
 
 
 def get_project_recipes(project_id):
-    conn = get_connection()
-    rows = conn.execute(
-        "SELECT * FROM recipes WHERE project_id = ? ORDER BY sort_order, created_at DESC",
-        (project_id,),
-    ).fetchall()
-    conn.close()
+    with get_engine().connect() as conn:
+        rows = conn.execute(
+            select(recipes, _latest_pdf)
+            .where(recipes.c.project_id == project_id)
+            .order_by(recipes.c.sort_order, recipes.c.created_at.desc(), recipes.c.id.desc())
+        ).mappings().all()
     return [_row_to_dict(r) for r in rows]
 
 
 def update_recipe(recipe_id, data):
-    conn = get_connection()
-    now = datetime.now(timezone.utc).isoformat()
-    conn.execute(
-        """UPDATE recipes SET
-           recipe_title = ?, category = ?, family_note = ?,
-           serves = ?, prep_time_minutes = ?, cook_time_minutes = ?,
-           difficulty = ?, ingredients_json = ?, method_steps_json = ?,
-           moms_tips_json = ?, serving_suggestion = ?, storage_notes = ?,
-           unclear_items_for_review_json = ?, updated_at = ?
-           WHERE id = ?""",
-        (
-            data.get("recipe_title", ""),
-            data.get("category", ""),
-            data.get("family_note", ""),
-            data.get("serves", ""),
-            data.get("prep_time_minutes"),
-            data.get("cook_time_minutes"),
-            data.get("difficulty", ""),
-            data.get("ingredients_json", "[]"),
-            data.get("method_steps_json", "[]"),
-            data.get("moms_tips_json", "[]"),
-            data.get("serving_suggestion", ""),
-            data.get("storage_notes", ""),
-            data.get("unclear_items_for_review_json", "[]"),
-            now,
-            recipe_id,
-        ),
-    )
-    conn.commit()
-    conn.close()
+    values = {
+        field: data.get(field, "")
+        for field in [
+            "recipe_title",
+            "category",
+            "family_note",
+            "serves",
+            "difficulty",
+            "serving_suggestion",
+            "storage_notes",
+        ]
+    }
+    values["prep_time_minutes"] = data.get("prep_time_minutes")
+    values["cook_time_minutes"] = data.get("cook_time_minutes")
+    for field in JSON_FIELDS:
+        if field in data:
+            values[field] = _parse_json_list(data[field])
+    values["updated_at"] = func.now()
+    with get_engine().begin() as conn:
+        conn.execute(update(recipes).where(recipes.c.id == recipe_id).values(**values))
 
 
 def approve_recipe(recipe_id):
-    conn = get_connection()
-    now = datetime.now(timezone.utc).isoformat()
-    conn.execute(
-        "UPDATE recipes SET status = 'approved', updated_at = ? WHERE id = ?",
-        (now, recipe_id),
-    )
-    conn.commit()
-    conn.close()
+    with get_engine().begin() as conn:
+        conn.execute(
+            update(recipes)
+            .where(recipes.c.id == recipe_id)
+            .values(status="approved", approved_at=func.now(), updated_at=func.now())
+        )
 
 
 def mark_pdf_generated(recipe_id, pdf_filename):
-    conn = get_connection()
-    now = datetime.now(timezone.utc).isoformat()
-    conn.execute(
-        "UPDATE recipes SET status = 'pdf_generated', pdf_filename = ?, updated_at = ? WHERE id = ?",
-        (pdf_filename, now, recipe_id),
-    )
-    conn.commit()
-    conn.close()
+    with get_engine().begin() as conn:
+        project_id = conn.execute(
+            select(recipes.c.project_id).where(recipes.c.id == recipe_id)
+        ).scalar_one()
+        conn.execute(
+            insert(generated_files).values(
+                project_id=project_id, recipe_id=recipe_id, kind="recipe_pdf", storage_key=pdf_filename
+            )
+        )
+        conn.execute(update(recipes).where(recipes.c.id == recipe_id).values(updated_at=func.now()))
+
+
+def _parse_json_list(value):
+    if isinstance(value, str):
+        try:
+            value = json.loads(value) if value.strip() else []
+        except json.JSONDecodeError:
+            value = []
+    return value if value is not None else []
 
 
 def _row_to_dict(row):
+    """Each list field appears twice: parsed (`ingredients`) and as editable JSON text (`ingredients_json`)."""
     d = dict(row)
-    for key in [
-        "alternate_names_json",
-        "ingredients_json",
-        "method_steps_json",
-        "moms_tips_json",
-        "unclear_items_for_review_json",
-    ]:
-        if key in d and d[key]:
-            try:
-                d[key.replace("_json", "")] = json.loads(d[key])
-            except json.JSONDecodeError:
-                d[key.replace("_json", "")] = []
-        else:
-            d[key.replace("_json", "")] = []
+    for key in JSON_FIELDS:
+        value = _parse_json_list(d.get(key))
+        d[key.replace("_json", "")] = value
+        d[key] = json.dumps(value, ensure_ascii=False, indent=2)
     return d

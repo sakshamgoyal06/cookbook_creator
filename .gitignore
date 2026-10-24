@@ -10,3 +10,4 @@ outputs/*
 *.db
 .venv/
 venv/
+backups/

@@ -8,6 +8,23 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: cookbook
+          POSTGRES_PASSWORD: cookbook
+          POSTGRES_DB: cookbook_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cookbook"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+    env:
+      # tests/test_database.py also runs every migration test against this database.
+      TEST_POSTGRES_URL: postgresql://cookbook:cookbook@localhost:5432/cookbook_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -20,6 +37,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
       - name: Lint
-        run: flake8 --max-line-length=120 --exclude=__pycache__,instance,uploads,outputs,.git app.py config.py models/ services/ tests/
+        run: flake8 --max-line-length=120 --exclude=__pycache__,instance,uploads,outputs,.git app.py config.py models/ services/ tests/ migrations/ scripts/
       - name: Test
         run: pytest -q
