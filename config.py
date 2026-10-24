@@ -9,12 +9,16 @@ OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "") or "https://api.openai.com/v1
 OPENAI_TRANSCRIBE_MODEL = os.getenv("OPENAI_TRANSCRIBE_MODEL", "gpt-4o-transcribe")
 
 # Recipe structuring (Anthropic). Leave the base URL empty for the default endpoint.
-# Leave the temperature empty to not send it (required on API version 2026-10-21).
+# Effort: low | medium | high | xhigh | max; leave empty to use the API default
+# (models before Claude 4.6, such as Sonnet 4.5, reject it, so leave it empty there).
+# Temperature: leave empty to not send it. Sonnet 5.5 rejects any non-default value,
+# and API version 2026-10-21 rejects it on every model.
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_BASE_URL = os.getenv("ANTHROPIC_BASE_URL", "") or "https://api.anthropic.com"
-ANTHROPIC_RECIPE_MODEL = os.getenv("ANTHROPIC_RECIPE_MODEL", "claude-sonnet-4-5-20250929")
-ANTHROPIC_RECIPE_MAX_TOKENS = int(os.getenv("ANTHROPIC_RECIPE_MAX_TOKENS", "4096"))
-_recipe_temperature = os.getenv("ANTHROPIC_RECIPE_TEMPERATURE", "0.3").strip()
+ANTHROPIC_RECIPE_MODEL = os.getenv("ANTHROPIC_RECIPE_MODEL", "claude-sonnet-5-5")
+ANTHROPIC_RECIPE_MAX_TOKENS = int(os.getenv("ANTHROPIC_RECIPE_MAX_TOKENS", "16000"))
+ANTHROPIC_RECIPE_EFFORT = os.getenv("ANTHROPIC_RECIPE_EFFORT", "medium").strip() or None
+_recipe_temperature = os.getenv("ANTHROPIC_RECIPE_TEMPERATURE", "").strip()
 ANTHROPIC_RECIPE_TEMPERATURE = float(_recipe_temperature) if _recipe_temperature else None
 
 FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "dev-secret-key")

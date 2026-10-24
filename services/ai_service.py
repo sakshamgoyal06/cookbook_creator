@@ -90,6 +90,8 @@ def structure_recipe(transcript: str) -> dict:
         "messages": [{"role": "user", "content": prompt}],
         "output_config": {"format": {"type": "json_schema", "schema": RECIPE_SCHEMA}},
     }
+    if config.ANTHROPIC_RECIPE_EFFORT:
+        request["output_config"]["effort"] = config.ANTHROPIC_RECIPE_EFFORT
     if config.ANTHROPIC_RECIPE_TEMPERATURE is not None:
         request["temperature"] = config.ANTHROPIC_RECIPE_TEMPERATURE
 
