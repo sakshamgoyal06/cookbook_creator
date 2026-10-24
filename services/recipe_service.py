@@ -24,6 +24,72 @@ _latest_pdf = (
 )
 
 
+def create_received_recipe(project_id, audio_filename, source="web"):
+    """A recipe row for a voice note that has been stored but not yet processed."""
+    with get_engine().begin() as conn:
+        row_id = conn.execute(
+            insert(recipes)
+            .values(
+                project_id=project_id,
+                recipe_id=str(uuid.uuid4()),
+                listen_token=new_token(),
+                recipe_title="New recipe",
+                status="received",
+            )
+            .returning(recipes.c.id)
+        ).scalar_one()
+        conn.execute(
+            insert(recipe_audio).values(
+                recipe_id=row_id, storage_key=audio_filename, kind="original", play_order=1, source=source
+            )
+        )
+    return row_id
+
+
+def save_transcript(recipe_id, transcript):
+    with get_engine().begin() as conn:
+        conn.execute(
+            update(recipes)
+            .where(recipes.c.id == recipe_id)
+            .values(raw_transcript=transcript, status="transcribed", updated_at=func.now())
+        )
+
+
+def save_structured_recipe(recipe_id, recipe_data):
+    with get_engine().begin() as conn:
+        conn.execute(
+            update(recipes)
+            .where(recipes.c.id == recipe_id)
+            .values(**_structured_values(recipe_data), status="needs_review", updated_at=func.now())
+        )
+
+
+def set_status(recipe_id, status):
+    with get_engine().begin() as conn:
+        conn.execute(
+            update(recipes).where(recipes.c.id == recipe_id).values(status=status, updated_at=func.now())
+        )
+
+
+def _structured_values(recipe_data):
+    return {
+        "recipe_title": recipe_data.get("recipe_title", "Untitled"),
+        "alternate_names_json": recipe_data.get("alternate_names", []),
+        "category": recipe_data.get("category", ""),
+        "family_note": recipe_data.get("family_note", ""),
+        "serves": recipe_data.get("serves", ""),
+        "prep_time_minutes": recipe_data.get("prep_time_minutes"),
+        "cook_time_minutes": recipe_data.get("cook_time_minutes"),
+        "difficulty": recipe_data.get("difficulty", ""),
+        "ingredients_json": recipe_data.get("ingredients", []),
+        "method_steps_json": recipe_data.get("method_steps", []),
+        "moms_tips_json": recipe_data.get("moms_tips", []),
+        "serving_suggestion": recipe_data.get("serving_suggestion", ""),
+        "storage_notes": recipe_data.get("storage_notes", ""),
+        "unclear_items_for_review_json": recipe_data.get("unclear_items_for_review", []),
+    }
+
+
 def save_uploaded_recipe(project_id, audio_filename, transcript, recipe_data):
     with get_engine().begin() as conn:
         row_id = conn.execute(
@@ -33,20 +99,7 @@ def save_uploaded_recipe(project_id, audio_filename, transcript, recipe_data):
                 recipe_id=str(uuid.uuid4()),
                 listen_token=new_token(),
                 raw_transcript=transcript,
-                recipe_title=recipe_data.get("recipe_title", "Untitled"),
-                alternate_names_json=recipe_data.get("alternate_names", []),
-                category=recipe_data.get("category", ""),
-                family_note=recipe_data.get("family_note", ""),
-                serves=recipe_data.get("serves", ""),
-                prep_time_minutes=recipe_data.get("prep_time_minutes"),
-                cook_time_minutes=recipe_data.get("cook_time_minutes"),
-                difficulty=recipe_data.get("difficulty", ""),
-                ingredients_json=recipe_data.get("ingredients", []),
-                method_steps_json=recipe_data.get("method_steps", []),
-                moms_tips_json=recipe_data.get("moms_tips", []),
-                serving_suggestion=recipe_data.get("serving_suggestion", ""),
-                storage_notes=recipe_data.get("storage_notes", ""),
-                unclear_items_for_review_json=recipe_data.get("unclear_items_for_review", []),
+                **_structured_values(recipe_data),
                 status="needs_review",
             )
             .returning(recipes.c.id)

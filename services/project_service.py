@@ -57,5 +57,7 @@ def delete_project(project_id):
 def get_project_recipe_count(project_id):
     with get_engine().connect() as conn:
         return conn.execute(
-            select(func.count()).select_from(recipes).where(recipes.c.project_id == project_id)
+            select(func.count())
+            .select_from(recipes)
+            .where(recipes.c.project_id == project_id, recipes.c.status != "failed")
         ).scalar_one()

@@ -41,6 +41,13 @@ S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY", "")
 S3_KEY_PREFIX = os.getenv("S3_KEY_PREFIX", "")
 S3_SIGNED_URL_SECONDS = int(os.getenv("S3_SIGNED_URL_SECONDS", "900"))
 
+# Background jobs (RQ). Empty = run the transcribe -> structure pipeline inside the
+# upload request, which is fine for local development. With a worker in a separate
+# container, use STORAGE_BACKEND=s3 so the worker can read the uploaded audio.
+REDIS_URL = os.getenv("REDIS_URL", "")
+PIPELINE_QUEUE = os.getenv("PIPELINE_QUEUE", "pipeline")
+PIPELINE_JOB_TIMEOUT_SECONDS = int(os.getenv("PIPELINE_JOB_TIMEOUT_SECONDS", "600"))
+
 # Google OAuth (optional, for SSO)
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
