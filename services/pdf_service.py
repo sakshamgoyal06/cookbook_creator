@@ -4,11 +4,19 @@ import tempfile
 from flask import render_template
 from weasyprint import HTML
 import config
-from services import storage_service
+from services import listen_service, qr_service, storage_service
 
 
 def generate_recipe_pdf(recipe: dict) -> str:
-    html_content = render_template("cookbook_recipe_template.html", recipe=recipe)
+    listen_url = None
+    if recipe.get("listen_token") and not recipe.get("listen_revoked_at") and recipe.get("audio_clips"):
+        listen_url = listen_service.listen_url(recipe["listen_token"])
+    html_content = render_template(
+        "cookbook_recipe_template.html",
+        recipe=recipe,
+        listen_url=listen_url,
+        qr_data_uri=qr_service.make_qr_data_uri(listen_url, scale=10) if listen_url else None,
+    )
 
     slug = _slugify(recipe.get("recipe_title", "recipe"))
     recipe_id = recipe.get("recipe_id", "unknown")

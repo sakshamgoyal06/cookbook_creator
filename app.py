@@ -9,6 +9,8 @@ from flask import (
     redirect,
     url_for,
     flash,
+    Response,
+    abort,
     send_from_directory,
 )
 from flask_login import (
@@ -23,9 +25,11 @@ from flask_wtf.csrf import CSRFProtect
 import config
 from models.database import init_db
 from services import (
+    listen_service,
     pdf_service,
     pipeline_service,
     project_service,
+    qr_service,
     recipe_service,
     storage_service,
     user_service,
@@ -198,6 +202,45 @@ def offline():
     return render_template("offline.html")
 
 
+# ─── Public listen pages (PRD §8.5) ─────────────────────────────
+# Printed QR codes point at these paths forever (QR-4): never rename them without redirects.
+
+@app.route("/l/<token>")
+def listen(token):
+    recipe = listen_service.get_listen_recipe(token)
+    if recipe is None or not recipe["clips"]:
+        return render_template("listen_private.html"), 404
+    clip_urls = [url_for("listen_audio", token=token, clip_number=n) for n in range(1, len(recipe["clips"]) + 1)]
+    return render_template("listen.html", recipe=recipe, token=token, clip_urls=clip_urls)
+
+
+@app.route("/l/<token>/audio/<int:clip_number>")
+def listen_audio(token, clip_number):
+    storage_key = listen_service.get_clip_storage_key(token, clip_number)
+    if storage_key is None:
+        abort(404)
+    # Streams locally; on S3/R2 redirects to a short-lived signed URL (QR-5).
+    response = storage_service.send("audio", storage_key)
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
+
+
+@app.route("/l/<token>/played", methods=["POST"])
+@csrf.exempt
+def listen_played(token):
+    if not listen_service.record_play(token):
+        abort(404)
+    return "", 204
+
+
+@app.route("/b/<token>")
+def book(token):
+    book = listen_service.get_book(token)
+    if book is None:
+        return render_template("listen_private.html"), 404
+    return render_template("book_listen.html", book=book)
+
+
 @app.route("/")
 def index():
     if current_user.is_authenticated:
@@ -340,7 +383,54 @@ def recipe_detail(project_id, recipe_id):
     recipe = _get_project_recipe(project_id, recipe_id)
     if recipe is None:
         return _recipe_not_found(project_id)
-    return render_template("recipe_detail.html", recipe=recipe, project=project)
+    listen_url = None
+    if recipe["listen_revoked_at"] is None and recipe["audio_clips"]:
+        listen_url = listen_service.listen_url(recipe["listen_token"])
+    return render_template(
+        "recipe_detail.html",
+        recipe=recipe,
+        project=project,
+        listen_url=listen_url,
+        qr_data_uri=qr_service.make_qr_data_uri(listen_url) if listen_url else None,
+        play_count=listen_service.play_count(recipe_id),
+    )
+
+
+@app.route("/projects/<int:project_id>/recipes/<int:recipe_id>/qr.<fmt>")
+@login_required
+def recipe_qr(project_id, recipe_id, fmt):
+    if _get_owned_project(project_id) is None:
+        return _project_not_found()
+    recipe = _get_project_recipe(project_id, recipe_id)
+    if recipe is None or recipe["listen_revoked_at"] is not None:
+        return _recipe_not_found(project_id)
+    return _qr_response(listen_service.listen_url(recipe["listen_token"]), fmt, f"listen-{recipe_id}")
+
+
+@app.route("/projects/<int:project_id>/qr.<fmt>")
+@login_required
+def project_qr(project_id, fmt):
+    project = _get_owned_project(project_id)
+    if project is None:
+        return _project_not_found()
+    return _qr_response(listen_service.book_url(project["book_token"]), fmt, f"cookbook-{project_id}")
+
+
+@app.route("/projects/<int:project_id>/recipes/<int:recipe_id>/listen-link/<action>", methods=["POST"])
+@login_required
+def recipe_listen_link(project_id, recipe_id, action):
+    if _get_owned_project(project_id) is None:
+        return _project_not_found()
+    if _get_project_recipe(project_id, recipe_id) is None or action not in ("revoke", "regenerate"):
+        return _recipe_not_found(project_id)
+    if action == "revoke":
+        listen_service.revoke(recipe_id)
+        flash("Listen link turned off. The QR code now shows \"This recording is private\".", "success")
+    else:
+        listen_service.regenerate(recipe_id)
+        flash("New listen link created. Old QR codes no longer work; regenerate the PDF to print the new one.",
+              "success")
+    return redirect(url_for("recipe_detail", project_id=project_id, recipe_id=recipe_id))
 
 
 @app.route("/projects/<int:project_id>/recipes/<int:recipe_id>/edit", methods=["GET", "POST"])
@@ -440,6 +530,18 @@ def recipe_pdf(project_id, recipe_id):
     if recipe is None or not recipe["pdf_filename"]:
         return _recipe_not_found(project_id)
     return storage_service.send("pdfs", recipe["pdf_filename"])
+
+
+def _qr_response(url, fmt, download_stem):
+    if fmt == "svg":
+        response = Response(qr_service.make_qr_svg(url), mimetype="image/svg+xml")
+    elif fmt == "png":
+        response = Response(qr_service.make_qr_png(url), mimetype="image/png")
+    else:
+        abort(404)
+    if request.args.get("download"):
+        response.headers["Content-Disposition"] = f'attachment; filename="{download_stem}.{fmt}"'
+    return response
 
 
 def _get_owned_project(project_id):

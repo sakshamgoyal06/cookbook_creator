@@ -92,21 +92,21 @@ Goal: every recipe page plays Mom's real voice. This is the signature feature (P
 - [x] Backfill: existing recipes get a token and their `audio_filename` becomes a `recipe_audio` row
 
 ### Listen page
-- [ ] Public route `/l/<token>` (no login) (QR-2): recipe title, Mom's name, recording date, one large play button, plays clips in order
-- [ ] Audio served via short-lived signed URLs, never by filename (QR-5)
-- [ ] Revoked token → friendly "This recording is private" page (QR-7)
+- [x] Public route `/l/<token>` (no login) (QR-2): recipe title, Mom's name, recording date, one large play button, plays clips in order (placeholder styling; shows the project title until M2 adds `storyteller_name`; restyle with the mobile UI design)
+- [x] Audio served via short-lived signed URLs, never by filename (QR-5) (`/l/<token>/audio/<n>`)
+- [x] Revoked token → friendly "This recording is private" page (QR-7)
 - [ ] Mobile-first, big type, high contrast; < 1.5 s first paint on 4G (§13)
 
 ### QR on pages
-- [ ] Add `segno` to requirements; `qr_service.make_qr(url)` → SVG/PNG, error correction ≥ M, 4-module quiet zone (QR-6)
-- [ ] QR + tappable "▶ Listen to Mom" link on `recipe_detail.html` and in `cookbook_recipe_template.html` / PDF, ≥ 2 cm printed (QR-1)
-- [ ] Revoke / regenerate button on the recipe page (QR-7)
-- [ ] Book QR: `projects.book_token` + `/b/<token>` placeholder page listing recipes with players (QR-8; full book in M6)
-- [ ] Commit to the URL format: base URL from config (`PUBLIC_BASE_URL`), path `/l/<token>` never changes without redirects (QR-4)
+- [x] Add `segno` to requirements; `qr_service.make_qr(url)` → SVG/PNG, error correction ≥ M, 4-module quiet zone (QR-6)
+- [x] QR + tappable "▶ Listen to Mom" link on `recipe_detail.html` and in `cookbook_recipe_template.html` / PDF, ≥ 2 cm printed (QR-1) (2.6 cm; decodes from a 150 dpi render)
+- [x] Revoke / regenerate button on the recipe page (QR-7)
+- [x] Book QR: `projects.book_token` + `/b/<token>` placeholder page listing recipes with players (QR-8; full book in M6) (`/projects/<id>/qr.svg|png`)
+- [x] Commit to the URL format: base URL from config (`PUBLIC_BASE_URL`), path `/l/<token>` never changes without redirects (QR-4)
 
 ### Tests
-- [ ] Unit: token uniqueness/length; revoked token returns the private page; no DB ids in URLs
-- [ ] Route: listen page works logged out; signed URL expires
+- [x] Unit: token uniqueness/length; revoked token returns the private page; no DB ids in URLs
+- [x] Route: listen page works logged out; signed URL expires
 
 **Acceptance (PRD QR test):** print a generated page at 100% on a home inkjet; scan with iPhone Camera and Android Google Lens; Mom's voice plays within 3 s of tapping play on 4G. Revoking makes the old QR show "private".
 

@@ -41,6 +41,11 @@ S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY", "")
 S3_KEY_PREFIX = os.getenv("S3_KEY_PREFIX", "")
 S3_SIGNED_URL_SECONDS = int(os.getenv("S3_SIGNED_URL_SECONDS", "900"))
 
+# Public base URL printed into QR codes, e.g. https://cookbook.example.com. Printed QRs
+# can't be updated, so set this to a domain you will keep (PRD QR-4). Empty = the URL
+# the request came in on, which is fine for local testing.
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/")
+
 # Background jobs (RQ). Empty = run the transcribe -> structure pipeline inside the
 # upload request, which is fine for local development. With a worker in a separate
 # container, use STORAGE_BACKEND=s3 so the worker can read the uploaded audio.

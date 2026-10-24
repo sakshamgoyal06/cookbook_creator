@@ -1,0 +1,36 @@
+{# Public pages opened from printed QR codes. Kept tiny and self-contained so they paint
+   fast on 4G (PRD §13). Placeholder styling until the mobile UI/UX design lands. #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="referrer" content="no-referrer">
+    <meta name="theme-color" content="#1a1a2e">
+    <title>{% block title %}Mom's Cookbook{% endblock %}</title>
+    <style>
+        :root { --ink: #1a1a2e; --gold: #a07d3f; --cream: #fefaf3; --muted: #5a5a5a; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: var(--cream); color: var(--ink);
+               font: 18px/1.5 Georgia, "Noto Serif", serif; }
+        main { max-width: 32rem; margin: 0 auto; padding: 2.5rem 1rem 3rem; text-align: center; }
+        .eyebrow { color: var(--gold); letter-spacing: .08em; text-transform: uppercase; font-size: .85rem; margin: 0; }
+        h1 { font-size: 2.1rem; line-height: 1.2; margin: .5rem 0 .25rem; }
+        .meta { color: var(--muted); margin: 0 0 2rem; }
+        .play { width: 9rem; height: 9rem; border-radius: 50%; border: 0; background: var(--ink); color: #fff;
+                font-size: 3rem; cursor: pointer; box-shadow: 0 6px 20px rgba(26,26,46,.25); }
+        .play:focus-visible { outline: 4px solid var(--gold); outline-offset: 4px; }
+        .status { min-height: 1.5em; margin: 1rem 0 0; color: var(--muted); }
+        ul { list-style: none; padding: 0; text-align: left; }
+        li { display: flex; align-items: center; gap: .75rem; padding: .9rem 0; border-bottom: 1px solid #e8e2d9; }
+        li .play { width: 3.25rem; height: 3.25rem; font-size: 1.3rem; flex: none; box-shadow: none; }
+        a { color: var(--ink); }
+    </style>
+</head>
+<body>
+<main>
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>

@@ -107,6 +107,32 @@
     </details>
 </div>
 
+<div class="card listen-link">
+    <h2>Listen to Mom</h2>
+    {% if listen_url %}
+    <img src="{{ qr_data_uri }}" alt="QR code that plays Mom's voice" width="160" height="160">
+    <p><a href="{{ listen_url }}" target="_blank">&#9654; Listen to Mom</a> &middot; played {{ play_count }} time{{ '' if play_count == 1 else 's' }}</p>
+    <p>
+        <a href="{{ url_for('recipe_qr', project_id=project.id, recipe_id=recipe.id, fmt='png', download=1) }}">Download QR (PNG)</a> &middot;
+        <a href="{{ url_for('recipe_qr', project_id=project.id, recipe_id=recipe.id, fmt='svg', download=1) }}">SVG</a>
+    </p>
+    <form method="POST" action="{{ url_for('recipe_listen_link', project_id=project.id, recipe_id=recipe.id, action='revoke') }}" style="display:inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-secondary">Turn off link</button>
+    </form>
+    {% elif recipe.listen_revoked_at %}
+    <p>The listen link is off. Anyone scanning the old QR sees "This recording is private".</p>
+    {% else %}
+    <p>No recording yet.</p>
+    {% endif %}
+    {% if recipe.audio_clips %}
+    <form method="POST" action="{{ url_for('recipe_listen_link', project_id=project.id, recipe_id=recipe.id, action='regenerate') }}" style="display:inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-secondary">New link</button>
+    </form>
+    {% endif %}
+</div>
+
 <div class="action-buttons">
     <a href="{{ url_for('recipe_edit', project_id=project.id, recipe_id=recipe.id) }}" class="btn btn-primary">Edit Recipe</a>
     <form method="POST" action="{{ url_for('recipe_approve', project_id=project.id, recipe_id=recipe.id) }}" style="display:inline">
