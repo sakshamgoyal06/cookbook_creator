@@ -8,7 +8,7 @@
 > - If scope changes, update the PRD first, then this plan.
 > - Every code change: `flake8` clean, tests passing, run the app once locally.
 
-**Status:** M0 not started · Last updated 2026-10-24
+**Status:** M0 in progress (AI pipeline, tests and CI done) · Last updated 2026-10-24
 
 | Milestone | Theme | PRD refs | Target |
 |---|---|---|---|
@@ -49,10 +49,10 @@ Goal: prove families pay and Moms finish **before** automating. The founder does
 Goal: a hosted, safe, testable base that every later milestone builds on.
 
 ### Tests and CI
-- [ ] Add `pytest` + `tests/` with a temp-SQLite fixture and a logged-in test client
-- [ ] Route tests: register/login, project CRUD, ownership checks (other user's project → redirect), recipe approve/edit
-- [ ] Service tests: `audio_utils` (extensions, MIME fallback), `recipe_service` round-trip, `ai_service` with mocked clients
-- [ ] GitHub Actions: flake8 + pytest on every push and PR
+- [x] Add `pytest` + `tests/` with a temp-SQLite fixture and a logged-in test client (`requirements-dev.txt`)
+- [x] Route tests: register/login, project CRUD, ownership checks (other user's project → redirect), recipe approve/edit, upload (mocked AI), PDF generation
+- [x] Service tests: `audio_utils` (extensions, MIME fallback), `recipe_service` round-trip, `ai_service` with mocked clients
+- [x] GitHub Actions: flake8 + pytest on every push to main and every PR (`.github/workflows/ci.yml`)
 
 ### Security fixes (PRD §17)
 - [ ] `/outputs/<filename>`: check the file belongs to a project the user owns (or serve via signed URL)
