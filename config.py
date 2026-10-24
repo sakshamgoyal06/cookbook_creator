@@ -28,6 +28,18 @@ FLASK_HOST = os.getenv("FLASK_HOST", "0.0.0.0")
 FLASK_PORT = int(os.getenv("FLASK_PORT", "5000"))
 FLASK_DEBUG = os.getenv("FLASK_DEBUG", "false").lower() in {"1", "true", "yes"}
 
+# File storage: "local" (uploads/ and outputs/ folders) or "s3" (AWS S3 or an
+# S3-compatible store such as Cloudflare R2; for R2 set the endpoint to
+# https://<account-id>.r2.cloudflarestorage.com and the region to "auto").
+STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local").strip().lower()
+S3_BUCKET = os.getenv("S3_BUCKET", "")
+S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL", "") or None
+S3_REGION = os.getenv("S3_REGION", "auto")
+S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY_ID", "")
+S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY", "")
+S3_KEY_PREFIX = os.getenv("S3_KEY_PREFIX", "")
+S3_SIGNED_URL_SECONDS = int(os.getenv("S3_SIGNED_URL_SECONDS", "900"))
+
 # Google OAuth (optional, for SSO)
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
