@@ -18,14 +18,19 @@ from flask_login import (
     login_required,
     current_user,
 )
+from flask_wtf.csrf import CSRFProtect
 import config
 from models.database import init_db
 from services import ai_service, recipe_service, pdf_service, user_service, project_service
 from services.audio_utils import SUPPORTED_FORMATS_LABEL, build_storage_filename, is_allowed_audio
 
+if not config.FLASK_DEBUG and config.FLASK_SECRET_KEY in config.PLACEHOLDER_SECRET_KEYS:
+    raise RuntimeError("Set FLASK_SECRET_KEY to a long random string before running with FLASK_DEBUG off.")
+
 app = Flask(__name__)
 app.secret_key = config.FLASK_SECRET_KEY
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50 MB
+csrf = CSRFProtect(app)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -400,10 +405,17 @@ def recipe_generate_pdf(project_id, recipe_id):
     return redirect(url_for("recipe_detail", project_id=project_id, recipe_id=recipe_id))
 
 
-@app.route("/outputs/<filename>")
+@app.route("/projects/<int:project_id>/recipes/<int:recipe_id>/pdf")
 @login_required
-def serve_output(filename):
-    return send_from_directory(config.OUTPUT_FOLDER, filename)
+def recipe_pdf(project_id, recipe_id):
+    project = _get_owned_project(project_id)
+    if project is None:
+        return _project_not_found()
+
+    recipe = _get_project_recipe(project_id, recipe_id)
+    if recipe is None or not recipe["pdf_filename"]:
+        return _recipe_not_found(project_id)
+    return send_from_directory(config.OUTPUT_FOLDER, recipe["pdf_filename"])
 
 
 def _get_owned_project(project_id):

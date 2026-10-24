@@ -461,12 +461,12 @@ listen_events    id, recipe_id, played_at  (no PII)
 
 To fix while building P0:
 
-- **File serving is not access-controlled:** `/outputs/<filename>` serves any PDF to any logged-in user. Move to per-owner checks or signed URLs.
+- ~~**File serving is not access-controlled:**~~ Fixed: PDFs are served from `/projects/<id>/recipes/<id>/pdf` after the ownership checks; the filename-based `/outputs/<filename>` route is gone. Signed URLs come with object storage.
 - **Processing is synchronous:** transcription and structuring run inside the upload request, which risks timeouts on long notes. Move to the worker (AI-4).
 - **Recipe editing is raw JSON:** `recipe_edit.html` edits ingredients and steps as JSON text areas. Replace with a form (DASH-2).
 - ~~**AI parsing is brittle:**~~ Fixed: `structure_recipe` uses structured outputs and reads the text block by type (AI-3). Structuring runs on Claude Sonnet 5.5 and no longer sends `temperature`.
 - **Storage:** SQLite and local folders, so it can't run on more than one machine. Move to Postgres and object storage.
-- **No tests or CI.** Add pytest for services and routes, plus flake8 in CI.
+- ~~**No tests or CI.**~~ Fixed: pytest suite in `tests/`, flake8 + pytest in GitHub Actions on every PR.
 
 ---
 

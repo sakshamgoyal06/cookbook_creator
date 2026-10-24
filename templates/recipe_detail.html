@@ -110,13 +110,15 @@
 <div class="action-buttons">
     <a href="{{ url_for('recipe_edit', project_id=project.id, recipe_id=recipe.id) }}" class="btn btn-primary">Edit Recipe</a>
     <form method="POST" action="{{ url_for('recipe_approve', project_id=project.id, recipe_id=recipe.id) }}" style="display:inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-success">Approve Recipe</button>
     </form>
     <form method="POST" action="{{ url_for('recipe_generate_pdf', project_id=project.id, recipe_id=recipe.id) }}" style="display:inline">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-accent">Generate PDF</button>
     </form>
     {% if recipe.pdf_filename %}
-    <a href="{{ url_for('serve_output', filename=recipe.pdf_filename) }}" class="btn btn-secondary" target="_blank">Download PDF</a>
+    <a href="{{ url_for('recipe_pdf', project_id=project.id, recipe_id=recipe.id) }}" class="btn btn-secondary" target="_blank">Download PDF</a>
     {% endif %}
 </div>
 {% endblock %}

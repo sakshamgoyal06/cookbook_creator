@@ -8,6 +8,7 @@
 </div>
 
 <form method="POST" class="edit-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <h2 class="form-section-title">Basic Info</h2>
     <div class="form-group">
         <label for="title">Cookbook Title *</label>

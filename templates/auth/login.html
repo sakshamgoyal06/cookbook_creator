@@ -6,6 +6,7 @@
 <div class="auth-container">
     <h1>Sign In</h1>
     <form method="POST" class="auth-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-group">
             <label for="email">Email</label>
             <input type="email" id="email" name="email" required placeholder="you@example.com">
