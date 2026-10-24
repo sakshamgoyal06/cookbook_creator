@@ -70,7 +70,7 @@ You do **not** run this app on the phone itself. Run it on your Mac or laptop, t
    Set at least:
    - `OPENAI_API_KEY`
    - `ANTHROPIC_API_KEY`
-   - `ANTHROPIC_RECIPE_MODEL=claude-sonnet-4-5-20250929`
+   - Optional: `OPENAI_TRANSCRIBE_MODEL`, `ANTHROPIC_RECIPE_MODEL`, the `*_BASE_URL` values and the recipe max tokens / temperature (see `.env.example`)
 4. Start the app:
    ```bash
    python3 app.py

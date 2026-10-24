@@ -13,7 +13,7 @@
 | Milestone | Theme | PRD refs | Target |
 |---|---|---|---|
 | [Phase 0](#phase-0-concierge-pilot-runs-in-parallel) | Concierge pilot (manual, in parallel) | §16 | Nov–Dec 2026 |
-| [M0](#m0-foundations) | Foundations: tests, security, hosting, storage, worker, model upgrade | AI-3, AI-4, §13, §17 | Nov 2026 |
+| [M0](#m0-foundations) | Foundations: tests, security, hosting, storage, worker, structured AI output | AI-3, AI-4, §13, §17 | Nov 2026 |
 | [M1](#m1-qr-voice-playback-) | **QR voice playback** ⭐ | QR-1…QR-8 | Nov 2026 |
 | [M2](#m2-whatsapp-capture) | WhatsApp capture | WA-1, WA-2, WA-5, WA-6, BUY-5 | Dec 2026 |
 | [M3](#m3-follow-up-questions-and-page-back-to-mom) | Follow-up questions + page back to Mom | WA-3, WA-4, AI-5, AI-6, ENG-5 | Dec 2026 |
@@ -61,10 +61,11 @@ Goal: a hosted, safe, testable base that every later milestone builds on.
 - [ ] Turn off debug mode in production config
 
 ### AI pipeline (AI-3)
-- [ ] Upgrade structuring model to the current Claude Sonnet (`claude-sonnet-5-5`) in `config.py` and `.env.example`
-- [ ] Use structured outputs (`output_config.format` with the recipe JSON schema) instead of hand-stripping code fences
-- [ ] Read the text block by type, not `response.content[0]`; drop `temperature` (rejected by the API from 2026-10-21)
-- [ ] Handle `stop_reason == "refusal"` and `max_tokens` with clear errors
+- [x] Keep the current models (`gpt-4o-transcribe`, `claude-sonnet-4-5-20250929`); no model upgrade for now
+- [x] Models, API keys, base URLs, max tokens and temperature configurable from `.env` (`config.py`, `.env.example`)
+- [x] Use structured outputs (`output_config.format` with the recipe JSON schema) instead of hand-stripping code fences
+- [x] Read the text block by type, not `response.content[0]`; `temperature` is optional (leave `ANTHROPIC_RECIPE_TEMPERATURE` empty before moving to API version 2026-10-21, which rejects it)
+- [x] Handle `stop_reason == "refusal"` and `max_tokens` with clear errors
 
 ### Infrastructure (§15)
 - [ ] Postgres via SQLAlchemy (or keep raw SQL with a thin adapter); migration script from SQLite schema
@@ -243,6 +244,7 @@ Record decisions that change the plan (newest first).
 
 | Date | Decision | Why |
 |---|---|---|
+| 2026-10-24 | Keep `gpt-4o-transcribe` and Claude Sonnet 4.5; add structured outputs and make models and credentials configurable instead of upgrading | Transcription quality across languages matters most; swapping models stays a config change, decided by eval |
 | 2026-10-24 | Digital-first at ₹999 for 10 recipes; print deferred to P2 | 60% margin after GST; low-risk test of demand |
 | 2026-10-24 | QR voice playback is P0 and built right after foundations (M1) | Mom's voice is the product's signature and differentiator |
 | 2026-10-24 | Removed unused code: global recipes page/route, `get_all_recipes`, the RTF build brief; renamed `openai_service` → `ai_service` | It also calls Anthropic; recipes are always viewed within a project |
