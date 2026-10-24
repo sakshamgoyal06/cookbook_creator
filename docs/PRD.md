@@ -209,7 +209,7 @@ Priorities:
 |---|---|---|
 | AI-1 | Transcription of Hindi, Hinglish and English voice notes (`gpt-4o-transcribe` today; evaluate an Indic-language speech-to-text provider on 10 real samples before launch). | P0 |
 | AI-2 | Structuring into the existing recipe JSON schema (`prompts/recipe_editor_prompt.txt`). Keeps Mom's warmth and phrases; **never invents ingredients**; flags every approximation. | P0 |
-| AI-3 | Structured outputs on the current structuring model (no model change for now); robust JSON parsing; no reliance on `content[0]` being text. Models, API keys and base URLs are configurable from `.env`, so a model or provider can be swapped without code changes. | P0 |
+| AI-3 | Structuring on Claude Sonnet 5.5 with structured outputs; robust JSON parsing; no reliance on `content[0]` being text. Models, API keys and base URLs are configurable from `.env`, so a model or provider can be swapped without code changes. | P0 |
 | AI-4 | Processing runs **asynchronously** (background worker), never inside the web request. Failures retry with backoff and alert ops, never Mom. | P0 |
 | AI-5 | A follow-up question generator turns unclear items into at most 3 natural questions in Mom's language. | P0 |
 | AI-6 | Re-structuring merges follow-up answers into the recipe and removes resolved unclear items. | P0 |
@@ -428,7 +428,7 @@ listen_events    id, recipe_id, played_at  (no PII)
 | Processing | Inside the upload request | Background worker (RQ or Celery + Redis) |
 | Capture | Web upload only | **WhatsApp Cloud API webhook** + web upload |
 | Transcription | OpenAI `gpt-4o-transcribe` | Same, or an Indic speech-to-text provider (decide by eval) |
-| Structuring | Claude Sonnet 4.5, structured outputs | Same model unless an eval shows a better one; set by `ANTHROPIC_RECIPE_MODEL` |
+| Structuring | Claude Sonnet 5.5 (`medium` effort), structured outputs | Same, unless an eval shows a better one; set by `ANTHROPIC_RECIPE_MODEL` |
 | Rendering | WeasyPrint, PDF per recipe | WeasyPrint: book PDF, recipe-card PNGs, QR (`segno`) |
 | Payments | None | Razorpay (INR); Stripe (USD, P1) |
 | Scheduling | None | Worker scheduler for reminders and reveal day |
@@ -464,7 +464,7 @@ To fix while building P0:
 - **File serving is not access-controlled:** `/outputs/<filename>` serves any PDF to any logged-in user. Move to per-owner checks or signed URLs.
 - **Processing is synchronous:** transcription and structuring run inside the upload request, which risks timeouts on long notes. Move to the worker (AI-4).
 - **Recipe editing is raw JSON:** `recipe_edit.html` edits ingredients and steps as JSON text areas. Replace with a form (DASH-2).
-- ~~**AI parsing is brittle:**~~ Fixed: `structure_recipe` uses structured outputs and reads the text block by type (AI-3). `temperature` is still sent; set `ANTHROPIC_RECIPE_TEMPERATURE` empty before moving to API version 2026-10-21.
+- ~~**AI parsing is brittle:**~~ Fixed: `structure_recipe` uses structured outputs and reads the text block by type (AI-3). Structuring runs on Claude Sonnet 5.5 and no longer sends `temperature`.
 - **Storage:** SQLite and local folders, so it can't run on more than one machine. Move to Postgres and object storage.
 - **No tests or CI.** Add pytest for services and routes, plus flake8 in CI.
 

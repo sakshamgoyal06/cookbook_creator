@@ -61,10 +61,10 @@ Goal: a hosted, safe, testable base that every later milestone builds on.
 - [ ] Turn off debug mode in production config
 
 ### AI pipeline (AI-3)
-- [x] Keep the current models (`gpt-4o-transcribe`, `claude-sonnet-4-5-20250929`); no model upgrade for now
-- [x] Models, API keys, base URLs, max tokens and temperature configurable from `.env` (`config.py`, `.env.example`)
+- [x] Transcription stays on `gpt-4o-transcribe`; structuring moved to Claude Sonnet 5.5 (`claude-sonnet-5-5`, effort `medium`)
+- [x] Models, API keys, base URLs, max tokens, effort and temperature configurable from `.env` (`config.py`, `.env.example`)
 - [x] Use structured outputs (`output_config.format` with the recipe JSON schema) instead of hand-stripping code fences
-- [x] Read the text block by type, not `response.content[0]`; `temperature` is optional (leave `ANTHROPIC_RECIPE_TEMPERATURE` empty before moving to API version 2026-10-21, which rejects it)
+- [x] Read the text block by type, not `response.content[0]`; `temperature` is no longer sent by default (Sonnet 5.5 rejects non-default values)
 - [x] Handle `stop_reason == "refusal"` and `max_tokens` with clear errors
 
 ### Infrastructure (§15)
@@ -244,6 +244,7 @@ Record decisions that change the plan (newest first).
 
 | Date | Decision | Why |
 |---|---|---|
+| 2026-10-24 | Structuring moves to Claude Sonnet 5.5 at `medium` effort; transcription stays on `gpt-4o-transcribe` | Saksham's call; better structuring at a lower price per token than Sonnet 4.5 |
 | 2026-10-24 | Keep `gpt-4o-transcribe` and Claude Sonnet 4.5; add structured outputs and make models and credentials configurable instead of upgrading | Transcription quality across languages matters most; swapping models stays a config change, decided by eval |
 | 2026-10-24 | Digital-first at ₹999 for 10 recipes; print deferred to P2 | 60% margin after GST; low-risk test of demand |
 | 2026-10-24 | QR voice playback is P0 and built right after foundations (M1) | Mom's voice is the product's signature and differentiator |
