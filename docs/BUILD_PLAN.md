@@ -70,6 +70,8 @@ Goal: a hosted, safe, testable base that every later milestone builds on.
 ### Infrastructure (§15)
 - [ ] Postgres via SQLAlchemy (or keep raw SQL with a thin adapter); migration script from SQLite schema
 - [ ] Object storage (Cloudflare R2 or S3) for audio and generated files; `storage_service` with put/get/signed-url
+  - [x] `services/storage_service.py`: local backend (today's folders) and S3/R2 backend with signed URLs, set by `STORAGE_BACKEND`
+  - [ ] Wire upload, transcription and PDF routes through it (after the Postgres PR, which adds `recipe_audio` and `generated_files`)
 - [ ] Background worker (RQ + Redis): move transcribe → structure out of the upload request (AI-4); upload returns immediately with status `received`
 - [ ] Retries with backoff for worker jobs; failures visible to ops, never shown raw to users
 - [ ] Deploy to Render/Railway/Fly: web + worker + Postgres + Redis; HTTPS; env-based config
