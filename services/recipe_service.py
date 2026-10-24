@@ -65,15 +65,6 @@ def get_project_recipes(project_id):
     return [_row_to_dict(r) for r in rows]
 
 
-def get_all_recipes():
-    conn = get_connection()
-    rows = conn.execute(
-        "SELECT * FROM recipes ORDER BY created_at DESC"
-    ).fetchall()
-    conn.close()
-    return [_row_to_dict(r) for r in rows]
-
-
 def update_recipe(recipe_id, data):
     conn = get_connection()
     now = datetime.now(timezone.utc).isoformat()
