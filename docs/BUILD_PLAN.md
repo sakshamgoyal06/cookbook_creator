@@ -27,7 +27,7 @@
 | 7 | [Recording in the app (self and assisted)](#7-recording-in-the-app-self-and-assisted) | S1–S5 | DASH-5, QR-10 | 2, 4 | Built; device matrix and cook switcher left |
 | 8 | [Listen pages and QR](#8-listen-pages-and-qr) | F1, F3, F5, R13 | QR-1…QR-9 | 2 | Done; print test and in-app browser checks left |
 | 9 | [WhatsApp capture](#9-whatsapp-capture) | C1, C2 | WA-1, WA-2, WA-5, WA-6, BUY-5 | 4, 5 | **On hold** |
-| 10 | [Follow-up questions and page back](#10-follow-up-questions-and-page-back) | C3, C4, S4 | WA-3, WA-4, AI-5, AI-6, ENG-5 | 7 or 9 | |
+| 10 | [Follow-up questions and page back](#10-follow-up-questions-and-page-back) | C3, C4, S4 | WA-3, WA-4, AI-5, AI-6, ENG-5 | 7 or 9 | In-app part built (S4); WhatsApp part waits on 9 |
 | 11 | [Reminders and escalation](#11-reminders-and-escalation) | C5, R9 card | ENG-1, ENG-2, ENG-3 | 9 | |
 | 12 | [Family and dish requests](#12-family-and-dish-requests) | R11, F4 | ENG-4 | 5, 8 | |
 | 13 | [Payments](#13-payments) | R3, R7 | BUY-2 | 5 | |
@@ -393,12 +393,12 @@ Screens: **C1** Invite arrives · **C2** Consent + first note.
 Screens: **C3** Curious question · **C4** Her page comes back · **S4** Quick questions (in-app).
 
 ### Build
-- [ ] `recipe_questions` table (§14)
-- [ ] Question generator: top ≤ 3 `unclear_items_for_review` → short questions in her language that explain why they're asked ("Page poora karne ke liye ek baat poochni thi") (AI-5)
-- [ ] One question at a time; quick replies with Indian measures (katori, mutthi, chutki, "andaaze se"), plus "Bolkar batati hoon" (voice) and "leave it as I said it"
-- [ ] Answers (voice or text) attached to the recipe; re-structure merges them and clears resolved items (AI-6); answer audio stored as `kind = followup`
+- [x] `recipe_questions` table (§14)
+- [x] Question generator: top ≤ 3 `unclear_items_for_review` → short questions in her language that explain why they're asked ("Page poora karne ke liye ek baat poochni thi") (AI-5)
+- [~] (voice answers later; WhatsApp mode: "Ask Mummy" opens the buyer's WhatsApp with the question) One question at a time; quick replies with Indian measures (katori, mutthi, chutki, "andaaze se"), plus "Bolkar batati hoon" (voice) and "leave it as I said it"
+- [~] (text and tap answers; voice later) Answers (voice or text) attached to the recipe; re-structure merges them and clears resolved items (AI-6); answer audio stored as `kind = followup`
 - [ ] Status `awaiting_mom` while questions are open (DASH-3); unanswered after 48 h → left for the buyer on R10 (WA-3)
-- [ ] S4 shows the same questions in the app for self and assisted mode (owner can type)
+- [x] S4 shows the same questions in the app for self and assisted mode (owner can type)
 - [ ] Page image (PNG from the PDF) with her name and the QR (C4); "Page 1 of 10 tayaar" + next dish suggestion (WA-4); only sent when `share_pages_as_ready` allows family forwarding
 - [ ] Milestone messages: first page, halfway, done, to the cook and the buyer (ENG-5)
 - [ ] p90 voice note → page back ≤ 5 minutes, measured from `pipeline_runs`
@@ -407,12 +407,12 @@ Screens: **C3** Curious question · **C4** Her page comes back · **S4** Quick q
 `question_sent`, `question_answered` {via}, `question_skipped`, `question_expired`, `milestone_reached`
 
 ### Edge cases
-- [ ] "Andaaze se" / "jitna theek lage" as an answer → recorded as her answer, shown on the page as she said it, never converted to grams
+- [x] "Andaaze se" / "jitna theek lage" as an answer → recorded as her answer, shown on the page as she said it, never converted to grams
 - [ ] Answer arrives for an older recipe's question → matched by quoted reply, else by the most recent open question, else asks which dish
 - [ ] Answer contradicts the original note → newer answer wins, both kept in the transcript
 - [ ] She asks a question back ("kaunsa?") → counted as unanswered, one rephrase, then hand to the buyer
-- [ ] No unclear items → no questions; page goes straight to review
-- [ ] Never more than 3 questions per recipe, never more than one message in a row without her reply
+- [x] No unclear items → no questions; page goes straight to review
+- [x] Never more than 3 questions per recipe, never more than one message in a row without her reply
 
 **Acceptance:** a note with a vague quantity triggers one question; she answers by voice; the updated page comes back as an image with a working QR within 5 minutes.
 

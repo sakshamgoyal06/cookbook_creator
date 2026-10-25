@@ -94,7 +94,7 @@ def test_upload_and_pdf_go_through_s3(auth_client, s3, monkeypatch):
         return "Rajma banane ke liye..."
 
     monkeypatch.setattr(ai_service, "transcribe_audio", fake_transcribe)
-    monkeypatch.setattr(ai_service, "structure_recipe", lambda transcript: SAMPLE_RECIPE)
+    monkeypatch.setattr(ai_service, "structure_recipe", lambda transcript, **kw: SAMPLE_RECIPE)
     project_id = create_project(auth_client)
 
     response = auth_client.post(

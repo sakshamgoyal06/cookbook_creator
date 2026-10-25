@@ -18,7 +18,7 @@ def _upload(client, project_id, filename="note.m4a", mimetype="audio/m4a"):
 
 def test_upload_transcribes_structures_and_saves(auth_client, monkeypatch):
     monkeypatch.setattr(ai_service, "transcribe_audio", lambda path: "Rajma banane ke liye...")
-    monkeypatch.setattr(ai_service, "structure_recipe", lambda transcript: SAMPLE_RECIPE)
+    monkeypatch.setattr(ai_service, "structure_recipe", lambda transcript, **kw: SAMPLE_RECIPE)
     project_id = create_project(auth_client)
 
     response = _upload(auth_client, project_id)
@@ -41,7 +41,7 @@ def test_upload_rejects_non_audio(auth_client):
 
 
 def test_upload_failure_shows_friendly_message_and_logs_error(auth_client, monkeypatch):
-    def fail(transcript):
+    def fail(transcript, **kw):
         raise ValueError("The AI declined to structure this transcript.")
 
     monkeypatch.setattr(ai_service, "transcribe_audio", lambda path: "some words")

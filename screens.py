@@ -21,6 +21,7 @@ from services import (
     pdf_service,
     pipeline_service,
     project_service,
+    question_service,
     recipe_service,
     storage_service,
     upload_service,
@@ -295,6 +296,10 @@ def _needs_you(project, recipes):
                 "action": url_for("screens.review", project_id=pid, recipe_id=failed["id"]),
                 "label": "See what happened"}
     ready = next((r for r in recipes if r["status"] == "needs_review"), None)
+    if ready and question_service.open_questions(ready["id"]):
+        n = len(question_service.open_questions(ready["id"]))
+        return {"text": f"“{ready['recipe_title']}” has {n} quick question{'s' if n != 1 else ''} before it's done.",
+                "action": url_for("screens.review", project_id=pid, recipe_id=ready["id"]), "label": "Answer them"}
     if ready:
         return {"text": f"“{ready['recipe_title']}” is written up and ready for you to check.",
                 "action": url_for("screens.review", project_id=pid, recipe_id=ready["id"]), "label": "Review the page"}
@@ -365,7 +370,47 @@ def review(project, recipe_id):
                    recipe=recipe, clip_urls=clips,
                    back_url=url_for("screens.recipes" if project["cook_mode"] != "self" else "screens.home",
                                     project_id=project["id"]),
-                   blank_rows=3)
+                   blank_rows=3, questions=_questions_for(project, recipe))
+
+
+def _questions_for(project, recipe):
+    """S4: open follow-up questions, each with a WhatsApp link to ask the cook when she isn't in the app."""
+    if recipe["status"] != "needs_review":
+        return []
+    questions = question_service.open_questions(recipe["id"])
+    if project["cook_mode"] == "whatsapp":
+        for q in questions:
+            q["ask_link"] = copy.wa_link(copy.question_text(project, recipe["recipe_title"], q["question"]),
+                                         project.get("storyteller_phone"))
+    return questions
+
+
+@bp.route("/p/<int:project_id>/r/<int:recipe_id>/q/<int:question_id>", methods=["POST"])
+@owned_project
+def answer_question(project, recipe_id, question_id):
+    recipe = _recipe_or_404(project, recipe_id)
+    via = request.form.get("via", "text")
+    if via not in ("chip", "text", "keep"):
+        abort(400)
+    try:
+        last = question_service.answer(recipe_id, question_id, request.form.get("answer"), via)
+    except ValueError:
+        flash("Please type an answer, or tap “Leave it as said”.", "error")
+        return redirect(url_for("screens.review", project_id=project["id"], recipe_id=recipe_id))
+    if last is None:  # already answered (a double tap, or another tab)
+        return redirect(url_for("screens.review", project_id=project["id"], recipe_id=recipe_id))
+    actor = _actor(project)
+    if via == "keep":
+        events_service.track("question_skipped", project_id=project["id"], recipe_id=recipe_id, actor=actor)
+    else:
+        events_service.track("question_answered", project_id=project["id"], recipe_id=recipe_id, actor=actor,
+                             via=via)
+    if last and question_service.has_answers(recipe_id) and recipe["status"] == "needs_review":
+        # Rewrite the page with the answers; the transcript is kept, so only structuring runs again.
+        recipe_service.set_status(recipe_id, "transcribed")
+        pipeline_service.enqueue_processing(recipe_id)
+        flash("Thank you. We're updating the page with the answers.", "success")
+    return redirect(url_for("screens.review", project_id=project["id"], recipe_id=recipe_id))
 
 
 @bp.route("/p/<int:project_id>/r/<int:recipe_id>/audio/<int:clip_number>")

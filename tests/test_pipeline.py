@@ -45,7 +45,7 @@ def _runs():
 def test_upload_returns_immediately_and_worker_processes(auth_client, queue, monkeypatch):
     calls = []
     monkeypatch.setattr(ai_service, "transcribe_audio", lambda path: calls.append(path) or "Rajma...")
-    monkeypatch.setattr(ai_service, "structure_recipe", lambda transcript: SAMPLE_RECIPE)
+    monkeypatch.setattr(ai_service, "structure_recipe", lambda transcript, **kw: SAMPLE_RECIPE)
     project_id = create_project(auth_client)
 
     response = _upload(auth_client, project_id)
@@ -68,7 +68,7 @@ def test_failed_job_is_retried_with_backoff_then_marked_failed(app, auth_client,
     monkeypatch.setattr(pipeline_service, "RETRY_INTERVALS", [0, 0])
     monkeypatch.setattr(ai_service, "transcribe_audio", lambda path: "Rajma...")
 
-    def flaky(transcript):
+    def flaky(transcript, **kw):
         raise RuntimeError("Anthropic overloaded")
 
     monkeypatch.setattr(ai_service, "structure_recipe", flaky)
@@ -98,7 +98,7 @@ def test_retry_succeeds_after_transient_error(auth_client, queue, monkeypatch):
     monkeypatch.setattr(ai_service, "transcribe_audio", lambda path: "Rajma...")
     attempts = []
 
-    def flaky_once(transcript):
+    def flaky_once(transcript, **kw):
         attempts.append(1)
         if len(attempts) == 1:
             raise RuntimeError("timeout")
@@ -154,7 +154,7 @@ def test_pipeline_records_events(auth_client, monkeypatch):
     pipeline_service.process_recipe(failed)
 
     monkeypatch.setattr(ai_service, "transcribe_audio", lambda path: "Rajma...")
-    monkeypatch.setattr(ai_service, "structure_recipe", lambda transcript: SAMPLE_RECIPE)
+    monkeypatch.setattr(ai_service, "structure_recipe", lambda transcript, **kw: SAMPLE_RECIPE)
     ok = recipe_service.create_received_recipe(project_id, "b.m4a")
     pipeline_service.process_recipe(ok)
 

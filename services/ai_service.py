@@ -55,7 +55,14 @@ RECIPE_SCHEMA = _object({
     "serving_suggestion": _STRING,
     "storage_notes": _STRING,
     "unclear_items_for_review": _STRING_LIST,
+    "follow_up_questions": {
+        "type": "array",
+        "items": _object({"about": _STRING, "question": _STRING, "options": _STRING_LIST}),
+    },
 })
+
+LANGUAGE_NAMES = {"hi": "Hindi in Devanagari script", "hinglish": "Hinglish (Hindi in Latin script)",
+                  "en": "simple Indian English"}
 
 
 def _get_openai_client():
@@ -77,12 +84,13 @@ def transcribe_audio(file_path: str) -> str:
     return result.text
 
 
-def structure_recipe(transcript: str) -> dict:
+def structure_recipe(transcript: str, language: str = "hinglish") -> dict:
     prompt_path = os.path.join(config.PROMPTS_FOLDER, "recipe_editor_prompt.txt")
     with open(prompt_path, "r") as f:
         prompt_template = f.read()
 
-    prompt = prompt_template.replace("{{TRANSCRIPT}}", transcript)
+    prompt = (prompt_template.replace("{{TRANSCRIPT}}", transcript)
+              .replace("{{LANGUAGE}}", LANGUAGE_NAMES.get(language, LANGUAGE_NAMES["hinglish"])))
 
     request = {
         "model": config.ANTHROPIC_RECIPE_MODEL,
