@@ -1,0 +1,11 @@
+{% extends "public/_listen_base.html" %}
+{% block title %}Thank you{% endblock %}
+{% block content %}
+<div class="center">
+<p class="eyebrow">{{ book.title }}</p>
+<h1>Thank you, {{ member.name }}</h1>
+<p class="meta">{% if dish %}We've passed “{{ dish }}” to the family organiser. If it goes on the list, {{ cook }} will know you asked for it.{% else %}You're in. Come back any time to listen.{% endif %}</p>
+<p><a class="btn" href="{{ url_for('book', token=token) }}">Open the cookbook</a></p>
+<p><a href="{{ url_for('book_join', token=token) }}">Ask for another dish</a></p>
+</div>
+{% endblock %}

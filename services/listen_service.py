@@ -130,12 +130,20 @@ def regenerate(recipe_id):
         )
 
 
+def regenerate_book(project_id):
+    """New family link: the old book link and book QR stop working (recipe QR codes are unaffected)."""
+    with get_engine().begin() as conn:
+        conn.execute(update(projects).where(projects.c.id == project_id)
+                     .values(book_token=new_token(), updated_at=func.now()))
+
+
 def get_book(token):
     """A project's public cookbook page data: its title and listenable recipes with clips."""
     with get_engine().connect() as conn:
         project = conn.execute(
             select(projects.c.id, projects.c.title, projects.c.subtitle, projects.c.dedication,
-                   projects.c.storyteller_name, projects.c.share_pages_as_ready, projects.c.revealed_at)
+                   projects.c.storyteller_name, projects.c.storyteller_address_as, projects.c.storyteller_language,
+                   projects.c.share_pages_as_ready, projects.c.revealed_at, projects.c.reveal_date)
             .where(projects.c.book_token == token)
         ).mappings().first()
         if project is None:

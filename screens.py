@@ -17,6 +17,7 @@ from services import (
     copy,
     dish_service,
     events_service,
+    family_service,
     listen_service,
     pdf_service,
     pipeline_service,
@@ -303,6 +304,10 @@ def _needs_you(project, recipes):
     if ready:
         return {"text": f"“{ready['recipe_title']}” is written up and ready for you to check.",
                 "action": url_for("screens.review", project_id=pid, recipe_id=ready["id"]), "label": "Review the page"}
+    pending = family_service.pending_requests(pid)
+    if pending:
+        return {"text": f"{pending[0]['requested_by_label']} asked for {pending[0]['title']}. Add it to the list?",
+                "action": url_for("screens.family", project_id=pid), "label": "See requests"}
     if project["cook_mode"] == "whatsapp" and not project.get("invite_sent_at"):
         return {"text": f"Send {cook_label(project)} the invite from your WhatsApp.",
                 "action": url_for("screens.setup", project_id=pid, step="invite"), "label": "Send the invite"}
@@ -733,10 +738,35 @@ def family(project):
         flash("Saved.", "success")
         return redirect(url_for("screens.family", project_id=pid))
     book_url = listen_service.book_url(project["book_token"])
-    requested = [d for d in dish_service.list_dishes(pid) if d["source"] == "family"]
+    asked = [d for d in dish_service.list_dishes(pid) if d["source"] == "family" and d["status"] != "requested"]
     return _render("app/family.html", project, tab="family", book_url=book_url,
-                   share_link=copy.wa_link(copy.family_share_text(project, book_url)),
-                   members=project_service.get_members(pid), requested=requested)
+                   join_url=f"{book_url}/join", members=project_service.get_members(pid),
+                   pending=family_service.pending_requests(pid), requested=asked)
+
+
+@bp.route("/p/<int:project_id>/family/requests/<int:dish_id>", methods=["POST"])
+@owned_project
+def decide_request(project, dish_id):
+    approve = request.form.get("decision") == "approve"
+    if family_service.decide(project["id"], dish_id, approve):
+        flash("Added to the list." if approve else "Hidden. The family won't see it again.", "success")
+    return redirect(url_for("screens.family", project_id=project["id"]))
+
+
+@bp.route("/p/<int:project_id>/family/members/<int:member_id>/remove", methods=["POST"])
+@owned_project
+def remove_member(project, member_id):
+    family_service.remove_member(project["id"], member_id)
+    return redirect(url_for("screens.family", project_id=project["id"]))
+
+
+@bp.route("/p/<int:project_id>/family/new-link", methods=["POST"])
+@owned_project
+def new_family_link(project):
+    listen_service.regenerate_book(project["id"])
+    flash("New family link made. The old link and the book's QR code no longer work; recipe QR codes still do.",
+          "success")
+    return redirect(url_for("screens.family", project_id=project["id"]))
 
 
 @bp.route("/p/<int:project_id>/family/share", methods=["POST"])

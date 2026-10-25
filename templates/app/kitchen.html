@@ -33,6 +33,6 @@
 {% endif %}
 {% if up_next | length > 1 %}
 <h2 class="section-title">Then</h2>
-<ul class="list card">{% for d in up_next[1:] %}<li><span class="grow">{{ d.title }}</span><a class="btn btn-ghost" href="{{ url_for('screens.record', project_id=project.id, dish=d.id) }}">Record</a></li>{% endfor %}</ul>
+<ul class="list card">{% for d in up_next[1:] %}<li><span class="grow">{{ d.title }}{% if d.requested_by_label %}<br><span class="small muted">asked by {{ d.requested_by_label }}</span>{% endif %}</span><a class="btn btn-ghost" href="{{ url_for('screens.record', project_id=project.id, dish=d.id) }}">Record</a></li>{% endfor %}</ul>
 {% endif %}
 {% endblock %}

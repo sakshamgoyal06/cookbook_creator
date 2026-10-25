@@ -34,7 +34,7 @@
 <h2 class="section-title">Up next</h2>
 <ul class="list card">
 {% for d in up_next %}
-  <li><span class="grow">{{ d.title }}</span>{% if project.cook_mode == 'whatsapp' %}<a class="btn btn-ghost" href="{{ url_for('screens.import_notes', project_id=project.id, dish=d.id) }}">Add notes</a>{% else %}<a class="btn btn-ghost" href="{{ url_for('screens.record', project_id=project.id, dish=d.id) }}">Record</a>{% endif %}</li>
+  <li><span class="grow">{{ d.title }}{% if d.requested_by_label %}<br><span class="small muted">asked by {{ d.requested_by_label }}</span>{% endif %}</span>{% if project.cook_mode == 'whatsapp' %}<a class="btn btn-ghost" href="{{ url_for('screens.import_notes', project_id=project.id, dish=d.id) }}">Add notes</a>{% else %}<a class="btn btn-ghost" href="{{ url_for('screens.record', project_id=project.id, dish=d.id) }}">Record</a>{% endif %}</li>
 {% endfor %}
 </ul>
 {% endif %}

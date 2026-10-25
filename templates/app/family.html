@@ -13,10 +13,30 @@
     <input type="checkbox" name="share_pages_as_ready" value="1" {% if project.share_pages_as_ready %}checked{% endif %} onchange="this.form.submit()"></label>
   <noscript><button class="btn btn-secondary" type="submit">Save</button></noscript>
 </form>
+{% if pending %}
+<h2 class="section-title">Waiting for your OK</h2>
+<ul class="list card">
+{% for d in pending %}
+  <li><span class="grow">{{ d.title }}<br><span class="small muted">asked by {{ d.requested_by_label }}</span></span>
+    <form method="post" action="{{ url_for('screens.decide_request', project_id=project.id, dish_id=d.id) }}" class="row">{{ csrf() }}
+      <button class="btn btn-secondary" name="decision" value="hide" type="submit">Hide</button>
+      <button class="btn btn-primary" name="decision" value="approve" type="submit">Add</button></form></li>
+{% endfor %}
+</ul>
+{% endif %}
+<div class="card" style="margin-top:12px">
+  <p class="small">Family members can join and ask for a dish here. Nothing reaches {{ cook }} until you add it.</p>
+  <button class="btn btn-secondary btn-block" type="button" data-copy-text="{{ join_url }}">Copy the “ask for a dish” link</button>
+</div>
 <h2 class="section-title">Members</h2>
-<ul class="list card">{% for m in members %}<li><span class="grow">{{ m.name }}</span><span class="small muted">{{ {'buyer': 'Organiser', 'cook': 'Cook', 'member': 'Family'}[m.role] }}</span></li>{% endfor %}</ul>
+<ul class="list card">{% for m in members %}<li><span class="grow">{{ m.name }}</span><span class="small muted">{{ {'buyer': 'Organiser', 'cook': 'Cook', 'member': 'Family'}[m.role] }}</span>
+  {% if m.role == 'member' %}<form method="post" action="{{ url_for('screens.remove_member', project_id=project.id, member_id=m.id) }}">{{ csrf() }}<button class="btn btn-ghost" type="submit" aria-label="Remove {{ m.name }}">{{ icon('x') }}</button></form>{% endif %}</li>{% endfor %}</ul>
 {% if requested %}
 <h2 class="section-title">Dishes the family asked for</h2>
 <ul class="list card">{% for d in requested %}<li><span class="grow">{{ d.title }}</span><span class="small muted">{{ d.requested_by_label or '' }}</span></li>{% endfor %}</ul>
 {% endif %}
+<h2 class="section-title">If the link went too far</h2>
+<form method="post" action="{{ url_for('screens.new_family_link', project_id=project.id) }}">{{ csrf() }}
+  <button class="btn btn-danger btn-block" type="submit">Make a new family link</button>
+  <p class="small muted">The old link and the book's QR code stop working. Each recipe's own QR code keeps working.</p></form>
 {% endblock %}

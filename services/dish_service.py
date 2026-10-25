@@ -36,10 +36,12 @@ def get_dish(project_id, dish_id):
 
 
 def save_wishlist(project_id, titles, source="buyer"):
-    """Replace the not-yet-recorded dishes with `titles`, in order. Dishes with a recording are kept."""
+    """Replace the buyer's not-yet-recorded dishes with `titles`, in order. Recorded dishes and family requests stay."""
     titles = clean_titles(titles)
     with get_engine().begin() as conn:
-        conn.execute(delete(dishes).where(dishes.c.project_id == project_id, dishes.c.recipe_id.is_(None)))
+        # Family requests and recorded dishes stay; only the buyer's own unrecorded list is replaced.
+        conn.execute(delete(dishes).where(dishes.c.project_id == project_id, dishes.c.recipe_id.is_(None),
+                                          dishes.c.source == "buyer", dishes.c.status == "wishlist"))
         start = conn.execute(
             select(func.coalesce(func.max(dishes.c.position), 0)).where(dishes.c.project_id == project_id)
         ).scalar_one()

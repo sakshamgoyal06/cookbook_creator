@@ -5,6 +5,7 @@ import tempfile
 from flask import (
     Flask,
     render_template,
+    session,
     request,
     redirect,
     url_for,
@@ -25,7 +26,9 @@ from flask_wtf.csrf import CSRFProtect
 import config
 from models.database import init_db
 from services import (
+    dish_service,
     events_service,
+    family_service,
     listen_service,
     pdf_service,
     pipeline_service,
@@ -291,6 +294,37 @@ def book(token):
     if book is None:
         return render_template("listen_private.html"), 404
     return render_template("book_listen.html", book=book)
+
+
+@app.route("/b/<token>/join", methods=["GET", "POST"])
+def book_join(token):
+    """F4: a family member joins with just a name and asks for a dish. No login."""
+    book = listen_service.get_book(token)
+    if book is None:
+        return render_template("listen_private.html"), 404
+    joined = session.get("family", {})
+    member = family_service.get_member(book["id"], joined.get(str(book["id"]))) if joined.get(str(book["id"])) else None
+    cook = book["storyteller_address_as"] or (book["storyteller_name"] or "").split(" ")[0] or "Mummy"
+    if request.method == "GET":
+        wanted = [d["title"] for d in dish_service.list_dishes(book["id"]) if d["status"] == "wishlist"][:8]
+        return render_template("book_join.html", book=book, member=member, cook=cook, wanted=wanted)
+
+    try:
+        member_id, is_new = family_service.join(book["id"], request.form.get("name"),
+                                                member["id"] if member else None)
+    except ValueError:
+        return render_template("book_join.html", book=book, member=member, cook=cook, wanted=[],
+                               error="Please tell us your name."), 400
+    joined[str(book["id"])] = member_id
+    session["family"] = joined
+    if is_new:
+        events_service.track("family_member_joined", project_id=book["id"], actor="family")
+    member = family_service.get_member(book["id"], member_id)
+    dish = request.form.get("dish_other", "").strip() or request.form.get("dish", "").strip()
+    if dish:
+        family_service.request_dish(book["id"], member, dish)
+        events_service.track("dish_requested", project_id=book["id"], actor="family")
+    return render_template("book_join_done.html", book=book, member=member, cook=cook, dish=dish, token=token)
 
 
 @app.route("/")
