@@ -50,7 +50,7 @@ def _stub_ai(monkeypatch, transcripts=None):
         return (transcripts or {}).get(len(seen), f"part {len(seen)}")
 
     monkeypatch.setattr(ai_service, "transcribe_audio", transcribe)
-    monkeypatch.setattr(ai_service, "structure_recipe", lambda transcript: dict(SAMPLE_RECIPE, raw=transcript))
+    monkeypatch.setattr(ai_service, "structure_recipe", lambda transcript, **kw: dict(SAMPLE_RECIPE, raw=transcript))
     return seen
 
 

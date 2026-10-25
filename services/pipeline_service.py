@@ -11,8 +11,8 @@ from sqlalchemy import func, insert, select, update
 
 import config
 from models.database import get_engine
-from models.schema import pipeline_runs, recipe_audio, recipes
-from services import ai_service, events_service, recipe_service, storage_service
+from models.schema import pipeline_runs, projects, recipe_audio, recipes
+from services import ai_service, events_service, question_service, recipe_service, storage_service
 
 log = logging.getLogger(__name__)
 
@@ -69,9 +69,14 @@ def process_recipe(recipe_id):
             transcript = _run_stage(recipe_id, "transcribe", "openai", config.OPENAI_TRANSCRIBE_MODEL,
                                     lambda: _transcribe(audio_keys))
             recipe_service.save_transcript(recipe_id, transcript)
+        text = transcript + question_service.answers_block(recipe_id)
+        language = _project_language(recipe["project_id"])
         recipe_data = _run_stage(recipe_id, "structure", "anthropic", config.ANTHROPIC_RECIPE_MODEL,
-                                 lambda: ai_service.structure_recipe(transcript))
+                                 lambda: ai_service.structure_recipe(text, language=language))
         recipe_service.save_structured_recipe(recipe_id, recipe_data)
+        for _ in range(question_service.save_questions(recipe_id, recipe_data.get("follow_up_questions"))):
+            events_service.track("question_sent", project_id=recipe["project_id"], recipe_id=recipe_id,
+                                 channel="web")
         events_service.track("recipe_ready_for_review", project_id=recipe["project_id"], recipe_id=recipe_id)
     except PermanentError as e:
         _mark_failed(recipe, recipe_id, getattr(e, "stage", "transcribe"))
@@ -79,6 +84,11 @@ def process_recipe(recipe_id):
         if _is_last_attempt():
             _mark_failed(recipe, recipe_id, getattr(e, "stage", "structure"))
         raise
+
+
+def _project_language(project_id):
+    with get_engine().connect() as conn:
+        return conn.execute(select(projects.c.storyteller_language).where(projects.c.id == project_id)).scalar()
 
 
 def _mark_failed(recipe, recipe_id, stage):

@@ -53,6 +53,7 @@ MEMBER_ROLES = ("buyer", "cook", "member")
 UPLOAD_STATUSES = ("open", "complete", "abandoned")
 ACTORS = ("buyer", "cook", "family", "system", "anon")
 LISTEN_SOURCES = ("qr", "link", "book", "app")
+QUESTION_STATUSES = ("open", "answered", "kept", "skipped", "expired")
 
 # JSONB on Postgres, JSON text on SQLite.
 JSONType = JSON().with_variant(JSONB(), "postgresql")
@@ -244,6 +245,25 @@ upload_sessions = Table(
     Column("recipe_id", Integer, ForeignKey("recipes.id", ondelete="SET NULL")),
     _created_at(),
     CheckConstraint(_in("status", UPLOAD_STATUSES), name="status"),
+)
+
+# Follow-up questions about a recipe's unclear bits (module 10). At most 3 per recipe.
+recipe_questions = Table(
+    "recipe_questions",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("recipe_id", Integer, ForeignKey("recipes.id", ondelete="CASCADE"), nullable=False, index=True),
+    Column("position", Integer, nullable=False, server_default="1"),
+    Column("about", Text, nullable=False, server_default=""),
+    Column("question", Text, nullable=False),
+    Column("options", JSONType, nullable=False, server_default="[]"),
+    Column("status", Text, nullable=False, server_default="open"),
+    Column("answer_text", Text),
+    # chip | text | voice | keep ("leave it as I said it")
+    Column("answer_via", Text),
+    Column("answered_at", DateTime(timezone=True)),
+    _created_at(),
+    CheckConstraint(_in("status", QUESTION_STATUSES), name="status"),
 )
 
 # Analytics events (module 3). No personal data in props.

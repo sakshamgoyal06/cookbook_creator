@@ -49,3 +49,17 @@ def wa_link(text, phone=None):
     """A wa.me link that opens the user's own WhatsApp with `text` ready to send."""
     target = phone.lstrip("+") if phone else ""
     return f"https://wa.me/{target}?text={quote(text)}"
+
+
+QUESTION = {
+    "hi": "{who}, {dish} के बारे में एक बात पूछनी थी: {question}",
+    "hinglish": "{who}, {dish} ke baare mein ek baat poochni thi: {question}",
+    "en": "{who}, one quick question about the {dish}: {question}",
+}
+
+
+def question_text(project, dish, question):
+    """A follow-up question the buyer forwards from their own WhatsApp while the bot is off."""
+    language = project.get("storyteller_language") or "hinglish"
+    who = project.get("storyteller_address_as") or ("मम्मी" if language == "hi" else "Mummy")
+    return QUESTION[language].format(who=who, dish=dish, question=question)

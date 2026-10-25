@@ -42,6 +42,9 @@ def test_structure_recipe_request_and_parse(anthropic_client, monkeypatch):
     assert kwargs["output_config"]["effort"] == "medium"
     assert "temperature" not in kwargs
     assert "Rajma banane ke liye..." in kwargs["messages"][0]["content"]
+    assert "Hinglish" in kwargs["messages"][0]["content"] and "{{" not in kwargs["messages"][0]["content"]
+    ai_service.structure_recipe("x", language="hi")
+    assert "Devanagari" in anthropic_client.return_value.messages.create.call_args.kwargs["messages"][0]["content"]
     assert anthropic_client.call_args.kwargs["base_url"] == config.ANTHROPIC_BASE_URL
 
 

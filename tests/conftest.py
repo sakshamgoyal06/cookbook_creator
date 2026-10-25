@@ -29,6 +29,7 @@ SAMPLE_RECIPE = {
     "serving_suggestion": "With rice",
     "storage_notes": "",
     "unclear_items_for_review": ["thoda sa namak"],
+    "follow_up_questions": [],
 }
 
 
