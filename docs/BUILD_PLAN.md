@@ -25,7 +25,7 @@
 | 5 | [Onboarding and gift setup](#5-onboarding-and-gift-setup) | R1–R8 | BUY-1…BUY-5, ENG-3 | 2, 3, 4 | Built; gift card and drag reorder left |
 | 6 | [Requester home and recipe review](#6-requester-home-and-recipe-review) | R9, R10, R13 | DASH-1…DASH-3 | 5 | Built; live Home refresh left |
 | 7 | [Recording in the app (self and assisted)](#7-recording-in-the-app-self-and-assisted) | S1–S5 | DASH-5, QR-10 | 2, 4 | Built; device matrix and cook switcher left |
-| 8 | [Listen pages and QR](#8-listen-pages-and-qr) | F1, F3, F5, R13 | QR-1…QR-9 | 2 | Backend done (M1), restyle left |
+| 8 | [Listen pages and QR](#8-listen-pages-and-qr) | F1, F3, F5, R13 | QR-1…QR-9 | 2 | Done; print test and in-app browser checks left |
 | 9 | [WhatsApp capture](#9-whatsapp-capture) | C1, C2 | WA-1, WA-2, WA-5, WA-6, BUY-5 | 4, 5 | **On hold** |
 | 10 | [Follow-up questions and page back](#10-follow-up-questions-and-page-back) | C3, C4, S4 | WA-3, WA-4, AI-5, AI-6, ENG-5 | 7 or 9 | |
 | 11 | [Reminders and escalation](#11-reminders-and-escalation) | C5, R9 card | ENG-1, ENG-2, ENG-3 | 9 | |
@@ -326,27 +326,27 @@ Screens: **F1** Listen page · **F3** Recipe in the book · **F5** Recording mad
 - [x] Tests: token length and uniqueness, logged-out access, no ids in URLs, signed URL expiry
 
 ### Build
-- [ ] F1 restyle: "in Sunita ji's voice" (`storyteller_name`, fallback project title), recording date, 148 px play button, clip list, story clip last, "Read the recipe" (opens F3)
-- [ ] F1 performance: no blocking web fonts (system font first, swap later), inline critical CSS, total page ≤ 30 KB before audio, audio `preload="none"`; first paint < 1.5 s on throttled 4G (§13)
-- [ ] F3: her quote (Kalam), Listen, ingredients with her measures as said, method, QR for print
-- [ ] F5: private state in English and Hindi
-- [ ] `listen_events.source` set from a `?s=qr` parameter printed into QR codes (links shared from the app use `?s=link`); owner plays flagged
-- [ ] Weekly play counts on R13 (QR-9 data; sending them to the cook is module 11)
+- [x] F1 restyle: "in Sunita ji's voice" (`storyteller_name`, fallback project title), recording date, 148 px play button, clip list, story clip last, "Read the recipe" (opens F3)
+- [x] F1 performance: no blocking web fonts (system font first, swap later), inline critical CSS, total page ≤ 30 KB before audio, audio `preload="none"`; first paint < 1.5 s on throttled 4G (§13)
+- [x] F3: her quote (Kalam), Listen, ingredients with her measures as said, method, QR for print
+- [x] F5: private state in English and Hindi
+- [x] `listen_events.source` set from a `?s=qr` parameter printed into QR codes (links shared from the app use `?s=link`); owner plays flagged
+- [x] Weekly play counts on R13 (QR-9 data; sending them to the cook is module 11)
 
 ### Events
 `listen_page_viewed` {source}, `qr_play` {source}
 
 ### Edge cases
-- [ ] Audio blocked from autoplay → always needs a tap; never autoplay
-- [ ] Signed URL expires while the page is open (15 min) → player re-requests `/l/<token>/audio/<n>` on error and resumes
-- [ ] Old QR printed before a regenerate → private page, never someone else's recording
-- [ ] Link previews in WhatsApp show the recipe title and app name only (Open Graph tags), no audio URL
+- [x] Audio blocked from autoplay → always needs a tap; never autoplay
+- [x] Signed URL expires while the page is open (15 min) → player re-requests `/l/<token>/audio/<n>` on error and resumes
+- [x] Old QR printed before a regenerate → private page, never someone else's recording
+- [x] Link previews in WhatsApp show the recipe title and app name only (Open Graph tags), no audio URL
 - [ ] Page opened in WhatsApp's in-app browser and in Instagram's → plays (test both)
-- [ ] Project deleted → every token for it shows the private page
+- [x] Project deleted → every token for it shows the private page
 
 ### Tests
-- [ ] `?s=qr` is recorded; bot user agents don't create views
-- [ ] Page weight budget checked in a test (HTML + CSS bytes)
+- [x] `?s=qr` is recorded; bot user agents don't create views
+- [x] Page weight budget checked in a test (HTML + CSS bytes)
 
 **Acceptance (PRD QR test):** print a generated page at 100% on a home inkjet; scan with iPhone Camera and Android Google Lens; her voice plays within 3 s of tapping play on 4G. Revoking makes the old QR show "private".
 

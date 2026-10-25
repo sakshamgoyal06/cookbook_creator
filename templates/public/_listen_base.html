@@ -1,5 +1,5 @@
-{# Public pages opened from printed QR codes. Kept tiny and self-contained so they paint
-   fast on 4G (PRD §13). Placeholder styling until the mobile UI/UX design lands. #}
+{# Public pages opened from printed QR codes and shared links (UX F1-F5). Kept tiny and
+   self-contained: system fonts, inline CSS, no scripts but the player, so they paint fast on 4G (PRD §13). #}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,31 +7,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <meta name="referrer" content="no-referrer">
-    <meta name="theme-color" content="#1a1a2e">
+    <meta name="theme-color" content="#F6F3EC">
     <title>{% block title %}{{ config.APP_NAME }}{% endblock %}</title>
+    <meta property="og:title" content="{{ self.title() }}">
+    <meta property="og:site_name" content="{{ config.APP_NAME }}">
+    <meta property="og:description" content="{% block og_description %}A family recipe, in the cook's own voice.{% endblock %}">
     <style>
-        :root { --ink: #1a1a2e; --gold: #a07d3f; --cream: #fefaf3; --muted: #5a5a5a; }
+        :root { --atta: #F6F3EC; --steel: #fff; --line: #E7E1D5; --tawa: #24211C; --tawa-2: #5E574C; --leaf: #2E5B45; --haldi: #E3A82B; color-scheme: light; }
         * { box-sizing: border-box; }
-        body { margin: 0; background: var(--cream); color: var(--ink);
-               font: 18px/1.5 Georgia, "Noto Serif", serif; }
-        main { max-width: 32rem; margin: 0 auto; padding: 2.5rem 1rem 3rem; text-align: center; }
-        .eyebrow { color: var(--gold); letter-spacing: .08em; text-transform: uppercase; font-size: .85rem; margin: 0; }
-        h1 { font-size: 2.1rem; line-height: 1.2; margin: .5rem 0 .25rem; }
-        .meta { color: var(--muted); margin: 0 0 2rem; }
-        .play { width: 9rem; height: 9rem; border-radius: 50%; border: 0; background: var(--ink); color: #fff;
-                font-size: 3rem; cursor: pointer; box-shadow: 0 6px 20px rgba(26,26,46,.25); }
-        .play:focus-visible { outline: 4px solid var(--gold); outline-offset: 4px; }
-        .status { min-height: 1.5em; margin: 1rem 0 0; color: var(--muted); }
-        ul { list-style: none; padding: 0; text-align: left; }
-        li { display: flex; align-items: center; gap: .75rem; padding: .9rem 0; border-bottom: 1px solid #e8e2d9; }
-        li .play { width: 3.25rem; height: 3.25rem; font-size: 1.3rem; flex: none; box-shadow: none; }
-        a { color: var(--ink); }
+        body { margin: 0; background: var(--atta); color: var(--tawa); font: 18px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Devanagari", sans-serif; }
+        main { max-width: 32rem; margin: 0 auto; padding: 2rem 16px 3rem; }
+        .center { text-align: center; }
+        h1, h2, .serif { font-family: Georgia, "Noto Serif Devanagari", "Noto Serif", serif; font-weight: 400; line-height: 1.2; }
+        h1 { font-size: 2rem; margin: .4rem 0 .25rem; } h2 { font-size: 1.3rem; margin: 2rem 0 .5rem; }
+        .eyebrow { color: var(--tawa-2); letter-spacing: .08em; text-transform: uppercase; font-size: .8rem; font-weight: 600; margin: 0; }
+        .meta { color: var(--tawa-2); margin: 0 0 1.5rem; }
+        .play { width: 148px; height: 148px; border-radius: 50%; border: 0; background: var(--leaf); color: #fff; cursor: pointer;
+                display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(46,91,69,.28); text-decoration: none; }
+        .play svg { width: 40%; height: 40%; }
+        .play.small { width: 52px; height: 52px; flex: none; box-shadow: none; }
+        .play:focus-visible, a:focus-visible { outline: 3px solid var(--haldi); outline-offset: 3px; }
+        .status { min-height: 1.5em; margin: 1rem 0 0; color: var(--tawa-2); }
+        .list { list-style: none; padding: 0; margin: 1.5rem 0 0; background: var(--steel); border: 1px solid var(--line); border-radius: 14px; }
+        .list li { display: flex; align-items: center; gap: .75rem; padding: .75rem 1rem; border-bottom: 1px solid var(--line); }
+        .list li:last-child { border-bottom: 0; }
+        .list li.on { font-weight: 700; }
+        .btn { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; padding: 10px 22px; border-radius: 999px;
+               border: 1px solid var(--line); background: var(--steel); color: var(--leaf); font-weight: 600; text-decoration: none; }
+        .quote { font-family: "Segoe Print", "Bradley Hand", cursive; font-size: 1.15rem; background: var(--steel); border-left: 4px solid var(--haldi);
+                 padding: 12px 16px; border-radius: 8px; }
+        .card { background: var(--steel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+        a { color: var(--leaf); }
+        footer { color: var(--tawa-2); font-size: .85rem; text-align: center; margin-top: 3rem; }
     </style>
 </head>
 <body>
 <main>
 {% block content %}{% endblock %}
-<p class="meta" style="margin-top:3rem;font-size:.85rem">A private family recording &middot; {{ config.APP_NAME }}</p>
+<footer>A private family recording &middot; {{ config.APP_NAME }}</footer>
 </main>
 </body>
 </html>

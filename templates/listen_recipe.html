@@ -1,0 +1,22 @@
+{% extends "public/_listen_base.html" %}
+{% block title %}{{ page.recipe_title }}{% endblock %}
+{% block content %}
+<p class="eyebrow">{{ recipe.project_title }}</p>
+<h1>{{ page.recipe_title }}</h1>
+<p class="meta">{% if voice_name %}As {{ voice_name }} tells it{% endif %}{% if page.serves %} · Serves {{ page.serves }}{% endif %}</p>
+{% if page.moms_tips %}<p class="quote">“{{ page.moms_tips[0] }}”</p>{% endif %}
+<p><a class="btn" href="{{ url_for('listen', token=token) }}">Listen{% if voice_name %} to {{ voice_name }}{% endif %}</a></p>
+{% if page.ingredients %}
+<h2>Ingredients</h2>
+<ul class="list">{% for ing in page.ingredients %}<li><span><strong>{{ ing.quantity }} {{ ing.unit }}</strong> {{ ing.item }}{% if ing.preparation_note %}, <span class="meta">{{ ing.preparation_note }}</span>{% endif %}</span></li>{% endfor %}</ul>
+{% endif %}
+{% if page.method_steps %}
+<h2>Method</h2>
+<ol>{% for step in page.method_steps %}<li style="margin-bottom:.75rem">{{ step.instruction }}{% if step.sensory_cue %} <span class="meta">({{ step.sensory_cue }})</span>{% endif %}</li>{% endfor %}</ol>
+{% endif %}
+{% if page.moms_tips | length > 1 %}
+<h2>Tips</h2>
+<ul>{% for tip in page.moms_tips[1:] %}<li>{{ tip }}</li>{% endfor %}</ul>
+{% endif %}
+{% if page.family_note %}<h2>The story</h2><p>{{ page.family_note }}</p>{% endif %}
+{% endblock %}

@@ -233,7 +233,22 @@ def listen(token):
         events_service.track("listen_page_viewed", project_id=recipe["project_id"], recipe_id=recipe["id"],
                              actor="anon", channel="qr" if source == "qr" else "web", source=source)
     played_url = url_for("listen_played", token=token, s=source)
-    return render_template("listen.html", recipe=recipe, token=token, clip_urls=clip_urls, played_url=played_url)
+    clips = [{"url": url, "label": listen_service.clip_label(recipe["clips"], i)} for i, url in enumerate(clip_urls)]
+    return render_template("listen.html", recipe=recipe, token=token, clip_urls=clip_urls, clips=clips,
+                           played_url=played_url, voice_name=listen_service.voice_name(recipe))
+
+
+@app.route("/l/<token>/recipe")
+def listen_recipe(token):
+    """F3: the written page behind a listen link, once the family has approved it."""
+    recipe = listen_service.get_listen_recipe(token)
+    if recipe is None:
+        return render_template("listen_private.html"), 404
+    if recipe["status"] != "approved":
+        abort(404)
+    page = recipe_service.get_recipe(recipe["id"])
+    return render_template("listen_recipe.html", recipe=recipe, page=page, token=token,
+                           voice_name=listen_service.voice_name(recipe))
 
 
 @app.route("/l/<token>/audio/<int:clip_number>")

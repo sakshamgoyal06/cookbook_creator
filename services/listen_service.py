@@ -41,7 +41,11 @@ def get_listen_recipe(token):
                 recipes.c.recipe_title,
                 recipes.c.created_at,
                 recipes.c.listen_revoked_at,
+                recipes.c.status,
+                recipes.c.cook_name,
                 projects.c.title.label("project_title"),
+                projects.c.storyteller_name,
+                projects.c.cook_mode,
             )
             .join(projects, projects.c.id == recipes.c.project_id)
             .where(recipes.c.listen_token == token)
@@ -130,7 +134,8 @@ def get_book(token):
     """A project's public cookbook page data: its title and listenable recipes with clips."""
     with get_engine().connect() as conn:
         project = conn.execute(
-            select(projects.c.id, projects.c.title, projects.c.subtitle, projects.c.dedication)
+            select(projects.c.id, projects.c.title, projects.c.subtitle, projects.c.dedication,
+                   projects.c.storyteller_name, projects.c.share_pages_as_ready, projects.c.revealed_at)
             .where(projects.c.book_token == token)
         ).mappings().first()
         if project is None:
@@ -140,13 +145,37 @@ def get_book(token):
             select(recipes.c.id, recipes.c.recipe_title, recipes.c.listen_token)
             .where(
                 recipes.c.project_id == project["id"],
-                recipes.c.status.in_(LISTENABLE_STATUSES),
+                recipes.c.status == "approved",  # the family sees pages once the buyer approves them
                 recipes.c.listen_revoked_at.is_(None),
             )
             .order_by(recipes.c.sort_order, recipes.c.created_at, recipes.c.id)
         ).mappings().all()
         book["recipes"] = [dict(r, clip_count=len(_clips(conn, r["id"]))) for r in rows]
+        # "Keep it a surprise": the book lists nothing until the reveal; printed QR codes still play.
+        book["surprise"] = not book["share_pages_as_ready"] and book["revealed_at"] is None
+        if book["surprise"]:
+            book["recipes"] = []
     return book
+
+
+def voice_name(recipe):
+    """Whose voice the listen page names: "Sunita ji", or the owner's own name in self mode."""
+    name = recipe.get("cook_name") or recipe.get("storyteller_name")
+    if not name:
+        return None
+    return name if recipe.get("cook_mode") == "self" else f"{name.split()[0]} ji"
+
+
+def clip_label(clips, index):
+    kind = clips[index]["kind"]
+    if kind == "story":
+        return "The story behind it"
+    if kind == "followup":
+        return "A follow-up answer"
+    originals = [c for c in clips if c["kind"] == "original"]
+    if len(originals) == 1:
+        return "The recipe"
+    return f"The recipe, part {originals.index(clips[index]) + 1}"
 
 
 def _clips(conn, recipe_id):
