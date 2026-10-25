@@ -42,7 +42,7 @@ We are not selling an AI recipe formatter. We are selling **family legacy as a g
 | G1 | Prove families will pay for a **digital-first** cookbook experience in India | 50 paid families in the pilot; ≥ 500 paid books in year 1 |
 | G2 | Make Mom **actually finish** (the main risk) | ≥ 70% of paid projects reach 10 approved recipes |
 | G3 | Preserve Mom's **voice**, not just her recipes | 100% of recipes in a finished book carry a working voice QR; ≥ 50% of finished books get at least one QR play from someone other than the buyer |
-| G4 | Run a healthy unit economy at India prices | ≥ 55% contribution margin at ₹999 after GST, payment fees and AI costs |
+| G4 | Run a healthy unit economy at India prices | ≥ 55% contribution margin at ₹1,200 after GST, payment fees and AI costs |
 | G5 | Grow mainly through families sharing | ≥ 30% of new buyers come through referral, family sharing or a shared recipe page |
 
 ### 3.2 Non-goals (for now)
@@ -96,7 +96,7 @@ We are not selling an AI recipe formatter. We are selling **family legacy as a g
 | Language | English | English | **Hindi, Hinglish, regional + English** |
 | How the parent contributes | Weekly email prompt | Weekly prompt, web recorder | **WhatsApp voice notes, follow-up questions, reminders** |
 | Voice in the final book | No | QR plays the voice | **QR plays the voice (P0)** |
-| Price | about $99 (plans $59–199 in 2026) | $99 including a hardcover | **₹999 digital** (print later) |
+| Price | about $99 (plans $59–199 in 2026) | $99 including a hardcover | **₹1,200 digital** (print later) |
 | Proof of the market | Over 1M books printed; profitable | Shark Tank 2025; about $1.5M→$4.6M projected sales | — |
 
 **Positioning:** *"The easiest way to save Mom's recipes in her own voice. She just sends WhatsApp voice notes; you get a cookbook the whole family can hear."*
@@ -296,9 +296,9 @@ Mom's voice is what turns a recipe PDF into an heirloom. **Every recipe in every
 
 | Product | Price (incl. GST) | Contents |
 |---|---|---|
-| **Mom's Top 10, Volume 1** | **₹999** (launch / festive offer ₹799) | 10 recipes, WhatsApp capture, follow-ups, voice QR on every recipe, digital book (PDF + web), family sharing |
-| **Volume 2** (+10 recipes) | **₹599** | Adds 10 recipes; new volume or merged edition |
-| **Family Edition** | **₹1,999** | 25 recipes, custom theme, "About Mom" writing help |
+| **Mom's Top 10, Volume 1** | **₹1,200** (decided 2026-10-24; launch offers allowed) | 10 recipes, WhatsApp capture, follow-ups, voice QR on every recipe, digital book (PDF + web), family sharing |
+| **Volume 2** (+10 recipes) | **TBC** (was ₹599; to be re-set against ₹1,200) | Adds 10 recipes; new volume or merged edition |
+| **Family Edition** | **TBC** (was ₹1,999; to be re-set against ₹1,200) | 25 recipes, custom theme, "About Mom" writing help |
 | **Interview Mom for Me** | **₹499 per call** | A trained Hindi- or regional-language interviewer runs a 45-minute call |
 | **Print-ready PDF** | **₹299** | High-resolution file for printing locally |
 | *Later:* softcover / hardcover | ₹999 / ₹1,799 | Print-on-demand, shipped within India |
@@ -311,8 +311,8 @@ Mom's voice is what turns a recipe PDF into an heirloom. **Every recipe in every
 ### 9.2 Diaspora (P1)
 
 Same product, priced in USD by card country or location:
-- Top 10: **$19–29**
-- Family Edition: **$49**
+- Top 10: **about $22** (nets about ₹2,000; decided 2026-10-24)
+- Family Edition: **TBC** (was $49)
 - Hardcover (later): about **$59**, extra copies about $35
 
 ---
@@ -336,18 +336,18 @@ Same product, priced in USD by card country or location:
 | Virality | Family members joined per project; buyers coming from shares or referrals | ≥ 3; ≥ 30% |
 | Monetisation | Projects buying Volume 2 or Family Edition within 60 days | ≥ 20% |
 | Quality | Buyer edits per recipe before approval (lower is better) | ≤ 3 field edits |
-| Economics | Contribution margin per ₹999 order | ≥ 55% |
+| Economics | Contribution margin per ₹1,200 order | ≥ 55% |
 | Speed | Voice note → page back to Mom (p90) | ≤ 5 minutes |
 
 ---
 
-## 11. Unit economics (Top 10 at ₹999)
+## 11. Unit economics (Top 10 at ₹1,200)
 
 | Line | ₹ |
 |---|---|
-| Price (incl. GST) | 999 |
-| GST at 18% (once registered) | −152 |
-| Razorpay fee (~2% + GST) | −24 |
+| Price (incl. GST) | 1,200 |
+| GST at 18% (once registered) | −183 |
+| Razorpay fee (~2% + GST) | −28 |
 | Transcription (~70 min of audio) | −37 |
 | Claude structuring and follow-ups | −62 |
 | WhatsApp chat AI | −18 |
@@ -355,7 +355,7 @@ Same product, priced in USD by card country or location:
 | WhatsApp template messages (~30) | −20 |
 | Rendering, storage, QR hosting | −5 |
 | Buffer (retries, re-recordings, +30%) | −50 |
-| **Contribution** | **≈ 613 (≈ 61% of price; ≈ 72% after GST)** |
+| **Contribution** | **≈ 779 (≈ 65% of price; ≈ 77% after GST)** |
 
 - **Fixed costs:** about ₹5–9k a month for hosting, database, storage and email. Break-even at about 10–15 orders a month.
 - **Price floor for ≥ 50% margin:** about ₹699.
@@ -399,22 +399,30 @@ Builds on the existing `users`, `projects` and `recipes` tables.
 
 ```
 users            (exists)
-projects         + storyteller_name, storyteller_phone, storyteller_language,
-                   occasion, reveal_date, tier, recipe_quota, payment_status,
-                   book_token, consent_at, reminders_paused
-recipes          + listen_token, listen_revoked_at, section, approved_at
-                   status ∈ received|transcribed|structured|awaiting_mom|needs_review|approved
+projects         + cook_mode (whatsapp|self|assisted), storyteller_name,
+                   storyteller_address_as, storyteller_phone, storyteller_language,
+                   occasion, reveal_date, share_pages_as_ready, tier, recipe_quota,
+                   payment_status, book_token, cook_token, consent_at,
+                   reminders_paused_until, revealed_at
+recipes          + listen_token, listen_revoked_at, section, approved_at, dish_id, cook_name
+                   status ∈ received|transcribed|structured|awaiting_mom|needs_review|approved|failed
 recipe_audio     id, recipe_id, storage_key, duration_s, kind (original|followup|story),
                  play_order, created_at
+dishes           id, project_id, title, position, source (buyer|family|cook),
+                 requested_by_member_id, requested_by_label, status, recipe_id
+                 (one ordered list: the buyer's wishlist and family requests)
 recipe_questions id, recipe_id, question_text, answer_text, answer_audio_id,
                  status (open|answered|expired), asked_at, answered_at
-family_members   id, project_id, name, phone/email, invite_token, joined_at
-dish_requests    id, project_id, family_member_id, dish_name, status
+family_members   id, project_id, name, role (buyer|cook|member), join_token, joined_at
+upload_sessions  id, project_id, client_upload_id, dish_id, bytes_received, status
 orders           id, project_id, product, amount_paise, currency, provider,
                  provider_ref, status, created_at
 wa_messages      id, project_id, direction, template, wa_message_id, status, created_at
-listen_events    id, recipe_id, played_at  (no PII)
+listen_events    id, recipe_id, played_at, source (qr|link|book|app), is_owner  (no PII)
+events           id, name, project_id, recipe_id, actor, channel, props, created_at  (no PII)
 ```
+
+Screens and flows for these are in the mobile UX spec (project files `design/MOBILE_UX_SPEC.md`).
 
 ---
 
@@ -439,7 +447,7 @@ listen_events    id, recipe_id, played_at  (no PII)
 
 | Phase | When | Scope | Exit criteria |
 |---|---|---|---|
-| **0: Concierge pilot** | Nov–Dec 2026 | 20–50 paying families at ₹799–999. The founder runs WhatsApp by hand; existing upload, structuring and PDF; QR added by hand or with the first QR-1/2/3 build. | Activation ≥ 70%, completion ≥ 70%, ≥ 5 unprompted "she cried when she heard it" stories |
+| **0: Concierge pilot** | Nov–Dec 2026 | 20–50 paying families at ₹1,200 (pilot offers allowed). The founder runs WhatsApp by hand; existing upload, structuring and PDF; QR added by hand or with the first QR-1/2/3 build. | Activation ≥ 70%, completion ≥ 70%, ≥ 5 unprompted "she cried when she heard it" stories |
 | **1: P0 MVP** | Jan–Mar 2027 | All P0 requirements above | 100 self-serve paid projects; p90 voice note → page ≤ 5 min; margin ≥ 55% |
 | **2: Mother's Day push** | Apr–May 2027 | P1 engagement (family requests, plays shown to Mom, interview add-on), diaspora USD pricing | 500 paid books; ≥ 30% from referrals or shares |
 | **3: Print and expansion** | Jun 2027 → | Print-on-demand (India + abroad), regional languages, themes | Print uptake ≥ 20% of finished books |
