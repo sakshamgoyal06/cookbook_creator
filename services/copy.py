@@ -63,3 +63,18 @@ def question_text(project, dish, question):
     language = project.get("storyteller_language") or "hinglish"
     who = project.get("storyteller_address_as") or ("मम्मी" if language == "hi" else "Mummy")
     return QUESTION[language].format(who=who, dish=dish, question=question)
+
+
+REVEAL = {
+    "hi": "{title}: {who} की रसोई की किताब, उनकी अपनी आवाज़ में। हर रेसिपी के साथ उनकी आवाज़ सुनिए: {url}",
+    "hinglish": ("{title}: {who} ki recipes ki kitaab, unki apni awaaz mein. "
+                 "Har recipe ke saath unki awaaz suniye: {url}"),
+    "en": "{title}: {who}'s recipes, in their own voice. Open it and listen to every recipe: {url}",
+}
+
+
+def reveal_text(project, url):
+    """The family-group message on reveal day, sent from the buyer's WhatsApp."""
+    language = project.get("storyteller_language") or "hinglish"
+    who = project.get("storyteller_address_as") or project.get("storyteller_name") or "Mummy"
+    return REVEAL[language].format(title=project["title"], who=who, url=url)

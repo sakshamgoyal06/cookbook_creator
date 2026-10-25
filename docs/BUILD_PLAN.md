@@ -31,7 +31,7 @@
 | 11 | [Reminders and escalation](#11-reminders-and-escalation) | C5, R9 card | ENG-1, ENG-2, ENG-3 | 9 | |
 | 12 | [Family and dish requests](#12-family-and-dish-requests) | R11, F4 | ENG-4 | 5, 8 | Built |
 | 13 | [Payments](#13-payments) | R3, R7 | BUY-2 | 5 | |
-| 14 | [Book and reveal day](#14-book-and-reveal-day) | F2, R12 | BOOK-1…BOOK-5 | 6, 8 | |
+| 14 | [Book and reveal day](#14-book-and-reveal-day) | F2, R12 | BOOK-1…BOOK-5 | 6, 8 | Built; card images and phone-size PDF left |
 | 15 | [Mom's page](#15-moms-page-optional-p1) | C6–C8 | | 7, 9 | P1 unless Saksham decides otherwise |
 | 16 | [Upsell, admin and metrics](#16-upsell-admin-and-metrics) | | UP-1, OPS-1, OPS-3 | 3, 13 | |
 | 17 | [Launch readiness](#17-launch-readiness) | | §13 | all | |
@@ -501,21 +501,21 @@ Screens: **R3** Pick a book (prices) · **R7** Pay.
 Screens: **F2** Family cookbook `/b/<token>` · **R12** Reveal day.
 
 ### Build
-- [ ] Book compiler: cover (title, cook's name, optional photo), dedication, contents, recipe pages with QR, About the cook, closing page (BOOK-1)
-- [ ] Screen PDF (A5/square for phones) (BOOK-2)
-- [ ] F2 web book: cover, dedication, "A message from Mummy" slot (QR-11, P1), contents with a play button per recipe, PDF download, "Ask for a dish" (module 12) (completes QR-8)
+- [x] Book compiler: cover (title, cook's name, optional photo), dedication, contents, recipe pages with QR, About the cook, closing page (BOOK-1)
+- [~] (A4 PDF for now; phone-size layout later) Screen PDF (A5/square for phones) (BOOK-2)
+- [~] ("A message from Mummy" slot is P1) F2 web book: cover, dedication, "A message from Mummy" slot (QR-11, P1), contents with a play button per recipe, PDF download, "Ask for a dish" (module 12) (completes QR-8)
 - [ ] Recipe-card images per recipe for forwarding (BOOK-4)
-- [ ] Always ship: on the reveal date compile whatever is approved; unused quota carries into Volume 2 (BOOK-5)
-- [ ] R12: cover preview, family-group message (`wa.me`), PDF, Volume 2 offer; scheduled reveal on `reveal_date` or "Reveal now" (BOOK-3)
-- [ ] Before reveal, `/b/<token>` shows a "Coming on <date>" page unless the buyer previews while logged in
+- [x] Always ship: on the reveal date compile whatever is approved; unused quota carries into Volume 2 (BOOK-5)
+- [~] (Volume 2 offer is a placeholder until prices are set) R12: cover preview, family-group message (`wa.me`), PDF, Volume 2 offer; scheduled reveal on `reveal_date` or "Reveal now" (BOOK-3)
+- [x] Before reveal, `/b/<token>` shows a "Coming on <date>" page unless the buyer previews while logged in
 
 ### Events
 `book_compiled`, `book_revealed`, `book_pdf_downloaded`, `book_page_viewed`, `volume2_offer_shown`
 
 ### Edge cases
-- [ ] Reveal date arrives with 0 approved recipes → no reveal; buyer asked to pick a new date
-- [ ] Recipe approved after reveal → added to the web book automatically; PDF recompiled on request
-- [ ] `share_pages_as_ready = false` → nothing visible to family until reveal
+- [x] Reveal date arrives with 0 approved recipes → no reveal; buyer asked to pick a new date
+- [x] Recipe approved after reveal → added to the web book automatically; PDF recompiled on request
+- [x] `share_pages_as_ready = false` → nothing visible to family until reveal
 - [ ] Large books (25 recipes) → PDF compiled in the worker, not the request
 
 **Acceptance:** a 10-recipe project produces a PDF and web book in which every recipe's QR and link play the right voice; reveal on the set date gives the buyer the family message.

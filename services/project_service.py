@@ -1,7 +1,7 @@
 from sqlalchemy import delete, func, insert, select, update
 
 from models.database import get_engine, new_token
-from models.schema import family_members, projects, recipes, users
+from models.schema import family_members, generated_files, projects, recipes, users
 
 EDITABLE_FIELDS = {
     "title": "",
@@ -94,3 +94,24 @@ def get_members(project_id):
             .order_by(family_members.c.id)
         ).mappings().all()
     return [dict(r) for r in rows]
+
+
+def save_book_pdf(project_id, storage_key):
+    with get_engine().begin() as conn:
+        conn.execute(insert(generated_files).values(project_id=project_id, kind="book_pdf", storage_key=storage_key))
+
+
+def latest_book_pdf(project_id):
+    with get_engine().connect() as conn:
+        return conn.execute(
+            select(generated_files.c.storage_key, generated_files.c.created_at)
+            .where(generated_files.c.project_id == project_id, generated_files.c.kind == "book_pdf")
+            .order_by(generated_files.c.id.desc()).limit(1)
+        ).mappings().first()
+
+
+def reveal(project_id):
+    """Reveal day (BOOK-3): the family sees every approved page from now on."""
+    with get_engine().begin() as conn:
+        conn.execute(update(projects).where(projects.c.id == project_id, projects.c.revealed_at.is_(None))
+                     .values(revealed_at=func.now(), updated_at=func.now()))

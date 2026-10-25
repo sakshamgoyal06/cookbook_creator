@@ -1,0 +1,28 @@
+{% extends "app/_shell.html" %}
+{% from "components/ui.html" import csrf %}
+{% block content %}
+<p class="section-title">Reveal day</p>
+<div class="card center stack">
+  <h1>{{ project.title }}</h1>
+  {% if project.storyteller_name %}<p class="muted">Recipes in {{ project.storyteller_name.split()[0] }}{{ ' ji' if project.cook_mode != 'self' }}'s own voice</p>{% endif %}
+  <p class="small muted">{{ approved | length }} page{{ 's' if approved | length != 1 }} approved{% if days_left is not none and days_left > 0 %} · {{ days_left }} days to {{ project.occasion or 'the reveal' }}{% endif %}</p>
+</div>
+{% if project.revealed_at %}
+<p class="flash">Revealed on {{ project.revealed_at.strftime('%-d %B %Y') }}. Pages you approve from now on appear for the family straight away.</p>
+{% elif not approved %}
+<p class="flash flash-info">Approve at least one page before the reveal. If the date is too close, pick a later one in Book details.</p>
+{% endif %}
+<div class="actions">
+  <a class="btn btn-primary btn-block" href="{{ share_link }}" target="_blank" rel="noopener">{{ icon('share') }} Send to the family group</a>
+  {% if latest_pdf %}<a class="btn btn-secondary btn-block" href="{{ url_for('screens.book_file', project_id=project.id) }}">Download the book PDF</a>{% endif %}
+  <form method="post" action="{{ url_for('screens.compile_book', project_id=project.id) }}">{{ csrf() }}<button class="btn btn-secondary btn-block" type="submit">{{ 'Make the PDF again' if latest_pdf else 'Make the book PDF' }}</button></form>
+  {% if not project.revealed_at and approved %}
+  <form method="post">{{ csrf() }}<button class="btn btn-primary btn-block" type="submit">Reveal now</button></form>
+  <p class="small muted center">{% if project.reveal_date %}Or wait: the pages open for the family by themselves on {{ project.reveal_date.strftime('%-d %B') }}.{% else %}The family sees the pages once you reveal.{% endif %}</p>
+  {% endif %}
+</div>
+<div class="card" style="margin-top:16px">
+  <p><strong>Volume 2</strong></p>
+  <p class="muted small">Dishes that didn't fit stay on the wishlist, ready for a second volume. We'll let you know when it opens.</p>
+</div>
+{% endblock %}
