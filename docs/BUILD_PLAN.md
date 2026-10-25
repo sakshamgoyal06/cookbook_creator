@@ -46,7 +46,7 @@ Old milestone names, for reference: M0 = 1, M1 = 8 (backend), M2 = 9, M3 = 10, M
 
 Goal: prove families pay and cooks finish **before** automating. The founder does by hand what modules 9–14 will automate.
 
-- [ ] Landing page (one page: promise, price, sample page with QR, "Book a slot") with a Razorpay payment link
+- [ ] Landing page (one page: promise, ₹1,200, sample page with QR, "Book a slot") with a Razorpay payment link
 - [ ] Pilot WhatsApp Business number (Business app, manual)
 - [ ] Invite message templates in Hindi, Hinglish and English, in the consultant voice (UX spec §1.1)
 - [ ] Pilot ops sheet: family, cook's number, language, reveal date, recipes received, last activity, follow-ups sent
@@ -577,6 +577,7 @@ Record decisions that change the plan (newest first).
 
 | Date | Decision | Why |
 |---|---|---|
+| 2026-10-24 | Top 10 digital is ₹1,200 in India and about $22 abroad (nets about ₹2,000); Volume 2 and Family Edition prices still open | Saksham's call in the go-to-market work; PRD §9 and §11 updated |
 | 2026-10-25 | Mobile UX v1 approved as the starting point; plan reorganised into modules with data, events and edge cases per module | Saksham's call; build the new UX screen by screen instead of patching the old UI |
 | 2026-10-25 | One ordered `dishes` table with `requested_by` replaces the separate `dish_requests` table | The wishlist, family requests and nudges all need the same ordered list |
 | 2026-10-25 | Analytics events moved from M7 to an early module | Every module needs to record events from day one to measure the pilot |
