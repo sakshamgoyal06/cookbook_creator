@@ -21,7 +21,7 @@
 | 1 | [Foundations](#1-foundations) | | AI-3, AI-4, §13, §15, §17 | | Mostly done; deploy, backups, Sentry left |
 | 2 | [Design system and app shell](#2-design-system-and-app-shell) | all | §12 | 1 | Next |
 | 3 | [Analytics events](#3-analytics-events) | | OPS-3, §10 | 1 | Next (with 2) |
-| 4 | [Data model v2](#4-data-model-v2) | | §14 | 1 | Next (with 2) |
+| 4 | [Data model v2](#4-data-model-v2) | | §14 | 1 | Done (edge cases land with modules 5–7) |
 | 5 | [Onboarding and gift setup](#5-onboarding-and-gift-setup) | R1–R8 | BUY-1…BUY-5, ENG-3 | 2, 3, 4 | |
 | 6 | [Requester home and recipe review](#6-requester-home-and-recipe-review) | R9, R10, R13 | DASH-1…DASH-3 | 5 | |
 | 7 | [Recording in the app (self and assisted)](#7-recording-in-the-app-self-and-assisted) | S1–S5 | DASH-5, QR-10 | 2, 4 | |
@@ -173,19 +173,18 @@ Goal: answer every PRD §10 metric from our own data, without personal data in e
 
 Goal: one reviewed set of migrations for everything the new UX needs, so screens don't each invent their own columns. PRD §14 is updated to match.
 
-Add these tables and columns (one Alembic migration per group, in this order):
+All in migration `0004_ux_v1.py`:
 
-- [ ] **0004 projects: cook and gift fields:** `cook_mode` (`whatsapp|self|assisted`, default `whatsapp`), `storyteller_name`, `storyteller_address_as` (what the child calls her: Mummy, Maa, Dadi), `storyteller_phone` (E.164, unique among active projects), `storyteller_language` (`hi|hinglish|en`), `occasion`, `reveal_date`, `share_pages_as_ready` (bool, default true), `consent_at`, `reminders_paused_until`, `revealed_at`
-- [ ] **0005 dishes:** `id, project_id, title, position, requested_by_member_id (nullable), requested_by_label (e.g. "Riya"), source (buyer|family|cook), status (wishlist|in_progress|done|skipped), recipe_id (nullable, unique), created_at`. This replaces the PRD's separate `dish_requests` table: a family request is a dish with `source = family`
-- [ ] **0006 family_members:** `id, project_id, name, role (buyer|cook|member), join_token, joined_at, removed_at`; buyer row created with the project
-- [ ] **0007 recipes: dish and cook:** `recipes.dish_id` (nullable), `recipes.cook_name` (nullable; set by the Cook switcher in assisted mode, else falls back to `storyteller_name`)
-- [ ] **0008 cook page token:** `projects.cook_token`, `projects.cook_token_revoked_at` (for `/m/<token>`, module 15; added now so tokens exist for every project)
-- [ ] **0009 uploads:** `upload_sessions` (`id, project_id, client_upload_id unique, dish_id, bytes_expected, bytes_received, status (open|complete|abandoned), created_at`) for chunked, resumable in-app recording
-- [ ] **0010 events** (module 3) and `listen_events.source`, `listen_events.is_owner`
+- [x] **projects:** `cook_mode` (`whatsapp|self|assisted`), `storyteller_name`, `storyteller_address_as` (what the child calls her: Mummy, Maa, Dadi), `storyteller_phone`, `storyteller_language` (`hi|hinglish|en`), `occasion`, `reveal_date`, `share_pages_as_ready` (default true), `tier`, `setup_step` (resume onboarding), `invite_sent_at`, `consent_at`, `reminders_paused_until`, `revealed_at`, `cook_token` + `cook_token_revoked_at` (for `/m/<token>`, module 15)
+- [x] **dishes:** `project_id, title, position, source (buyer|family|cook), requested_by_member_id, requested_by_label, status (wishlist|in_progress|done|skipped), recipe_id (unique)`. Replaces the PRD's `dish_requests`: a family request is a dish with `source = family`. The dish points at its recipe (no `recipes.dish_id`, so there's one link to keep in step)
+- [x] **family_members:** `project_id, name, role (buyer|cook|member), user_id, joined_at, removed_at`; a buyer row is created with every project. Family join uses the book link (`/b/<token>`), so regenerating that link also closes the family link
+- [x] **recipes.cook_name** (set by the Cook switcher in assisted mode; else `storyteller_name`)
+- [x] **upload_sessions:** `client_upload_id` (unique), `dish_id`, `kind`, `content_type`, `chunks_received`, `bytes_received`, `status (open|complete|abandoned)`, `recipe_id`
+- [x] **events** (module 3) and `listen_events.source`, `listen_events.is_owner`
 - [ ] Later, with their modules: `orders` (13), `wa_messages` (9), `recipe_questions` (10)
-- [ ] `recipe_audio.kind = story` already exists; story clips play after the recipe clips
-- [ ] Backfill: existing projects get `cook_mode = self` (they were all web uploads), a cook token, a buyer `family_members` row; existing recipes get a `dishes` row each
-- [ ] `docs/DATABASE.md` and `tests/test_database.py` updated (schema matches migrations)
+- [x] `recipe_audio.kind = story` already exists; story clips play after the recipe clips
+- [x] Backfill: existing projects get `cook_mode = self` (they were all web uploads), a cook token and a buyer `family_members` row; existing recipes get a `dishes` row each
+- [x] `tests/test_database.py` updated (schema matches migrations, backfill checked on SQLite and Postgres)
 
 ### Edge cases
 - [ ] Changing `cook_mode` after recipes exist keeps every recipe and clip; only the shell and reminders change
