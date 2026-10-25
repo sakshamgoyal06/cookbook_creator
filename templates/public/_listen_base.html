@@ -8,7 +8,7 @@
     <meta name="robots" content="noindex, nofollow">
     <meta name="referrer" content="no-referrer">
     <meta name="theme-color" content="#1a1a2e">
-    <title>{% block title %}Mom's Cookbook{% endblock %}</title>
+    <title>{% block title %}{{ config.APP_NAME }}{% endblock %}</title>
     <style>
         :root { --ink: #1a1a2e; --gold: #a07d3f; --cream: #fefaf3; --muted: #5a5a5a; }
         * { box-sizing: border-box; }
@@ -31,6 +31,7 @@
 <body>
 <main>
 {% block content %}{% endblock %}
+<p class="meta" style="margin-top:3rem;font-size:.85rem">A private family recording &middot; {{ config.APP_NAME }}</p>
 </main>
 </body>
 </html>

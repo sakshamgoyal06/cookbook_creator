@@ -1,11 +1,14 @@
 import json
 
+import config
+
 
 def test_manifest_is_valid_and_icons_exist(client):
-    response = client.get("/static/manifest.webmanifest")
+    response = client.get("/manifest.webmanifest")
     assert response.status_code == 200
     manifest = json.loads(response.data)
     assert manifest["display"] == "standalone"
+    assert manifest["name"] == config.APP_NAME
     assert manifest["start_url"] == "/dashboard"
     sizes = {icon["sizes"] for icon in manifest["icons"]}
     assert {"192x192", "512x512"} <= sizes
@@ -33,3 +36,10 @@ def test_pages_link_manifest_and_register_worker(client):
     assert b'rel="manifest"' in html
     assert b"apple-touch-icon" in html
     assert b'serviceWorker.register("/sw.js"' in html
+
+
+def test_app_name_comes_from_config(client, monkeypatch):
+    monkeypatch.setattr(config, "APP_NAME", "Testname")
+    assert b"Testname" in client.get("/login").data
+    assert json.loads(client.get("/manifest.webmanifest").data)["short_name"] == "Testname"
+    assert b"A private family recording &middot; Testname" in client.get("/l/unknown").data

@@ -197,6 +197,14 @@ def service_worker():
     return response
 
 
+@app.route("/manifest.webmanifest")
+def web_manifest():
+    with open(os.path.join(app.static_folder, "manifest.webmanifest"), encoding="utf-8") as f:
+        manifest = json.load(f)
+    manifest["name"] = manifest["short_name"] = config.APP_NAME
+    return Response(json.dumps(manifest), mimetype="application/manifest+json")
+
+
 @app.route("/offline")
 def offline():
     return render_template("offline.html")
@@ -606,7 +614,7 @@ def _lan_ip():
 
 def _print_startup_urls():
     port = config.FLASK_PORT
-    print("\nMom's Cookbook Studio is running:")
+    print(f"\n{config.APP_NAME} is running:")
     print(f"  On this computer: http://127.0.0.1:{port}")
 
     lan_ip = _lan_ip()
