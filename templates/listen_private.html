@@ -1,7 +1,11 @@
 {% extends "public/_listen_base.html" %}
 {% block title %}This recording is private{% endblock %}
 {% block content %}
+<div class="center">
 <p class="eyebrow">{{ config.APP_NAME }}</p>
 <h1>This recording is private</h1>
 <p class="meta">The family has turned off this link. If you think it should work, ask them for a new one.</p>
+<h1 lang="hi" style="font-size:1.5rem;margin-top:2rem">यह रिकॉर्डिंग निजी है</h1>
+<p class="meta" lang="hi">परिवार ने यह लिंक बंद कर दिया है। अगर आपको लगता है कि इसे चलना चाहिए, तो उनसे नया लिंक माँग लीजिए।</p>
+</div>
 {% endblock %}

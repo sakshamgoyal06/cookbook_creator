@@ -1,34 +1,54 @@
 {% extends "public/_listen_base.html" %}
 {% block title %}{{ recipe.recipe_title }}{% endblock %}
+{% block og_description %}{{ recipe.project_title }}{% if voice_name %}, in {{ voice_name }}'s voice{% endif %}{% endblock %}
 {% block content %}
+<div class="center">
 <p class="eyebrow">{{ recipe.project_title }}</p>
 <h1>{{ recipe.recipe_title }}</h1>
-<p class="meta">Recorded {{ recipe.clips[0].created_at.strftime('%-d %B %Y') if recipe.clips[0].created_at else '' }}</p>
-<button class="play" id="play" aria-label="Play the recording">&#9654;</button>
+<p class="meta">{% if voice_name %}In {{ voice_name }}'s voice · {% endif %}Recorded {{ recipe.clips[0].created_at.strftime('%-d %B %Y') if recipe.clips[0].created_at else '' }}</p>
+<button class="play" id="play" aria-label="Play the recording"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg></button>
 <p class="status" id="status" aria-live="polite"></p>
+</div>
+{% if clips | length > 1 %}
+<ol class="list" id="clips">
+  {% for clip in clips %}<li data-n="{{ loop.index }}"><span>{{ loop.index }}.</span><a href="#" data-clip="{{ loop.index }}">{{ clip.label }}</a></li>{% endfor %}
+</ol>
+{% endif %}
+{% if recipe.status == 'approved' %}<p class="center" style="margin-top:1.5rem"><a class="btn" href="{{ url_for('listen_recipe', token=token) }}">Read the recipe</a></p>{% endif %}
 <audio id="audio" preload="none"></audio>
+<noscript>{% for url in clip_urls %}<audio controls preload="none" src="{{ url }}"></audio>{% endfor %}</noscript>
 <script>
 (function () {
-    var urls = {{ clip_urls | tojson }}, clips = urls.length, current = 1, counted = false;
+    var urls = {{ clip_urls | tojson }}, clips = urls.length, current = 1, counted = false, retried = false;
     var audio = document.getElementById("audio"), button = document.getElementById("play"),
-        status = document.getElementById("status");
-    function load(n) { current = n; audio.src = urls[n - 1]; }
+        status = document.getElementById("status"), list = document.getElementById("clips");
+    var PLAY = button.innerHTML, PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg>';
+    function load(n) {
+        current = n; retried = false; audio.src = urls[n - 1];
+        if (list) [].forEach.call(list.children, function (li) { li.className = li.dataset.n == n ? "on" : ""; });
+    }
     button.addEventListener("click", function () {
         if (!audio.src) load(1);
         if (audio.paused) { audio.play(); } else { audio.pause(); }
     });
+    if (list) list.addEventListener("click", function (e) {
+        var a = e.target.closest("[data-clip]"); if (!a) return;
+        e.preventDefault(); load(Number(a.dataset.clip)); audio.play();
+    });
     audio.addEventListener("play", function () {
-        button.innerHTML = "&#10074;&#10074;"; button.setAttribute("aria-label", "Pause");
+        button.innerHTML = PAUSE; button.setAttribute("aria-label", "Pause");
         status.textContent = clips > 1 ? "Part " + current + " of " + clips : "";
         if (!counted) { counted = true; navigator.sendBeacon && navigator.sendBeacon({{ played_url | tojson }}); }
     });
-    audio.addEventListener("pause", function () {
-        button.innerHTML = "&#9654;"; button.setAttribute("aria-label", "Play the recording");
-    });
+    audio.addEventListener("pause", function () { button.innerHTML = PLAY; button.setAttribute("aria-label", "Play the recording"); });
     audio.addEventListener("ended", function () {
         if (current < clips) { load(current + 1); audio.play(); } else { load(1); status.textContent = ""; }
     });
-    audio.addEventListener("error", function () { status.textContent = "Couldn't load the recording. Try again."; });
+    audio.addEventListener("error", function () {
+        // A signed link may have expired while the page was open: ask for a fresh one once, and carry on.
+        if (!retried) { var t = audio.currentTime, n = current; load(n); retried = true; audio.currentTime = t; audio.play(); return; }
+        status.textContent = "Couldn't load the recording. Check the connection and try again.";
+    });
 })();
 </script>
 {% endblock %}

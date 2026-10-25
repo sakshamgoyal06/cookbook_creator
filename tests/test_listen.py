@@ -9,7 +9,7 @@ from PIL import Image
 import config
 from models.database import get_engine
 from models.schema import events, listen_events, projects
-from services import listen_service, qr_service, recipe_service
+from services import listen_service, project_service, qr_service, recipe_service
 from sqlalchemy import select
 from test_storage_service import s3  # noqa: F401  (pytest fixture)
 
@@ -171,6 +171,8 @@ def test_book_page_lists_recipes_with_players(auth_client, client):
     with get_engine().connect() as conn:
         book_token = conn.execute(select(projects.c.book_token).where(projects.c.id == project_id)).scalar_one()
 
+    assert b"Rajma" not in client.get(f"/b/{book_token}").data  # not approved yet
+    recipe_service.approve_recipe(row_id)
     page = client.get(f"/b/{book_token}")
     assert page.status_code == 200
     assert b"Rajma" in page.data and f"/l/{token}".encode() in page.data
@@ -179,3 +181,36 @@ def test_book_page_lists_recipes_with_players(auth_client, client):
     assert f"/l/{token}".encode() not in client.get(f"/b/{book_token}").data
     assert client.get("/b/unknown").status_code == 404
     assert auth_client.get(f"/projects/{project_id}/qr.svg").status_code == 200
+
+
+def test_listen_page_names_the_voice_and_links_the_written_page_once_approved(auth_client, client):
+    project_id, row_id, token = _recipe_with_audio(auth_client)
+    project_service.update_setup(project_id, storyteller_name="Sunita Sharma", cook_mode="whatsapp")
+    recipe_service.add_clip(row_id, "story.m4a", kind="story")
+    page = client.get(f"/l/{token}").data.decode()
+    assert "In Sunita ji&#39;s voice" in page or "In Sunita ji's voice" in page
+    assert "The story behind it" in page and "<noscript>" in page
+    assert len(page.encode()) < 30_000  # F1 page budget before audio (PRD §13)
+    assert "fonts.googleapis" not in page
+    assert client.get(f"/l/{token}/recipe").status_code == 404 and "Read the recipe" not in page
+
+    recipe_service.approve_recipe(row_id)
+    assert "Read the recipe" in client.get(f"/l/{token}").data.decode()
+    written = client.get(f"/l/{token}/recipe").data.decode()
+    assert "Pressure cook" in written and "Add ghee at the end" in written
+    listen_service.revoke(row_id)
+    assert client.get(f"/l/{token}/recipe").status_code == 404
+
+
+def test_private_page_is_bilingual(client):
+    assert "यह रिकॉर्डिंग निजी है" in client.get("/l/nope").data.decode()
+
+
+def test_surprise_mode_hides_the_book_until_the_reveal(auth_client, client):
+    project_id, row_id, token = _recipe_with_audio(auth_client)
+    recipe_service.approve_recipe(row_id)
+    project_service.update_setup(project_id, share_pages_as_ready=False)
+    book_token = project_service.get_project(project_id)["book_token"]
+    page = client.get(f"/b/{book_token}").data
+    assert b"a surprise" in page and b"Rajma" not in page
+    assert client.get(f"/l/{token}").status_code == 200  # printed QR codes keep working

@@ -1,20 +1,26 @@
 {% extends "public/_listen_base.html" %}
 {% block title %}{{ book.title }}{% endblock %}
+{% block og_description %}A family cookbook{% if book.storyteller_name %}, in {{ book.storyteller_name.split()[0] }}'s voice{% endif %}{% endblock %}
 {% block content %}
+<div class="center">
 <p class="eyebrow">A family cookbook</p>
 <h1>{{ book.title }}</h1>
 {% if book.subtitle %}<p class="meta">{{ book.subtitle }}</p>{% endif %}
-{% if book.recipes %}
-<ul>
+{% if book.dedication %}<p class="quote" style="text-align:left">{{ book.dedication }}</p>{% endif %}
+</div>
+{% if book.surprise %}
+<p class="card center">The pages are a surprise for now. Come back on the big day.</p>
+{% elif book.recipes %}
+<h2>Contents</h2>
+<ul class="list">
     {% for recipe in book.recipes if recipe.clip_count %}
     <li>
-        <a class="play" href="{{ url_for('listen', token=recipe.listen_token, s='book') }}" aria-label="Listen to {{ recipe.recipe_title }}"
-           style="display:flex;align-items:center;justify-content:center;text-decoration:none">&#9654;</a>
+        <a class="play small" href="{{ url_for('listen', token=recipe.listen_token, s='book') }}" aria-label="Listen to {{ recipe.recipe_title }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg></a>
         <a href="{{ url_for('listen', token=recipe.listen_token, s='book') }}">{{ recipe.recipe_title }}</a>
     </li>
     {% endfor %}
 </ul>
 {% else %}
-<p class="meta">Recipes will appear here as they are recorded.</p>
+<p class="meta center">Recipes will appear here as they are recorded.</p>
 {% endif %}
 {% endblock %}
