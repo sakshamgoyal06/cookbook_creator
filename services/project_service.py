@@ -68,3 +68,29 @@ def get_project_recipe_count(project_id):
             .select_from(recipes)
             .where(recipes.c.project_id == project_id, recipes.c.status != "failed")
         ).scalar_one()
+
+
+SETUP_FIELDS = {
+    "title", "dedication", "cook_mode", "storyteller_name", "storyteller_address_as", "storyteller_phone",
+    "storyteller_language", "occasion", "reveal_date", "share_pages_as_ready", "tier", "max_recipes",
+    "setup_step", "invite_sent_at",
+}
+
+
+def update_setup(project_id, **values):
+    """Save onboarding answers (BUILD_PLAN module 5). Only the listed fields can be set this way."""
+    unknown = set(values) - SETUP_FIELDS
+    if unknown:
+        raise ValueError(f"Not a setup field: {', '.join(sorted(unknown))}")
+    with get_engine().begin() as conn:
+        conn.execute(update(projects).where(projects.c.id == project_id).values(**values, updated_at=func.now()))
+
+
+def get_members(project_id):
+    with get_engine().connect() as conn:
+        rows = conn.execute(
+            select(family_members)
+            .where(family_members.c.project_id == project_id, family_members.c.removed_at.is_(None))
+            .order_by(family_members.c.id)
+        ).mappings().all()
+    return [dict(r) for r in rows]

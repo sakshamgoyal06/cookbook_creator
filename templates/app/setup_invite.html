@@ -1,0 +1,17 @@
+{% extends "app/_shell.html" %}
+{% from "components/ui.html" import csrf %}
+{% block content %}
+{% if not editing %}<div class="steps">{% for i in range(total) %}<span class="on"></span>{% endfor %}</div>{% endif %}
+<h1>Invite {{ project.storyteller_address_as or 'them' }}</h1>
+<p class="muted">Send this from your own WhatsApp, so it comes from you. Edit it there if you like.</p>
+<div class="card"><p class="invite-text" id="invite-text">{{ invite_text }}</p></div>
+<form method="post" action="{{ url_for('screens.send_invite', project_id=project.id) }}" class="actions">
+  {{ csrf() }}
+  <button class="btn btn-primary btn-block" type="submit">{{ icon('share') }} Open WhatsApp</button>
+  <button class="btn btn-secondary btn-block" type="button" data-copy="#invite-text">Copy the message</button>
+</form>
+{% if not editing %}
+<form method="post" class="center">{{ csrf() }}<button class="btn btn-ghost" type="submit">I'll send it later</button></form>
+{% endif %}
+<p class="small muted">When the voice notes come in, forward them to yourself or save them, then add them in the app. Each recipe can be several notes.</p>
+{% endblock %}

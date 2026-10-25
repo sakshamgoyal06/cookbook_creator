@@ -1,0 +1,16 @@
+{% extends "app/_setup.html" %}
+{% block form %}
+{% set tier = config.TIERS[project.tier] %}
+<h1>Your book</h1>
+<div class="card">
+  <p class="title">{{ project.title }}</p>
+  <p class="muted">{{ tier.label }} · {{ tier.recipes }} recipes{% if project.storyteller_name %} · in {{ project.storyteller_name }}'s voice{% endif %}</p>
+  {% if project.reveal_date %}<p class="muted">To give on {{ project.reveal_date.strftime('%-d %B %Y') }}{% if project.occasion %} ({{ project.occasion }}){% endif %}</p>{% endif %}
+  <hr class="soft">
+  <div class="row between"><span>Total</span><strong>₹{{ "{:,}".format(tier.price_inr) }}</strong></div>
+</div>
+{% if config.PILOT_FREE %}
+<p class="flash flash-info">You're in the invite-only pilot, so there's nothing to pay today.</p>
+{% endif %}
+{% endblock %}
+{% block submit %}{{ 'Continue' if config.PILOT_FREE else 'Pay' }}{% endblock %}

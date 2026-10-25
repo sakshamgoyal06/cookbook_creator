@@ -1,0 +1,22 @@
+{% extends "app/_shell.html" %}
+{% from "components/ui.html" import csrf %}
+{% block content %}
+<h1>Family</h1>
+<div class="card stack">
+  <p>Share the family cookbook. Everyone can listen to the finished pages; no app or login needed.</p>
+  <form method="post" action="{{ url_for('screens.share_family', project_id=project.id) }}">{{ csrf() }}<button class="btn btn-primary btn-block" type="submit">{{ icon('share') }} Share on WhatsApp</button></form>
+  <button class="btn btn-secondary btn-block" type="button" data-copy-text="{{ book_url }}">Copy the link</button>
+</div>
+<form method="post" class="card" style="margin-top:12px">
+  {{ csrf() }}
+  <label class="row between" style="margin:0"><span>Show pages to the family as they're approved<br><span class="hint">Turn off to keep it a surprise until the reveal.</span></span>
+    <input type="checkbox" name="share_pages_as_ready" value="1" {% if project.share_pages_as_ready %}checked{% endif %} onchange="this.form.submit()"></label>
+  <noscript><button class="btn btn-secondary" type="submit">Save</button></noscript>
+</form>
+<h2 class="section-title">Members</h2>
+<ul class="list card">{% for m in members %}<li><span class="grow">{{ m.name }}</span><span class="small muted">{{ {'buyer': 'Organiser', 'cook': 'Cook', 'member': 'Family'}[m.role] }}</span></li>{% endfor %}</ul>
+{% if requested %}
+<h2 class="section-title">Dishes the family asked for</h2>
+<ul class="list card">{% for d in requested %}<li><span class="grow">{{ d.title }}</span><span class="small muted">{{ d.requested_by_label or '' }}</span></li>{% endfor %}</ul>
+{% endif %}
+{% endblock %}

@@ -19,11 +19,11 @@
 | # | Module | Screens | PRD refs | Depends on | Status |
 |---|---|---|---|---|---|
 | 1 | [Foundations](#1-foundations) | | AI-3, AI-4, §13, §15, §17 | | Mostly done; deploy, backups, Sentry left |
-| 2 | [Design system and app shell](#2-design-system-and-app-shell) | all | §12 | 1 | Next |
+| 2 | [Design system and app shell](#2-design-system-and-app-shell) | all | §12 | 1 | Done (device checks left) |
 | 3 | [Analytics events](#3-analytics-events) | | OPS-3, §10 | 1 | Done (each module adds its own events) |
 | 4 | [Data model v2](#4-data-model-v2) | | §14 | 1 | Done (edge cases land with modules 5–7) |
-| 5 | [Onboarding and gift setup](#5-onboarding-and-gift-setup) | R1–R8 | BUY-1…BUY-5, ENG-3 | 2, 3, 4 | |
-| 6 | [Requester home and recipe review](#6-requester-home-and-recipe-review) | R9, R10, R13 | DASH-1…DASH-3 | 5 | |
+| 5 | [Onboarding and gift setup](#5-onboarding-and-gift-setup) | R1–R8 | BUY-1…BUY-5, ENG-3 | 2, 3, 4 | Built; gift card and drag reorder left |
+| 6 | [Requester home and recipe review](#6-requester-home-and-recipe-review) | R9, R10, R13 | DASH-1…DASH-3 | 5 | Built; live Home refresh left |
 | 7 | [Recording in the app (self and assisted)](#7-recording-in-the-app-self-and-assisted) | S1–S5 | DASH-5, QR-10 | 2, 4 | |
 | 8 | [Listen pages and QR](#8-listen-pages-and-qr) | F1, F3, F5, R13 | QR-1…QR-9 | 2 | Backend done (M1), restyle left |
 | 9 | [WhatsApp capture](#9-whatsapp-capture) | C1, C2 | WA-1, WA-2, WA-5, WA-6, BUY-5 | 4, 5 | **On hold** |
@@ -104,21 +104,21 @@ Goal: a hosted, safe, testable base that every later module builds on.
 Goal: every new screen is built from the same small set of parts in the "Rasoi notebook" style (UX spec §1). The current UI is replaced screen by screen, not patched.
 
 ### Build
-- [ ] Design tokens as CSS variables (atta, steel, tawa, curry-leaf, haldi, kumkum, chip colours) in one `static/app.css`; old `style.css` retired as screens move over
-- [ ] Fonts: Tiro Devanagari Hindi (titles), Mukta (UI), Kalam (cook's quotes); `font-display: swap`; system-font fallback; never block first paint
-- [ ] Jinja macros in `templates/components/`: button (primary, secondary), **record button** (kumkum only, 100–120 px), audio player (play/pause, clip list), status chip, progress ring, "needs you" card, form rows, bottom tabs, empty state, error state
-- [ ] App shell with bottom tabs: requester (Home · Recipes · Record · Family · Book) and self mode (Kitchen · Record · Family · Book), picked by `projects.cook_mode`
+- [x] Design tokens as CSS variables (atta, steel, tawa, curry-leaf, haldi, kumkum, chip colours) in one `static/app.css`; old `style.css` retired as screens move over
+- [x] Fonts: Tiro Devanagari Hindi (titles), Mukta (UI), Kalam (cook's quotes); `font-display: swap`; system-font fallback; never block first paint
+- [x] Jinja macros in `templates/components/`: button (primary, secondary), **record button** (kumkum only, 100–120 px), audio player (play/pause, clip list), status chip, progress ring, "needs you" card, form rows, bottom tabs, empty state, error state
+- [x] App shell with bottom tabs: requester (Home · Recipes · Record · Family · Book) and self mode (Kitchen · Record · Family · Book), picked by `projects.cook_mode`
 - [ ] Copy strings in one place per language (`hi`, `hinglish`, `en`) for cook-facing surfaces, written in the consultant voice (UX spec §1.1); requester app in English, quoting her phrases verbatim
-- [ ] Status-to-chip mapping in one helper (UX spec §3): received/transcribed → "Writing it down", awaiting_mom → "Waiting on Mummy" (uses `storyteller_address_as`), needs_review → "Ready to review", approved → "Approved", failed → "We couldn't hear this one" + Try again
-- [ ] Touch targets ≥ 44 px (cook screens ≥ 52 px); stroke SVG icons; no emoji in UI chrome
+- [x] Status-to-chip mapping in one helper (UX spec §3): received/transcribed → "Writing it down", awaiting_mom → "Waiting on Mummy" (uses `storyteller_address_as`), needs_review → "Ready to review", approved → "Approved", failed → "We couldn't hear this one" + Try again
+- [x] Touch targets ≥ 44 px (cook screens ≥ 52 px); stroke SVG icons; no emoji in UI chrome
 - [ ] PWA manifest updated with the new colours; `share_target` for `audio/*` (used by S3)
 
 ### Edge cases
 - [ ] Devanagari and Latin in the same line render without tofu on budget Android (test on one real device)
-- [ ] Long names and titles wrap, never overflow; very long dish names truncate with the full name on tap
-- [ ] Dark-mode browsers: pages keep their light palette (explicit background colours), text stays ≥ 4.5:1
-- [ ] Slow network: every button that posts shows a busy state and can't be double-submitted
-- [ ] JavaScript off or failing: forms still submit; audio falls back to a plain `<audio controls>`
+- [x] Long names and titles wrap, never overflow; very long dish names truncate with the full name on tap
+- [x] Dark-mode browsers: pages keep their light palette (explicit background colours), text stays ≥ 4.5:1
+- [x] Slow network: every button that posts shows a busy state and can't be double-submitted
+- [x] JavaScript off or failing: forms still submit; audio falls back to a plain `<audio controls>`
 
 ### Tests
 - [ ] Snapshot-free template tests: each macro renders with minimal data, chips map every recipe status
@@ -202,35 +202,35 @@ All in migration `0004_ux_v1.py`:
 Screens: **R1** Welcome · **R2** Whose recipes? · **R3** Pick a book · **R4** Who's the cook · **R5** Occasion and reveal · **R6** Dish wishlist · **R7** Pay · **R8** Invite the cook. Same-person short setup (name on book, language, reveal date) branches from R3 into module 7.
 
 ### Build
-- [ ] R1: promise, sample page with a real working "Listen" sample (a demo recording we own), sign up / log in (email + password today; Google SSO already optional)
-- [ ] R2: three-way fork sets `cook_mode`: "Mummy on WhatsApp" (`whatsapp`), "My own recipes" (`self`), "I'll record her with me" (`assisted`)
-- [ ] R3: tier picker (Top 10, Family Edition); prices from config, not templates (prices still open, see to-do)
-- [ ] R4–R6 as a 4-step wizard with progress, each step saved on Next so a dropped connection loses nothing; Back keeps answers
-- [ ] R4: what you call her, name on the cover, WhatsApp number (hidden in self mode), language
-- [ ] R5: occasion chips, reveal date with "N days away" and a warning under 21 days ("That's tight for 10 recipes. We'll suggest a shorter list."), book title, dedication
-- [ ] R6: 10–15 dishes, drag to reorder (with up/down buttons as the accessible fallback), suggestions by region and occasion, dish 1 goes into the invite
-- [ ] R7: summary + pay (module 13); until module 13 ships, a "pilot code" path marks the project paid by hand
-- [ ] R8: invite text in her language and the consultant voice, sent from the buyer's own WhatsApp via `wa.me/?text=`; gift-card image (PNG, cover style, her name, our number as QR); "I've sent it" confirmation; resend later from Home
-- [ ] Self mode skips R4's phone, R8 and the gift card; lands on S1
+- [~] R1: promise, sample page (quote only until Saksham records the demo; see to-do) with a real working "Listen" sample (a demo recording we own), sign up / log in (email + password today; Google SSO already optional)
+- [x] R2: three-way fork sets `cook_mode`: "Mummy on WhatsApp" (`whatsapp`), "My own recipes" (`self`), "I'll record her with me" (`assisted`)
+- [x] R3: tier picker (Top 10, Family Edition); prices from config, not templates (prices still open, see to-do)
+- [x] R4–R6 as a 4-step wizard with progress, each step saved on Next so a dropped connection loses nothing; Back keeps answers
+- [x] R4: what you call her, name on the cover, WhatsApp number (hidden in self mode), language
+- [x] R5: occasion chips, reveal date with "N days away" and a warning under 21 days ("That's tight for 10 recipes. We'll suggest a shorter list."), book title, dedication
+- [~] R6 (one per line with tap-to-add suggestions; drag reorder later): 10–15 dishes, drag to reorder (with up/down buttons as the accessible fallback), suggestions by region and occasion, dish 1 goes into the invite
+- [x] R7: summary + pay (module 13); until module 13 ships, `PILOT_FREE=true` skips payment
+- [~] R8 (gift-card image still to do): invite text in her language and the consultant voice, sent from the buyer's own WhatsApp via `wa.me/?text=`; gift-card image (PNG, cover style, her name, our number as QR); "I've sent it" confirmation; resend later from Home
+- [x] Self mode skips R4's phone, R8 and the gift card; lands on S1
 
 ### Events
 `onboarding_started`, `cook_mode_chosen`, `tier_chosen`, `cook_details_saved`, `reveal_date_set`, `dish_list_saved`, `checkout_started`, `payment_succeeded` / `payment_failed`, `invite_shared`
 
 ### Edge cases
-- [ ] Buyer quits mid-wizard → Home shows "Finish setting up" at the step they left
+- [x] Buyer quits mid-wizard → Home shows "Finish setting up" at the step they left
 - [ ] Two tabs editing the same wizard → last save wins per field, no crash
 - [ ] Cook's number equals the buyer's own number → allowed only in `self` or `assisted` mode; in `whatsapp` mode warn ("This is your number. Did you mean to record your own recipes?")
 - [ ] Number not on WhatsApp → can't be known before sending; R8 copy says "If she doesn't have WhatsApp, record together instead" with a switch to `assisted`
-- [ ] Fewer than 10 dishes → allowed (min 3), with suggestions; more than 15 → extra dishes kept as "later"
+- [x] Fewer than 10 dishes → allowed (min 3), with suggestions; more than 15 → extra dishes kept as "later"
 - [ ] Duplicate dish names (case, spelling, Hindi vs English) → soft warning, not blocked
 - [ ] `wa.me` link too long for some Android WhatsApp versions → keep invite ≤ 1,000 characters; test in Hindi script
-- [ ] Desktop buyer → `wa.me` opens WhatsApp Web; copy-text button as fallback
+- [x] Desktop buyer → `wa.me` opens WhatsApp Web; copy-text button as fallback
 - [ ] Gift-card image renders Devanagari names correctly (font embedded)
 
 ### Tests
-- [ ] Wizard step validation (dates, phone normalisation, dish count) unit-tested
-- [ ] Each fork lands on the right home (R9 vs S1)
-- [ ] Invite text renders in all three languages with her name and dish 1
+- [x] Wizard step validation (dates, phone normalisation, dish count) unit-tested
+- [x] Each fork lands on the right home (R9 vs S1)
+- [x] Invite text renders in all three languages with her name and dish 1
 
 **Acceptance:** a new user goes R1 → R8 on a phone in under 4 minutes, WhatsApp opens with the invite pre-filled in Hindi, and the project shows on Home with the dish list in order.
 
@@ -241,29 +241,29 @@ Screens: **R1** Welcome · **R2** Whose recipes? · **R3** Pick a book · **R4**
 Screens: **R9** Home · **R10** Review a page · **R13** Voice link + QR (backend from module 8).
 
 ### Build
-- [ ] R9 Home: progress ring (approved / quota), last voice note (who, when, play), reveal countdown, **one** "needs you" card (priority: failed recipe > ready to review > escalation > invite not sent), recipe list with chips, "Up next" dishes
-- [ ] Home refreshes status without a reload while anything is "Writing it down" (poll every 10 s for 5 minutes, then stop; no websockets)
-- [ ] R10 Review: player for all clips (original, follow-up, story) in order; "Recipe / What she said" toggle (structured vs transcript); ingredients and steps as **form rows** (add, remove, reorder) replacing the raw JSON editor (DASH-2); flagged approximations highlighted with "Ask her" (module 10) or "Leave as she said it"; Approve
-- [ ] Approve also generates the page PDF and card image in the background (no separate Generate PDF button)
-- [ ] Failed recipe: "We couldn't hear this one" chip, Try again (re-runs the pipeline from the failed stage) and "Record again" (goes to S2 or asks the cook)
-- [ ] R13 restyled on the new shell (QR, play count this week and all time, save PNG/SVG, copy link, make new link, make private)
-- [ ] Edits count recorded (fields changed) for the PRD quality metric
+- [x] R9 Home: progress ring (approved / quota), last voice note (who, when, play), reveal countdown, **one** "needs you" card (priority: failed recipe > ready to review > escalation > invite not sent), recipe list with chips, "Up next" dishes
+- [~] (review page refreshes itself every 15 s while writing; Home not yet) Home refreshes status without a reload while anything is "Writing it down" (poll every 10 s for 5 minutes, then stop; no websockets)
+- [~] R10 (add and remove rows; reorder and "Ask her" later): player for all clips (original, follow-up, story) in order; "Recipe / What she said" toggle (structured vs transcript); ingredients and steps as **form rows** (add, remove, reorder) replacing the raw JSON editor (DASH-2); flagged approximations highlighted with "Ask her" (module 10) or "Leave as she said it"; Approve
+- [x] Approve also generates the page PDF and card image in the background (no separate Generate PDF button)
+- [x] Failed recipe: "We couldn't hear this one" chip, Try again (re-runs the pipeline from the failed stage) and "Record again" (goes to S2 or asks the cook)
+- [x] R13 restyled on the new shell (QR, play count this week and all time, save PNG/SVG, copy link, make new link, make private)
+- [x] Edits count recorded (fields changed) for the PRD quality metric
 
 ### Events
 `recipe_ready_for_review`, `recipe_edited`, `recipe_approved`, `recipe_retry_requested`, `listen_link_revoked`, `listen_link_regenerated`, `qr_downloaded`
 
 ### Edge cases
-- [ ] Recipe still processing when opened → R10 shows "Writing it down" and the audio player only
+- [x] Recipe still processing when opened → R10 shows "Writing it down" and the audio player only
 - [ ] Two family editors approve at once → second approve is a no-op with "Already approved"
-- [ ] Editing an approved recipe → returns to "Ready to review" only if content changed; QR and link never change on edit
-- [ ] Quota reached → new notes still saved (never lose a voice note) but marked "extra"; Home offers Volume 2 (module 16)
+- [x] Editing an approved recipe → returns to "Ready to review" only if content changed; QR and link never change on edit
+- [x] Quota reached → new notes still saved (never lose a voice note) but marked "extra"; Home offers Volume 2 (module 16)
 - [ ] Recipe with no structured content (pipeline failed twice) → review page offers transcript-only page or retry
-- [ ] Transcript in Devanagari and English mixed → shown exactly as transcribed, no normalisation
+- [x] Transcript in Devanagari and English mixed → shown exactly as transcribed, no normalisation
 - [ ] Very long recording (> 15 min) → player shows duration, structuring still runs (check token limits; split if needed)
 
 ### Tests
-- [ ] "Needs you" card priority order
-- [ ] Form-row edit round-trips ingredients and steps without JSON errors; empty rows dropped
+- [x] "Needs you" card priority order
+- [x] Form-row edit round-trips ingredients and steps without JSON errors; empty rows dropped
 - [ ] Retry re-runs only the failed stage
 
 **Acceptance:** a buyer reviews and approves a Hinglish recipe on a phone without seeing JSON, in under 2 minutes, and the page PDF with a working QR appears.

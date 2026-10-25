@@ -1,0 +1,41 @@
+{% extends "app/_shell.html" %}
+{% from "components/ui.html" import chip, ring, empty %}
+{% block content %}
+<section class="card row">
+  {{ ring(approved, quota) }}
+  <div class="grow">
+    <h1 class="truncate">{{ project.title }}</h1>
+    <p class="muted small">{{ approved }} of {{ quota }} pages in the book{% if days_left is not none %} · {% if days_left > 0 %}{{ days_left }} day{{ 's' if days_left != 1 }} to {{ project.occasion or 'the reveal' }}{% elif days_left == 0 %}reveal day is today{% else %}reveal date has passed{% endif %}{% endif %}</p>
+    {% if plays_week %}<p class="small">Family played recordings {{ plays_week }} time{{ 's' if plays_week != 1 }} this week</p>{% endif %}
+  </div>
+</section>
+
+{% if needs_you %}
+<section class="card needs-you">
+  <p class="section-title" style="margin-top:0">Needs you</p>
+  <p>{{ needs_you.text }}</p>
+  <a class="btn btn-primary" href="{{ needs_you.action }}">{{ needs_you.label }}</a>
+</section>
+{% endif %}
+
+<h2 class="section-title">Recipes</h2>
+{% if recipes %}
+<ul class="list card">
+{% for r in recipes[:6] %}
+  <li><a class="item" href="{{ url_for('screens.review', project_id=project.id, recipe_id=r.id) }}"><span class="grow truncate">{{ r.recipe_title }}</span>{{ chip(r) }}</a></li>
+{% endfor %}
+</ul>
+{% if recipes | length > 6 %}<p><a href="{{ url_for('screens.recipes', project_id=project.id) }}">See all {{ recipes | length }}</a></p>{% endif %}
+{% else %}
+{{ empty("No recipes yet. Voice notes you add show up here while we write them down.", url_for('screens.record', project_id=project.id), 'Add the first recipe') }}
+{% endif %}
+
+{% if up_next %}
+<h2 class="section-title">Up next</h2>
+<ul class="list card">
+{% for d in up_next %}
+  <li><span class="grow">{{ d.title }}</span><a class="btn btn-ghost" href="{{ url_for('screens.record', project_id=project.id, dish=d.id) }}">{{ 'Record' if project.cook_mode == 'assisted' else 'Add notes' }}</a></li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

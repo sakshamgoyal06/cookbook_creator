@@ -1,0 +1,11 @@
+{% extends "app/_shell.html" %}
+{% from "components/ui.html" import csrf %}
+{% block content %}
+{% if not editing %}<div class="steps" aria-label="Step {{ number }} of {{ total }}">{% for i in range(total) %}<span class="{{ 'on' if i < number }}"></span>{% endfor %}</div>{% endif %}
+<form method="post">
+  {{ csrf() }}
+  {% block form %}{% endblock %}
+  <div class="actions"><button class="btn btn-primary btn-block" type="submit">{% block submit %}{{ 'Save' if editing else 'Continue' }}{% endblock %}</button></div>
+</form>
+{% block after %}{% endblock %}
+{% endblock %}

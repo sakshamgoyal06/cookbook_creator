@@ -1,0 +1,30 @@
+{% extends "app/_setup.html" %}
+{% block form %}
+{% if project.cook_mode == 'self' %}
+<h1>About you</h1>
+<label for="storyteller_name">Your name, as it should appear on the book</label>
+<input type="text" id="storyteller_name" name="storyteller_name" value="{{ project.storyteller_name or current_user.name }}" required maxlength="60" autocomplete="name">
+{% else %}
+<h1>Who's the cook?</h1>
+<label>What do you call them?</label>
+<div class="chip-options">
+{% for option in address_options %}
+  <label class="chip-option"><input type="radio" name="storyteller_address_as" value="{{ option }}" {% if (project.storyteller_address_as or 'Mummy') == option %}checked{% endif %}><span>{{ option }}</span></label>
+{% endfor %}
+</div>
+<input type="text" name="address_as_other" placeholder="Something else, like Ammi or Badi Mummy" maxlength="30" aria-label="Something else" value="{{ project.storyteller_address_as if project.storyteller_address_as and project.storyteller_address_as not in address_options else '' }}">
+<label for="storyteller_name">Their name for the cover <span class="hint">(optional, e.g. Sunita Sharma)</span></label>
+<input type="text" id="storyteller_name" name="storyteller_name" value="{{ project.storyteller_name or '' }}" maxlength="60">
+{% if project.cook_mode == 'whatsapp' %}
+<label for="storyteller_phone">Their WhatsApp number <span class="hint">(optional; opens the invite straight in their chat)</span></label>
+<input type="tel" id="storyteller_phone" name="storyteller_phone" value="{{ project.storyteller_phone or '' }}" placeholder="98765 43210" inputmode="tel" autocomplete="off">
+{% endif %}
+{% endif %}
+<label>{% if project.cook_mode == 'self' %}Which language do you cook in?{% else %}Which language do they speak in?{% endif %}</label>
+<div class="chip-options">
+{% for value, label in [('hi', 'हिंदी'), ('hinglish', 'Hinglish'), ('en', 'English')] %}
+  <label class="chip-option"><input type="radio" name="storyteller_language" value="{{ value }}" {% if project.storyteller_language == value %}checked{% endif %}><span>{{ label }}</span></label>
+{% endfor %}
+</div>
+<p class="small muted">The book keeps their words exactly as spoken. This sets the language of the invite.</p>
+{% endblock %}

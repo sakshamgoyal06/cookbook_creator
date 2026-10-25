@@ -37,6 +37,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
       - name: Lint
-        run: flake8 --max-line-length=120 --exclude=__pycache__,instance,uploads,outputs,.git app.py config.py worker.py models/ services/ tests/ migrations/ scripts/
+        run: flake8 --max-line-length=120 --exclude=__pycache__,instance,uploads,outputs,.git app.py config.py worker.py screens.py models/ services/ tests/ migrations/ scripts/
       - name: Test
         run: pytest -q

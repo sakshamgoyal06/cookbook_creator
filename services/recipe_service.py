@@ -4,7 +4,7 @@ import uuid
 from sqlalchemy import func, insert, select, update
 
 from models.database import get_engine, new_token
-from models.schema import generated_files, recipe_audio, recipes
+from models.schema import dishes, generated_files, recipe_audio, recipes
 
 JSON_FIELDS = [
     "alternate_names_json",
@@ -24,8 +24,13 @@ _latest_pdf = (
 )
 
 
-def create_received_recipe(project_id, audio_filename, source="web"):
-    """A recipe row for a voice note that has been stored but not yet processed."""
+def create_received_recipe(project_id, audio_filename, source="web", audio_keys=None, title=None,
+                           dish_id=None, cook_name=None, content_type=None):
+    """A recipe row for voice note(s) that have been stored but not yet processed.
+
+    `audio_keys` lists several clips for one dish, in play order (e.g. imported WhatsApp notes).
+    """
+    keys = audio_keys or [audio_filename]
     with get_engine().begin() as conn:
         row_id = conn.execute(
             insert(recipes)
@@ -33,17 +38,47 @@ def create_received_recipe(project_id, audio_filename, source="web"):
                 project_id=project_id,
                 recipe_id=str(uuid.uuid4()),
                 listen_token=new_token(),
-                recipe_title="New recipe",
+                recipe_title=title or "New recipe",
+                cook_name=cook_name,
                 status="received",
             )
             .returning(recipes.c.id)
         ).scalar_one()
-        conn.execute(
-            insert(recipe_audio).values(
-                recipe_id=row_id, storage_key=audio_filename, kind="original", play_order=1, source=source
+        for order, key in enumerate(keys, start=1):
+            conn.execute(
+                insert(recipe_audio).values(
+                    recipe_id=row_id, storage_key=key, kind="original", play_order=order, source=source,
+                    content_type=content_type,
+                )
             )
-        )
+        if dish_id is not None:
+            conn.execute(
+                update(dishes)
+                .where(dishes.c.id == dish_id, dishes.c.project_id == project_id, dishes.c.recipe_id.is_(None))
+                .values(recipe_id=row_id, status="in_progress")
+            )
+        else:
+            position = conn.execute(
+                select(func.coalesce(func.max(dishes.c.position), 0) + 1).where(dishes.c.project_id == project_id)
+            ).scalar_one()
+            conn.execute(
+                insert(dishes).values(project_id=project_id, title=title or "New recipe", position=position,
+                                      source="buyer", status="in_progress", recipe_id=row_id)
+            )
     return row_id
+
+
+def add_clip(recipe_id, storage_key, kind="story", source="app", content_type=None):
+    """Append a clip (a story, or a follow-up answer) after the recipe's existing clips."""
+    with get_engine().begin() as conn:
+        order = conn.execute(
+            select(func.coalesce(func.max(recipe_audio.c.play_order), 0) + 1)
+            .where(recipe_audio.c.recipe_id == recipe_id)
+        ).scalar_one()
+        conn.execute(
+            insert(recipe_audio).values(recipe_id=recipe_id, storage_key=storage_key, kind=kind,
+                                        play_order=order, source=source, content_type=content_type)
+        )
 
 
 def save_transcript(recipe_id, transcript):
@@ -170,6 +205,7 @@ def approve_recipe(recipe_id):
             .where(recipes.c.id == recipe_id)
             .values(status="approved", approved_at=func.now(), updated_at=func.now())
         )
+        conn.execute(update(dishes).where(dishes.c.recipe_id == recipe_id).values(status="done"))
 
 
 def mark_pdf_generated(recipe_id, pdf_filename):

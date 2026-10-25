@@ -1,36 +1,21 @@
-{% extends "base.html" %}
-
-{% block title %}Register – {{ config.APP_NAME }}{% endblock %}
-
+{% extends "app/_shell.html" %}
+{% from "components/ui.html" import csrf %}
+{% block title %}Create account · {{ config.APP_NAME }}{% endblock %}
 {% block content %}
-<div class="auth-container">
-    <h1>Create Account</h1>
-    <form method="POST" class="auth-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="form-group">
-            <label for="name">Full Name</label>
-            <input type="text" id="name" name="name" required placeholder="Your name">
-        </div>
-        <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" required placeholder="you@example.com">
-        </div>
-        <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" required placeholder="At least 6 characters">
-        </div>
-        <div class="form-group">
-            <label for="confirm_password">Confirm Password</label>
-            <input type="password" id="confirm_password" name="confirm_password" required placeholder="••••••">
-        </div>
-        <button type="submit" class="btn btn-primary btn-full">Create Account</button>
-    </form>
-
-    {% if config.GOOGLE_CLIENT_ID %}
-    <div class="auth-divider"><span>or</span></div>
-    <a href="{{ url_for('login_google') }}" class="btn btn-google btn-full">Sign up with Google</a>
-    {% endif %}
-
-    <p class="auth-link">Already have an account? <a href="{{ url_for('login') }}">Sign in</a></p>
-</div>
+<h1>Start a cookbook</h1>
+<p class="muted">An account keeps the book, the recordings and the pages safe. Only you can change them.</p>
+<form method="POST">
+  {{ csrf() }}
+  <label for="name">Your name</label>
+  <input type="text" id="name" name="name" required autocomplete="name">
+  <label for="email">Email</label>
+  <input type="email" id="email" name="email" required autocomplete="email" placeholder="you@example.com">
+  <label for="password">Password <span class="hint">(at least 6 characters)</span></label>
+  <input type="password" id="password" name="password" required minlength="6" autocomplete="new-password">
+  <label for="confirm_password">Password again</label>
+  <input type="password" id="confirm_password" name="confirm_password" required autocomplete="new-password">
+  <div class="actions"><button type="submit" class="btn btn-primary btn-block">Create account</button>
+  {% if config.GOOGLE_CLIENT_ID %}<a href="{{ url_for('login_google') }}" class="btn btn-secondary btn-block">Sign up with Google</a>{% endif %}</div>
+</form>
+<p class="center">Already have an account? <a href="{{ url_for('login') }}">Sign in</a></p>
 {% endblock %}

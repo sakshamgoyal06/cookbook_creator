@@ -1,0 +1,15 @@
+{% extends "app/_setup.html" %}
+{% block form %}
+<h1>Pick a book</h1>
+<div class="stack">
+{% for key, tier in tiers.items() %}
+  <label class="choice"><input type="radio" name="tier" value="{{ key }}" {% if not tier.available %}disabled{% endif %} {% if project.tier == key and tier.available %}checked{% endif %} required>
+    <span class="card{% if not tier.available %} disabled{% endif %}">
+      <span class="row between"><strong>{{ tier.label }}</strong>
+        <span>{% if tier.price_inr %}₹{{ "{:,}".format(tier.price_inr) }}{% else %}<span class="chip chip-writing">Coming soon</span>{% endif %}</span></span>
+      <span class="muted">{{ tier.recipes }} recipes, each with a QR code that plays the cook's voice. Digital book and pages to print.</span>
+      {% if tier.price_usd %}<br><span class="small muted">About ${{ tier.price_usd }} if you're paying from abroad.</span>{% endif %}
+    </span></label>
+{% endfor %}
+</div>
+{% endblock %}

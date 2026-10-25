@@ -72,6 +72,14 @@ DATABASE_PATH = os.path.join(INSTANCE_FOLDER, "cookbook.db")
 # Postgres when hosted (postgresql://user:pass@host/db). Empty = local SQLite file.
 DATABASE_URL = os.getenv("DATABASE_URL", "") or f"sqlite:///{DATABASE_PATH}"
 
+# Books a buyer can pick (UX R3). Prices are display-only until payments (module 13).
+TIERS = {
+    "top10": {"label": "Top 10", "recipes": 10, "price_inr": 1200, "price_usd": 22, "available": True},
+    "family": {"label": "Family Edition", "recipes": 25, "price_inr": None, "price_usd": None, "available": False},
+}
+# While true, onboarding skips payment (invite-only pilot).
+PILOT_FREE = os.getenv("PILOT_FREE", "true").strip().lower() in ("1", "true", "yes")
+
 COOKBOOK_THEMES = {
     "classic": {"name": "Classic Indian", "primary": "#5c1a1a", "accent": "#d4a84b", "bg": "#fdf8f0"},
     "modern": {"name": "Modern Minimal", "primary": "#2c3e50", "accent": "#e74c3c", "bg": "#ffffff"},

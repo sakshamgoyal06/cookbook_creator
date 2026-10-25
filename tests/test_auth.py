@@ -5,7 +5,10 @@ def test_register_logs_in_and_redirects_to_dashboard(client):
     response = register(client)
     assert response.status_code == 302
     assert response.headers["Location"].endswith("/dashboard")
-    assert client.get("/dashboard").status_code == 200
+    # A new account has no book yet, so the app opens onboarding.
+    assert client.get("/dashboard").headers["Location"].endswith("/home")
+    assert client.get("/home").headers["Location"].endswith("/start")
+    assert client.get("/start").status_code == 200
 
 
 def test_register_rejects_mismatched_passwords(client):

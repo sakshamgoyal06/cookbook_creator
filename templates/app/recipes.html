@@ -1,0 +1,28 @@
+{% extends "app/_shell.html" %}
+{% from "components/ui.html" import chip, empty, csrf %}
+{% block content %}
+<h1>Recipes</h1>
+{% if recipes %}
+<ul class="list card">
+{% for r in recipes %}
+  <li><a class="item" href="{{ url_for('screens.review', project_id=project.id, recipe_id=r.id) }}"><span class="grow truncate">{{ r.recipe_title }}</span>{{ chip(r) }}</a></li>
+{% endfor %}
+</ul>
+{% else %}
+{{ empty("Nothing recorded yet.", url_for('screens.record', project_id=project.id), 'Add the first recipe') }}
+{% endif %}
+<h2 class="section-title">Wishlist</h2>
+{% if dishes %}
+<ul class="list card">
+{% for d in dishes %}
+  <li><span class="grow">{{ d.title }}{% if d.requested_by_label %} <span class="small muted">· asked by {{ d.requested_by_label }}</span>{% endif %}</span>
+    <a class="btn btn-ghost" href="{{ url_for('screens.record', project_id=project.id, dish=d.id) }}">Add</a></li>
+{% endfor %}
+</ul>
+{% endif %}
+<form method="post" action="{{ url_for('screens.add_dish', project_id=project.id) }}" class="row" style="margin-top:12px">
+  {{ csrf() }}
+  <input type="text" name="title" placeholder="Add a dish" maxlength="80" aria-label="Dish name" class="grow">
+  <button class="btn btn-secondary" type="submit">Add</button>
+</form>
+{% endblock %}
