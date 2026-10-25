@@ -124,6 +124,13 @@ def test_legacy_sqlite_database_is_upgraded(tmp_path):
     assert len(set(tokens)) == 4 and all(len(t) >= 22 for t in tokens)
     assert updated == "2026-10-20 10:11:12"
     assert json.loads(ingredients) == [{"item": "दाल"}]
+    with get_engine(url).connect() as conn:
+        modes = conn.execute(sa.text("SELECT cook_mode, cook_token FROM projects")).all()
+        buyers = conn.execute(sa.text("SELECT role FROM family_members")).scalars().all()
+        dishes = conn.execute(sa.text("SELECT recipe_id, status FROM dishes ORDER BY recipe_id")).all()
+    assert [m for m, _ in modes] == ["self"] and all(len(t) >= 22 for _, t in modes)
+    assert buyers == ["buyer"]
+    assert [s for _, s in dishes] == ["in_progress", "in_progress", "done", "done"]
 
 
 def test_constraints(db_url):
@@ -131,7 +138,9 @@ def test_constraints(db_url):
     engine = get_engine(db_url)
     with engine.begin() as conn:
         conn.execute(sa.text("INSERT INTO users (email, name) VALUES ('a@example.com', 'A')"))
-        conn.execute(sa.text("INSERT INTO projects (user_id, title, book_token) VALUES (1, 'B', 'bt')"))
+        conn.execute(sa.text(
+            "INSERT INTO projects (user_id, title, book_token, cook_token) VALUES (1, 'B', 'bt', 'ct')"
+        ))
         conn.execute(sa.text(
             "INSERT INTO recipes (project_id, recipe_id, listen_token, status) VALUES (1, 'r', 'lt', 'received')"
         ))

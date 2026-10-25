@@ -1,7 +1,7 @@
 from sqlalchemy import delete, func, insert, select, update
 
 from models.database import get_engine, new_token
-from models.schema import projects, recipes
+from models.schema import family_members, projects, recipes, users
 
 EDITABLE_FIELDS = {
     "title": "",
@@ -18,11 +18,18 @@ EDITABLE_FIELDS = {
 }
 
 
-def create_project(user_id, title, **kwargs):
+def create_project(user_id, title, cook_mode="self", **kwargs):
     values = {field: kwargs.get(field, default) for field, default in EDITABLE_FIELDS.items()}
-    values.update(user_id=user_id, title=title, book_token=new_token())
+    values.update(user_id=user_id, title=title, cook_mode=cook_mode, book_token=new_token(), cook_token=new_token())
     with get_engine().begin() as conn:
-        return conn.execute(insert(projects).values(**values).returning(projects.c.id)).scalar_one()
+        project_id = conn.execute(insert(projects).values(**values).returning(projects.c.id)).scalar_one()
+        buyer_name = conn.execute(select(users.c.name).where(users.c.id == user_id)).scalar_one()
+        conn.execute(
+            insert(family_members).values(
+                project_id=project_id, name=buyer_name, role="buyer", user_id=user_id, joined_at=func.now()
+            )
+        )
+    return project_id
 
 
 def get_project(project_id):

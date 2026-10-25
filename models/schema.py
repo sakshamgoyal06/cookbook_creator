@@ -5,7 +5,9 @@ gets here; keep this file in step with them (tests/test_database.py checks it).
 """
 from sqlalchemy import (
     JSON,
+    Boolean,
     CheckConstraint,
+    Date,
     Column,
     DateTime,
     ForeignKey,
@@ -16,7 +18,9 @@ from sqlalchemy import (
     Table,
     Text,
     UniqueConstraint,
+    false,
     func,
+    true,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -41,6 +45,14 @@ AUDIO_KINDS = ("original", "followup", "story")
 GENERATED_FILE_KINDS = ("recipe_pdf", "book_pdf", "page_png", "card_png")
 PIPELINE_STAGES = ("transcribe", "structure", "questions", "render")
 PIPELINE_STATUSES = ("queued", "running", "succeeded", "failed")
+COOK_MODES = ("whatsapp", "self", "assisted")
+LANGUAGES = ("hi", "hinglish", "en")
+DISH_SOURCES = ("buyer", "family", "cook")
+DISH_STATUSES = ("wishlist", "in_progress", "done", "skipped")
+MEMBER_ROLES = ("buyer", "cook", "member")
+UPLOAD_STATUSES = ("open", "complete", "abandoned")
+ACTORS = ("buyer", "cook", "family", "system", "anon")
+LISTEN_SOURCES = ("qr", "link", "book", "app")
 
 # JSONB on Postgres, JSON text on SQLite.
 JSONType = JSON().with_variant(JSONB(), "postgresql")
@@ -94,8 +106,30 @@ projects = Table(
     Column("status", Text, server_default="draft"),
     # Public token for the family cookbook page /b/<token> (QR-8).
     Column("book_token", String(32), nullable=False, unique=True),
+    # Who records: the cook on WhatsApp, the owner themselves, or the owner recording the cook.
+    Column("cook_mode", Text, nullable=False, server_default="whatsapp"),
+    Column("storyteller_name", Text),
+    # What the buyer calls her (Mummy, Maa, Dadi); used in the buyer's own invite and UI copy.
+    Column("storyteller_address_as", Text),
+    Column("storyteller_phone", Text),
+    Column("storyteller_language", Text, nullable=False, server_default="hinglish"),
+    Column("occasion", Text),
+    Column("reveal_date", Date),
+    Column("share_pages_as_ready", Boolean, nullable=False, server_default=true()),
+    Column("tier", Text, nullable=False, server_default="top10"),
+    # Last finished onboarding step, so a buyer who leaves mid-setup resumes there.
+    Column("setup_step", Text),
+    Column("invite_sent_at", DateTime(timezone=True)),
+    Column("consent_at", DateTime(timezone=True)),
+    Column("reminders_paused_until", DateTime(timezone=True)),
+    Column("revealed_at", DateTime(timezone=True)),
+    # Public token for the cook's page /m/<token> (module 15).
+    Column("cook_token", String(32), nullable=False, unique=True),
+    Column("cook_token_revoked_at", DateTime(timezone=True)),
     _created_at(),
     _updated_at(),
+    CheckConstraint(_in("cook_mode", COOK_MODES), name="cook_mode"),
+    CheckConstraint(_in("storyteller_language", LANGUAGES), name="storyteller_language"),
 )
 
 recipes = Table(
@@ -127,6 +161,8 @@ recipes = Table(
     # Public token for the listen page /l/<token> (QR-3); revoking keeps the row.
     Column("listen_token", String(32), nullable=False, unique=True),
     Column("listen_revoked_at", DateTime(timezone=True)),
+    # Set in assisted mode when the person speaking isn't the project's storyteller.
+    Column("cook_name", Text),
     _created_at(),
     _updated_at(),
     CheckConstraint(_in("status", RECIPE_STATUSES), name="status"),
@@ -154,6 +190,77 @@ listen_events = Table(
     Column("id", Integer, primary_key=True),
     Column("recipe_id", Integer, ForeignKey("recipes.id", ondelete="CASCADE"), nullable=False, index=True),
     Column("played_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("source", Text, nullable=False, server_default="link"),
+    # Plays by the project owner are excluded from counts shown to the cook and from the voice metric.
+    Column("is_owner", Boolean, nullable=False, server_default=false()),
+    CheckConstraint(_in("source", LISTEN_SOURCES), name="source"),
+)
+
+family_members = Table(
+    "family_members",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("project_id", Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True),
+    Column("name", Text, nullable=False),
+    Column("role", Text, nullable=False, server_default="member"),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="SET NULL")),
+    Column("joined_at", DateTime(timezone=True)),
+    Column("removed_at", DateTime(timezone=True)),
+    _created_at(),
+    CheckConstraint(_in("role", MEMBER_ROLES), name="role"),
+)
+
+# One ordered list per project: the buyer's wishlist and family requests (replaces PRD dish_requests).
+dishes = Table(
+    "dishes",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("project_id", Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True),
+    Column("title", Text, nullable=False),
+    Column("position", Integer, nullable=False, server_default="0"),
+    Column("source", Text, nullable=False, server_default="buyer"),
+    Column("requested_by_member_id", Integer, ForeignKey("family_members.id", ondelete="SET NULL")),
+    Column("requested_by_label", Text),
+    Column("status", Text, nullable=False, server_default="wishlist"),
+    Column("recipe_id", Integer, ForeignKey("recipes.id", ondelete="SET NULL"), unique=True),
+    _created_at(),
+    CheckConstraint(_in("source", DISH_SOURCES), name="source"),
+    CheckConstraint(_in("status", DISH_STATUSES), name="status"),
+)
+
+# Chunked, resumable uploads from the in-app recorder (module 7).
+upload_sessions = Table(
+    "upload_sessions",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("project_id", Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True),
+    Column("client_upload_id", String(64), nullable=False, unique=True),
+    Column("dish_id", Integer, ForeignKey("dishes.id", ondelete="SET NULL")),
+    Column("kind", Text, nullable=False, server_default="original"),
+    Column("content_type", Text),
+    Column("chunks_received", Integer, nullable=False, server_default="0"),
+    Column("bytes_received", Integer, nullable=False, server_default="0"),
+    Column("status", Text, nullable=False, server_default="open"),
+    Column("recipe_id", Integer, ForeignKey("recipes.id", ondelete="SET NULL")),
+    _created_at(),
+    CheckConstraint(_in("status", UPLOAD_STATUSES), name="status"),
+)
+
+# Analytics events (module 3). No personal data in props.
+events = Table(
+    "events",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("name", Text, nullable=False),
+    Column("project_id", Integer, ForeignKey("projects.id", ondelete="CASCADE")),
+    Column("recipe_id", Integer, ForeignKey("recipes.id", ondelete="CASCADE")),
+    Column("actor", Text, nullable=False, server_default="system"),
+    Column("channel", Text, nullable=False, server_default="web"),
+    Column("props", JSONType, nullable=False, server_default="{}"),
+    _created_at(),
+    CheckConstraint(_in("actor", ACTORS), name="actor"),
+    Index("ix_events_name_created_at", "name", "created_at"),
+    Index("ix_events_project_id_created_at", "project_id", "created_at"),
 )
 
 generated_files = Table(
