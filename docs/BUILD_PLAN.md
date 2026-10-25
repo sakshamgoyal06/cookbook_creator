@@ -20,7 +20,7 @@
 |---|---|---|---|---|---|
 | 1 | [Foundations](#1-foundations) | | AI-3, AI-4, §13, §15, §17 | | Mostly done; deploy, backups, Sentry left |
 | 2 | [Design system and app shell](#2-design-system-and-app-shell) | all | §12 | 1 | Next |
-| 3 | [Analytics events](#3-analytics-events) | | OPS-3, §10 | 1 | Next (with 2) |
+| 3 | [Analytics events](#3-analytics-events) | | OPS-3, §10 | 1 | Done (each module adds its own events) |
 | 4 | [Data model v2](#4-data-model-v2) | | §14 | 1 | Done (edge cases land with modules 5–7) |
 | 5 | [Onboarding and gift setup](#5-onboarding-and-gift-setup) | R1–R8 | BUY-1…BUY-5, ENG-3 | 2, 3, 4 | |
 | 6 | [Requester home and recipe review](#6-requester-home-and-recipe-review) | R9, R10, R13 | DASH-1…DASH-3 | 5 | |
@@ -133,14 +133,14 @@ Goal: every new screen is built from the same small set of parts in the "Rasoi n
 Goal: answer every PRD §10 metric from our own data, without personal data in events (OPS-3). Moved earlier than the old M7 so every module records events from day one.
 
 ### Data
-- [ ] `events` table: `id, name, project_id (nullable), recipe_id (nullable), actor (buyer|cook|family|system|anon), channel (web|pwa|whatsapp|qr|system), props JSON, created_at`; indexes on `(name, created_at)` and `(project_id, created_at)`
-- [ ] `listen_events` gains `source (qr|link|book|app)` and `is_owner bool`, so owner plays can be excluded from the "voice" metric and from counts shown to the cook
+- [x] `events` table: `id, name, project_id (nullable), recipe_id (nullable), actor (buyer|cook|family|system|anon), channel (web|pwa|whatsapp|qr|system), props JSON, created_at`; indexes on `(name, created_at)` and `(project_id, created_at)`
+- [x] `listen_events` gains `source (qr|link|book|app)` and `is_owner bool`, so owner plays can be excluded from the "voice" metric and from counts shown to the cook
 
 ### Build
-- [ ] `events_service.track(name, project_id=None, recipe_id=None, actor=..., channel=..., **props)`; never raises into the request (log and continue); written in the same transaction where the action happens when possible
-- [ ] Event names in one module-level catalogue (a constant per name), so a typo fails tests
-- [ ] Props allowlist per event; phone numbers, names, transcripts and audio keys are rejected
-- [ ] Weekly play counts: query helpers `plays_this_week(recipe_id)` and `plays_this_week(project_id)`, excluding owner plays (used by C5, C8, R13)
+- [x] `events_service.track(name, project_id=None, recipe_id=None, actor=..., channel=..., **props)`; never raises into the request (log and continue); written in the same transaction where the action happens when possible
+- [x] Event names in one module-level catalogue (a constant per name), so a typo fails tests
+- [x] Props allowlist per event; phone numbers, names, transcripts and audio keys are rejected
+- [x] Weekly play counts: query helpers `plays_this_week(recipe_id)` and `plays_this_week(project_id)`, excluding owner plays (used by C5, C8, R13)
 
 ### Event catalogue (each module adds its own)
 | Area | Events |
@@ -156,14 +156,14 @@ Goal: answer every PRD §10 metric from our own data, without personal data in e
 | Upsell | `volume2_offer_shown`, `volume2_bought` |
 
 ### Edge cases
-- [ ] Bots and link-preview crawlers (WhatsApp, Telegram, Slack) opening `/l/` or `/b/` don't count as views or plays (user-agent check; plays only count from the JS `played` beacon)
-- [ ] One person replaying a clip 10 times in a minute counts once per page load
-- [ ] Events from deleted projects are deleted with the project (DPDP deletion)
-- [ ] Clock skew: always use the server time
+- [x] Bots and link-preview crawlers (WhatsApp, Telegram, Slack) opening `/l/` or `/b/` don't count as views or plays (user-agent check; plays only count from the JS `played` beacon)
+- [x] One person replaying a clip 10 times in a minute counts once per page load
+- [x] Events from deleted projects are deleted with the project (DPDP deletion)
+- [x] Clock skew: always use the server time
 
 ### Tests
-- [ ] Unknown event name or a banned prop raises in tests, logs in production
-- [ ] Owner plays are excluded from counts shown to the cook
+- [x] Unknown event name or a banned prop raises in tests, logs in production
+- [x] Owner plays are excluded from counts shown to the cook
 
 **Acceptance:** the metrics page (module 16) can show activation, completion and QR plays for a seeded test project using only `events` and `listen_events`.
 

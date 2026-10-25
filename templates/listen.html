@@ -20,7 +20,7 @@
     audio.addEventListener("play", function () {
         button.innerHTML = "&#10074;&#10074;"; button.setAttribute("aria-label", "Pause");
         status.textContent = clips > 1 ? "Part " + current + " of " + clips : "";
-        if (!counted) { counted = true; navigator.sendBeacon && navigator.sendBeacon({{ url_for('listen_played', token=token) | tojson }}); }
+        if (!counted) { counted = true; navigator.sendBeacon && navigator.sendBeacon({{ played_url | tojson }}); }
     });
     audio.addEventListener("pause", function () {
         button.innerHTML = "&#9654;"; button.setAttribute("aria-label", "Play the recording");

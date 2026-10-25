@@ -15,7 +15,7 @@ def generate_recipe_pdf(recipe: dict) -> str:
         "cookbook_recipe_template.html",
         recipe=recipe,
         listen_url=listen_url,
-        qr_data_uri=qr_service.make_qr_data_uri(listen_url, scale=10) if listen_url else None,
+        qr_data_uri=_qr_for(recipe) if listen_url else None,
     )
 
     slug = _slugify(recipe.get("recipe_title", "recipe"))
@@ -34,6 +34,10 @@ def generate_recipe_pdf(recipe: dict) -> str:
     finally:
         os.remove(temp_path)
     return filename
+
+
+def _qr_for(recipe):
+    return qr_service.make_qr_data_uri(listen_service.listen_url(recipe["listen_token"], source="qr"), scale=10)
 
 
 def _slugify(text: str) -> str:

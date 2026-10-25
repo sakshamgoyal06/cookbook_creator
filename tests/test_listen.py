@@ -8,7 +8,7 @@ from PIL import Image
 
 import config
 from models.database import get_engine
-from models.schema import projects
+from models.schema import events, listen_events, projects
 from services import listen_service, qr_service, recipe_service
 from sqlalchemy import select
 from test_storage_service import s3  # noqa: F401  (pytest fixture)
@@ -83,13 +83,35 @@ def test_other_user_cannot_manage_listen_link(client):
     assert recipe_service.get_recipe(row_id)["listen_revoked_at"] is None
 
 
-def test_plays_are_counted(auth_client, client):
+def test_plays_are_counted_without_owner_or_bots(app, auth_client):
     project_id, row_id, token = _recipe_with_audio(auth_client)
-    assert client.post(f"/l/{token}/played").status_code == 204
-    assert client.post(f"/l/{token}/played").status_code == 204
-    assert client.post("/l/nope/played").status_code == 404
+    assert auth_client.post(f"/l/{token}/played").status_code == 204  # owner: stored, not counted
+    family = app.test_client()
+    assert family.post(f"/l/{token}/played?s=qr").status_code == 204
+    assert family.post(f"/l/{token}/played").status_code == 204
+    assert family.post(f"/l/{token}/played", headers={"User-Agent": "WhatsApp/2.23"}).status_code == 204
+    assert family.post("/l/nope/played").status_code == 404
     assert listen_service.play_count(row_id) == 2
+    assert listen_service.play_count(row_id, days=7) == 2
+    assert listen_service.project_play_count(project_id) == 2
+    with get_engine().connect() as conn:
+        rows = conn.execute(select(listen_events.c.source, listen_events.c.is_owner)
+                            .order_by(listen_events.c.id)).all()
+        plays = conn.execute(select(events.c.props).where(events.c.name == "qr_play")).scalars().all()
+    assert [tuple(r) for r in rows] == [("link", True), ("qr", False), ("link", False)]
+    assert [p["source"] for p in plays] == ["link", "qr", "link"]
     assert b"played 2 times" in auth_client.get(f"/projects/{project_id}/recipes/{row_id}").data
+
+
+def test_listen_page_view_is_tracked_but_not_for_link_previews(app, auth_client):
+    project_id, row_id, token = _recipe_with_audio(auth_client)
+    family = app.test_client()
+    family.get(f"/l/{token}?s=qr")
+    family.get(f"/l/{token}", headers={"User-Agent": "facebookexternalhit/1.1"})
+    with get_engine().connect() as conn:
+        views = conn.execute(select(events.c.props).where(events.c.name == "listen_page_viewed")).scalars().all()
+    assert views == [{"source": "qr"}]
+    assert b"/played?s=qr" in family.get(f"/l/{token}?s=qr").data
 
 
 def test_listen_audio_redirects_to_short_lived_signed_url_on_s3(auth_client, client, s3, monkeypatch):  # noqa: F811

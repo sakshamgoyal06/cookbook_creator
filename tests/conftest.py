@@ -37,6 +37,7 @@ def app(tmp_path, monkeypatch):
     db_path = tmp_path / "test.db"
     monkeypatch.setattr(config, "DATABASE_URL", f"sqlite:///{db_path}")
     monkeypatch.setattr(config, "INSTANCE_FOLDER", str(tmp_path))
+    monkeypatch.setattr(config, "EVENTS_STRICT", True)
     for name in ("UPLOAD_FOLDER", "OUTPUT_FOLDER"):
         folder = tmp_path / name.lower()
         folder.mkdir()
