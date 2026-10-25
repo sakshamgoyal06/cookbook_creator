@@ -2,14 +2,15 @@
 {% block title %}{{ book.title }}{% endblock %}
 {% block og_description %}A family cookbook{% if book.storyteller_name %}, in {{ book.storyteller_name.split()[0] }}'s voice{% endif %}{% endblock %}
 {% block content %}
+{% if preview %}<p class="card" style="border-left:4px solid var(--haldi)">Preview: only you can see the pages. The family sees “a surprise” until {{ book.reveal_date.strftime('%-d %B') if book.reveal_date else 'you reveal it' }}.</p>{% endif %}
 <div class="center">
 <p class="eyebrow">A family cookbook</p>
 <h1>{{ book.title }}</h1>
 {% if book.subtitle %}<p class="meta">{{ book.subtitle }}</p>{% endif %}
 {% if book.dedication %}<p class="quote" style="text-align:left">{{ book.dedication }}</p>{% endif %}
 </div>
-{% if book.surprise %}
-<p class="card center">The pages are a surprise for now. Come back on the big day.</p>
+{% if book.surprise and not preview %}
+<p class="card center">The pages are a surprise for now. Come back {{ 'on ' ~ book.reveal_date.strftime('%-d %B') if book.reveal_date else 'on the big day' }}.</p>
 {% elif book.recipes %}
 <h2>Contents</h2>
 <ul class="list">
@@ -23,5 +24,5 @@
 {% else %}
 <p class="meta center">Recipes will appear here as they are recorded.</p>
 {% endif %}
-<p class="center" style="margin-top:2rem"><a class="btn" href="{{ url_for('book_join', token=request.view_args.token) }}">Ask for a dish</a></p>
+<p class="center" style="margin-top:2rem">{% if has_pdf %}<a class="btn" href="{{ url_for('book_pdf', token=request.view_args.token) }}">Download the book (PDF)</a> {% endif %}<a class="btn" href="{{ url_for('book_join', token=request.view_args.token) }}">Ask for a dish</a></p>
 {% endblock %}

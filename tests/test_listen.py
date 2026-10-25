@@ -206,7 +206,8 @@ def test_private_page_is_bilingual(client):
     assert "यह रिकॉर्डिंग निजी है" in client.get("/l/nope").data.decode()
 
 
-def test_surprise_mode_hides_the_book_until_the_reveal(auth_client, client):
+def test_surprise_mode_hides_the_book_until_the_reveal(app, auth_client):
+    client = app.test_client()  # the family, not the logged-in owner (who gets a preview)
     project_id, row_id, token = _recipe_with_audio(auth_client)
     recipe_service.approve_recipe(row_id)
     project_service.update_setup(project_id, share_pages_as_ready=False)

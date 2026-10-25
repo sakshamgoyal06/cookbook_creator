@@ -290,10 +290,30 @@ def _is_listen_owner(token):
 
 @app.route("/b/<token>")
 def book(token):
-    book = listen_service.get_book(token)
+    owner = _is_book_owner(token)
+    book = listen_service.get_book(token, preview=owner)
     if book is None:
         return render_template("listen_private.html"), 404
-    return render_template("book_listen.html", book=book)
+    if not owner and not events_service.is_bot(request.headers.get("User-Agent")):
+        events_service.track("book_page_viewed", project_id=book["id"], actor="anon")
+    has_pdf = not book["surprise"] and project_service.latest_book_pdf(book["id"]) is not None
+    return render_template("book_listen.html", book=book, preview=owner and book["surprise"], has_pdf=has_pdf)
+
+
+@app.route("/b/<token>/book.pdf")
+def book_pdf(token):
+    book = listen_service.get_book(token, preview=_is_book_owner(token))
+    latest = project_service.latest_book_pdf(book["id"]) if book else None
+    if latest is None or (book["surprise"] and not _is_book_owner(token)):
+        abort(404)
+    events_service.track("book_pdf_downloaded", project_id=book["id"], actor="anon")
+    return storage_service.send("pdfs", latest["storage_key"], download_name=f"{book['title']}.pdf")
+
+
+def _is_book_owner(token):
+    if not current_user.is_authenticated:
+        return False
+    return any(p["book_token"] == token for p in project_service.get_user_projects(current_user.id))
 
 
 @app.route("/b/<token>/join", methods=["GET", "POST"])

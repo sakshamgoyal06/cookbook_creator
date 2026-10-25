@@ -1,0 +1,41 @@
+{% from "pdf/_recipe_page.html" import recipe_page %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ project.title }}</title>
+    <style>
+        .book-cover, .book-front { page-break-after: always; text-align: center; padding-top: 6cm; }
+        .book-cover h1 { font-size: 2.8rem; color: #2E5B45; margin: 0 0 .4cm; font-weight: normal; }
+        .book-cover .by { font-size: 1.2rem; color: #5E574C; }
+        .book-cover .qr { margin-top: 3cm; font-size: .85rem; color: #5E574C; }
+        .book-front { padding-top: 5cm; font-size: 1.2rem; font-style: italic; color: #24211C; }
+        .contents { page-break-after: always; }
+        .contents h2 { color: #2E5B45; font-weight: normal; }
+        .contents ol { font-size: 1.1rem; line-height: 2; }
+        .book-recipe { page-break-after: always; }
+        .closing { text-align: center; padding-top: 6cm; color: #5E574C; }
+    </style>
+</head>
+<body>
+<section class="book-cover">
+    <h1>{{ project.title }}</h1>
+    {% if voice_name %}<p class="by">Recipes in {{ voice_name }}'s own voice</p>{% endif %}
+    {% if project.occasion %}<p class="by">{{ project.occasion }}{% if project.reveal_date %} · {{ project.reveal_date.year }}{% endif %}</p>{% endif %}
+    {% if book_qr %}<div class="qr"><img src="{{ book_qr }}" alt="" style="width:3cm;height:3cm"><br>Scan to open the family cookbook</div>{% endif %}
+</section>
+{% if project.dedication %}<section class="book-front"><p>{{ project.dedication }}</p></section>{% endif %}
+<section class="contents">
+    <h2>Contents</h2>
+    <ol>{% for page in pages %}<li>{{ page.recipe.recipe_title }}</li>{% endfor %}</ol>
+    <p style="color:#5E574C;font-size:.9rem">Every page has a QR code. Scan it with a phone camera to hear the recipe told in {{ voice_name ~ "'s" if voice_name else "the cook's" }} voice.</p>
+</section>
+{% for page in pages %}
+<section class="book-recipe">{{ recipe_page(page.recipe, page.listen_url, page.qr, voice_name, cook_label) }}</section>
+{% endfor %}
+<section class="closing">
+    <p>Made with love, and with {{ config.APP_NAME }}.</p>
+    <p style="font-size:.85rem">The recordings stay private to the family. Anyone with a page can listen; the organiser can turn any link off.</p>
+</section>
+</body>
+</html>

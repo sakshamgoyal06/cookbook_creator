@@ -786,3 +786,55 @@ def book(project):
                    book_url=listen_service.book_url(project["book_token"]),
                    days_left=days_until(project.get("reveal_date")),
                    steps=SETUP_STEPS[project["cook_mode"]])
+
+
+# ─── Whole book and reveal day R12 ─────────────────────────────
+
+@bp.route("/p/<int:project_id>/book/compile", methods=["POST"])
+@owned_project
+def compile_book(project):
+    approved = [recipe_service.get_recipe(r["id"]) for r in recipe_service.get_project_recipes(project["id"])
+                if r["status"] == "approved"]
+    if not approved:
+        flash("Approve at least one page first.", "error")
+        return redirect(url_for("screens.book", project_id=project["id"]))
+    try:
+        key = pdf_service.generate_book_pdf(project, approved)
+    except Exception:
+        current_app.logger.exception("Book PDF failed for project %s", project["id"])
+        flash("We couldn't make the book PDF just now. Please try again in a minute.", "error")
+        return redirect(url_for("screens.book", project_id=project["id"]))
+    project_service.save_book_pdf(project["id"], key)
+    events_service.track("book_compiled", project_id=project["id"], actor="buyer", recipes=len(approved))
+    flash(f"The book is ready: {len(approved)} page{'s' if len(approved) != 1 else ''}.", "success")
+    return redirect(url_for("screens.book", project_id=project["id"]))
+
+
+@bp.route("/p/<int:project_id>/book.pdf")
+@owned_project
+def book_file(project):
+    latest = project_service.latest_book_pdf(project["id"])
+    if latest is None:
+        abort(404)
+    return storage_service.send("pdfs", latest["storage_key"], download_name=f"{project['title']}.pdf")
+
+
+@bp.route("/p/<int:project_id>/reveal", methods=["GET", "POST"])
+@owned_project
+def reveal(project):
+    pid = project["id"]
+    approved = [r for r in recipe_service.get_project_recipes(pid) if r["status"] == "approved"]
+    if request.method == "POST":
+        if not approved:
+            flash("There's nothing to reveal yet. Approve a page first, or pick a later date.", "error")
+            return redirect(url_for("screens.reveal", project_id=pid))
+        project_service.reveal(pid)
+        events_service.track("book_revealed", project_id=pid, actor="buyer", recipes=len(approved))
+        flash("Revealed. The family can now open every approved page.", "success")
+        return redirect(url_for("screens.reveal", project_id=pid))
+    book_url = listen_service.book_url(project["book_token"])
+    return _render("app/reveal.html", project, tab="book", approved=approved,
+                   book_url=book_url, latest_pdf=project_service.latest_book_pdf(pid),
+                   share_link=copy.wa_link(copy.reveal_text(project, book_url)),
+                   days_left=days_until(project.get("reveal_date")),
+                   back_url=url_for("screens.book", project_id=pid))

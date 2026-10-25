@@ -3,7 +3,7 @@
 URLs carry only random tokens, never database ids (QR-3). The path format is
 permanent (QR-4): never change `/l/<token>` or `/b/<token>` without redirects.
 """
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from flask import request
 from sqlalchemy import func, insert, select, update
@@ -137,7 +137,7 @@ def regenerate_book(project_id):
                      .values(book_token=new_token(), updated_at=func.now()))
 
 
-def get_book(token):
+def get_book(token, preview=False):
     """A project's public cookbook page data: its title and listenable recipes with clips."""
     with get_engine().connect() as conn:
         project = conn.execute(
@@ -160,8 +160,9 @@ def get_book(token):
         ).mappings().all()
         book["recipes"] = [dict(r, clip_count=len(_clips(conn, r["id"]))) for r in rows]
         # "Keep it a surprise": the book lists nothing until the reveal; printed QR codes still play.
-        book["surprise"] = not book["share_pages_as_ready"] and book["revealed_at"] is None
-        if book["surprise"]:
+        reveal_day_reached = book["reveal_date"] is not None and book["reveal_date"] <= date.today()
+        book["surprise"] = not book["share_pages_as_ready"] and book["revealed_at"] is None and not reveal_day_reached
+        if book["surprise"] and not preview:
             book["recipes"] = []
     return book
 
