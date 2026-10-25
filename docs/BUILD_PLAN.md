@@ -24,7 +24,7 @@
 | 4 | [Data model v2](#4-data-model-v2) | | §14 | 1 | Done (edge cases land with modules 5–7) |
 | 5 | [Onboarding and gift setup](#5-onboarding-and-gift-setup) | R1–R8 | BUY-1…BUY-5, ENG-3 | 2, 3, 4 | Built; gift card and drag reorder left |
 | 6 | [Requester home and recipe review](#6-requester-home-and-recipe-review) | R9, R10, R13 | DASH-1…DASH-3 | 5 | Built; live Home refresh left |
-| 7 | [Recording in the app (self and assisted)](#7-recording-in-the-app-self-and-assisted) | S1–S5 | DASH-5, QR-10 | 2, 4 | |
+| 7 | [Recording in the app (self and assisted)](#7-recording-in-the-app-self-and-assisted) | S1–S5 | DASH-5, QR-10 | 2, 4 | Built; device matrix and cook switcher left |
 | 8 | [Listen pages and QR](#8-listen-pages-and-qr) | F1, F3, F5, R13 | QR-1…QR-9 | 2 | Backend done (M1), restyle left |
 | 9 | [WhatsApp capture](#9-whatsapp-capture) | C1, C2 | WA-1, WA-2, WA-5, WA-6, BUY-5 | 4, 5 | **On hold** |
 | 10 | [Follow-up questions and page back](#10-follow-up-questions-and-page-back) | C3, C4, S4 | WA-3, WA-4, AI-5, AI-6, ENG-5 | 7 or 9 | |
@@ -277,35 +277,35 @@ Screens: **S1** My kitchen · **S2** Recording · **S3** Add notes I already hav
 This module needs no WhatsApp approval, so it's the first full capture path to ship.
 
 ### Build
-- [ ] S1: "Next up" dish with the big record button, recipe list with chips, import, Cook switcher (assisted mode: whose name and voice the page uses; sets `recipes.cook_name`)
-- [ ] S2 recorder: `MediaRecorder` (webm/opus on Android Chrome, mp4/aac on iOS Safari), timer, live level meter, rotating prompt cards (static tips first; "We've heard so far" checklist is P1), Pause/Resume, "Done", "+ Add the story behind this dish" (story clip)
-- [ ] Chunked, resumable upload: chunks every 10 s to `/uploads/<client_upload_id>/chunk` (idempotent by chunk index); `complete` assembles, stores via `storage_service`, creates the recipe and enqueues the pipeline
-- [ ] Local safety copy in IndexedDB until the server confirms `complete`; on next open, unfinished recordings offer "Upload now"
-- [ ] S3 import: Web Share Target (`audio/*`, Android) from WhatsApp → choose dish or "new dish"; file picker for iOS and desktop; several notes grouped into one dish in the order picked
-- [ ] Duration (`recipe_audio.duration_s`) and content type stored for every clip
-- [ ] S5 approve: final page preview with Listen + QR, "Fix something" / "Looks right", share on WhatsApp (`wa.me` with the listen link)
+- [~] S1 (Cook switcher later): "Next up" dish with the big record button, recipe list with chips, import, Cook switcher (assisted mode: whose name and voice the page uses; sets `recipes.cook_name`)
+- [x] S2 recorder: `MediaRecorder` (webm/opus on Android Chrome, mp4/aac on iOS Safari), timer, live level meter, rotating prompt cards (static tips first; "We've heard so far" checklist is P1), Pause/Resume, "Done", "+ Add the story behind this dish" (story clip)
+- [x] Chunked, resumable upload: chunks every 10 s to `/uploads/<client_upload_id>/chunk` (idempotent by chunk index); `complete` assembles, stores via `storage_service`, creates the recipe and enqueues the pipeline
+- [x] Local safety copy in IndexedDB until the server confirms `complete`; on next open, unfinished recordings offer "Upload now"
+- [x] S3 import: Web Share Target (`audio/*`, Android) from WhatsApp → choose dish or "new dish"; file picker for iOS and desktop; several notes grouped into one dish in the order picked
+- [~] (content type stored; duration later) Duration (`recipe_audio.duration_s`) and content type stored for every clip
+- [~] S5 (uses the R10 review page for now): S5 approve: final page preview with Listen + QR, "Fix something" / "Looks right", share on WhatsApp (`wa.me` with the listen link)
 
 ### Events
 `recording_started`, `recording_finished`, `recording_abandoned`, `upload_failed`, `voice_note_received` {channel: app|import}, `recipe_created`, `recipe_approved`
 
 ### Edge cases
-- [ ] Microphone permission denied or blocked → plain-language help per browser, and the file-picker fallback
+- [x] Microphone permission denied or blocked → plain-language help per browser, and the file-picker fallback
 - [ ] iOS Safari quirks: recording stops when the screen locks or the app is backgrounded → save what was recorded, show "Recording paused" on return
 - [ ] Phone call or another app takes the mic mid-recording → auto-pause, keep the audio so far
-- [ ] Network drops mid-upload → chunks retry with backoff; nothing deleted locally until `complete` is confirmed
-- [ ] Same chunk sent twice → stored once
-- [ ] Recording under 5 s → "That was very short. Keep it, or record again?"
-- [ ] Recording over 30 min → warn at 25 min, stop and save at 30 min, offer to continue as part 2 of the same dish
+- [x] Network drops mid-upload → chunks retry with backoff; nothing deleted locally until `complete` is confirmed
+- [x] Same chunk sent twice → stored once
+- [~] (under 3 s: "keep talking") Recording under 5 s → "That was very short. Keep it, or record again?"
+- [~] (warn at 25, save at 30; part 2 is a new recording) Recording over 30 min → warn at 25 min, stop and save at 30 min, offer to continue as part 2 of the same dish
 - [ ] Silence only (level meter flat) → warn before upload
 - [ ] Storage full on the phone → IndexedDB write fails → upload directly, warn that a dropped connection can lose the clip
 - [ ] Unsupported format from import (e.g. `.opus` named `.ogg`, WhatsApp `.waptt`) → accepted by sniffing content type; anything else rejected with the supported list
-- [ ] Imported note is very old or from another person → no check possible; keep as is
+- [x] Imported note is very old or from another person → no check possible; keep as is
 - [ ] Cook switcher changed after recording → only future recordings change; existing pages keep their cook name unless edited
 
 ### Tests
-- [ ] Chunk endpoint: idempotent chunks, out-of-order chunks, abandoned sessions cleaned after 24 h
-- [ ] Assembled file equals the concatenated chunks; pipeline enqueued once
-- [ ] Share-target POST with 1 and 3 files creates one dish with ordered clips
+- [~] (cleanup job later) Chunk endpoint: idempotent chunks, out-of-order chunks, abandoned sessions cleaned after 24 h
+- [x] Assembled file equals the concatenated chunks; pipeline enqueued once
+- [x] Share-target POST with 1 and 3 files creates one dish with ordered clips
 - [ ] Manual device test matrix: Android Chrome (budget phone), iPhone Safari, desktop Chrome
 
 **Acceptance:** on a budget Android phone in airplane-mode-then-online, a 4-minute recording survives the drop, uploads, and becomes a reviewed page with a working QR.

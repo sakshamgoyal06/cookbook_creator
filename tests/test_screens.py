@@ -304,3 +304,86 @@ def test_status_chips_cover_every_status():
     assert status_chip("awaiting_mom", "Dadi")["label"] == "Waiting on Dadi"
     project = {"storyteller_name": "Sunita Sharma", "storyteller_address_as": "Mummy"}
     assert cook_display_name(project) == "Sunita ji" and cook_label(project) == "Mummy"
+
+
+def _open_upload(client, pid, cid="rec-0001-abcd", **body):
+    return client.post(f"/p/{pid}/uploads", json={"client_upload_id": cid, "content_type": "audio/webm;codecs=opus",
+                                                  **body})
+
+
+def test_recording_uploads_in_chunks_out_of_order_and_retries_safely(auth_client, monkeypatch):
+    seen = _stub_ai(monkeypatch)
+    pid = _onboard(auth_client, mode="assisted")
+    page = auth_client.get(f"/p/{pid}/record").data
+    assert b"Recording Mummy" in page and b"data-recorder" in page
+    rajma = dish_service.list_dishes(pid)[0]
+
+    assert _open_upload(auth_client, pid, dish_id=rajma["id"]).json["status"] == "open"
+    assert _open_upload(auth_client, pid, dish_id=rajma["id"]).status_code == 200  # opening again is fine
+    base = f"/p/{pid}/uploads/rec-0001-abcd"
+    auth_client.post(f"{base}/chunk/1", data=b"BBB")
+    auth_client.post(f"{base}/chunk/0", data=b"xx")
+    auth_client.post(f"{base}/chunk/0", data=b"AAA")  # a retried chunk replaces the first copy
+    early = auth_client.post(f"{base}/complete", json={"chunks": 3, "seconds": 14})
+    assert early.status_code == 409 and early.json["missing"] == [2]
+    auth_client.post(f"{base}/chunk/2", data=b"CCC")
+
+    done = auth_client.post(f"{base}/complete", json={"chunks": 3, "seconds": 14})
+    recipe_id = int(done.json["redirect"].split("/")[-1])
+    assert auth_client.post(f"{base}/complete", json={"chunks": 3}).json["redirect"] == done.json["redirect"]
+    assert len(recipe_service.get_project_recipes(pid)) == 1  # the repeat didn't make a second recipe
+    recipe = recipe_service.get_recipe(recipe_id)
+    assert recipe["audio_clips"][0]["storage_key"].endswith(".webm")
+    assert recipe["audio_clips"][0]["source"] == "app" and recipe["recipe_title"] == "Rajma"
+    assert auth_client.get(f"/p/{pid}/r/{recipe_id}/audio/1").get_data() == b"AAABBBCCC"
+    assert len(seen) == 1 and recipe["status"] == "needs_review"
+    assert dish_service.get_dish(pid, rajma["id"])["recipe_id"] == recipe_id
+    assert {"recording_started", "recording_finished", "recipe_created"} <= set(_event_names())
+
+
+def test_story_clip_joins_the_recipe_without_reprocessing(auth_client, monkeypatch):
+    seen = _stub_ai(monkeypatch)
+    pid = _onboard(auth_client, mode="self")
+    _open_upload(auth_client, pid, cid="rec-recipe-0001")
+    auth_client.post(f"/p/{pid}/uploads/rec-recipe-0001/chunk/0", data=b"recipe")
+    rid = int(auth_client.post(f"/p/{pid}/uploads/rec-recipe-0001/complete",
+                               json={"chunks": 1}).json["redirect"].split("/")[-1])
+    assert b"Add the story behind this dish" in auth_client.get(f"/p/{pid}/r/{rid}").data
+    assert b"The story behind" in auth_client.get(f"/p/{pid}/record?kind=story&recipe={rid}").data
+
+    _open_upload(auth_client, pid, cid="rec-story-0001", kind="story", recipe_id=rid)
+    auth_client.post(f"/p/{pid}/uploads/rec-story-0001/chunk/0", data=b"story")
+    auth_client.post(f"/p/{pid}/uploads/rec-story-0001/complete", json={"chunks": 1})
+    clips = recipe_service.get_recipe(rid)["audio_clips"]
+    assert [(c["kind"], c["play_order"]) for c in clips] == [("original", 1), ("story", 2)]
+    assert len(seen) == 1
+
+
+def test_uploads_are_validated_and_private(client, monkeypatch):
+    _stub_ai(monkeypatch)
+    register(client, email="owner@example.com")
+    pid = _onboard(client)
+    assert _open_upload(client, pid, cid="../../etc").status_code == 400
+    assert _open_upload(client, pid, cid="rec-story-9999", kind="story", recipe_id=999).status_code == 404
+    _open_upload(client, pid, cid="rec-mine-0001")
+    assert client.post(f"/p/{pid}/uploads/rec-mine-0001/chunk/0", data=b"").status_code == 400
+    assert client.post(f"/p/{pid}/uploads/nope-nope-nope/chunk/0", data=b"x").status_code == 404
+    client.get("/logout")
+    register(client, email="intruder@example.com")
+    other = _onboard(client)
+    assert client.post(f"/p/{pid}/uploads/rec-mine-0001/chunk/0", data=b"x").status_code == 302
+    # Someone else's upload id can't be reused in your own book either.
+    assert _open_upload(client, other, cid="rec-mine-0001").status_code == 400
+    assert client.post(f"/p/{other}/uploads/rec-mine-0001/chunk/0", data=b"x").status_code == 404
+
+
+def test_sharing_voice_notes_from_whatsapp_adds_them_to_the_latest_book(auth_client, monkeypatch):
+    _stub_ai(monkeypatch)
+    assert auth_client.post("/share", data={}).headers["Location"].endswith("/start")
+    pid = _onboard(auth_client)
+    response = auth_client.post("/share", data={"text": "", "audio_files": [
+        (io.BytesIO(b"a"), "PTT-20261025-WA0001.opus", "audio/ogg"), (io.BytesIO(b"b"), "x.jpg", "image/jpeg")]},
+        content_type="multipart/form-data")
+    rid = int(response.headers["Location"].split("/")[-1])
+    assert len(recipe_service.get_recipe(rid)["audio_clips"]) == 1
+    assert recipe_service.get_recipe(rid)["project_id"] == pid

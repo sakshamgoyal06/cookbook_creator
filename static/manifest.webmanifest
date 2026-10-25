@@ -1,14 +1,14 @@
 {
   "name": "Andaaz",
   "short_name": "Andaaz",
-  "description": "Mom's recipes, in her own voice.",
+  "description": "Family recipes, in the cook's own voice.",
   "id": "/",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#fefaf3",
-  "theme_color": "#1a1a2e",
+  "background_color": "#F6F3EC",
+  "theme_color": "#F6F3EC",
   "icons": [
     {
       "src": "/static/icons/icon-192.png",
@@ -26,5 +26,28 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "files": [
+        {
+          "name": "audio_files",
+          "accept": [
+            "audio/*",
+            ".opus",
+            ".ogg",
+            ".m4a",
+            ".mp3",
+            ".wav",
+            ".webm"
+          ]
+        }
+      ]
+    }
+  }
 }

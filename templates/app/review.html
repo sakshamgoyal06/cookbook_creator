@@ -86,6 +86,9 @@
     {% if recipe.status != 'approved' %}<button class="btn btn-primary btn-block" type="submit" name="action" value="approve">Looks right, approve</button>{% endif %}
     <button class="btn btn-secondary btn-block" type="submit" name="action" value="save">Save changes</button>
     <a class="btn btn-ghost btn-block" href="{{ url_for('screens.voice', project_id=project.id, recipe_id=recipe.id) }}">{{ icon('qr') }} Voice link and QR code</a>
+    {% if not recipe.audio_clips | selectattr('kind', 'equalto', 'story') | list %}
+    <a class="btn btn-ghost btn-block" href="{{ url_for('screens.record', project_id=project.id, kind='story', recipe=recipe.id) }}">{{ icon('plus') }} Add the story behind this dish</a>
+    {% endif %}
   </div>
 </form>
 {% endif %}
