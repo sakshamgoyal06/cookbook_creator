@@ -28,7 +28,7 @@ FLASK_HOST = os.getenv("FLASK_HOST", "0.0.0.0")
 # Hosts such as Railway set PORT; FLASK_PORT is for local runs.
 FLASK_PORT = int(os.getenv("PORT") or os.getenv("FLASK_PORT", "5000"))
 # User-facing product name (working name; trademark/domain not checked yet).
-APP_NAME = os.getenv("APP_NAME", "Andaaza").strip() or "Andaaza"
+APP_NAME = os.getenv("APP_NAME", "Andaaz").strip() or "Andaaz"
 
 FLASK_DEBUG = os.getenv("FLASK_DEBUG", "false").lower() in {"1", "true", "yes"}
 
