@@ -399,22 +399,30 @@ Builds on the existing `users`, `projects` and `recipes` tables.
 
 ```
 users            (exists)
-projects         + storyteller_name, storyteller_phone, storyteller_language,
-                   occasion, reveal_date, tier, recipe_quota, payment_status,
-                   book_token, consent_at, reminders_paused
-recipes          + listen_token, listen_revoked_at, section, approved_at
-                   status ∈ received|transcribed|structured|awaiting_mom|needs_review|approved
+projects         + cook_mode (whatsapp|self|assisted), storyteller_name,
+                   storyteller_address_as, storyteller_phone, storyteller_language,
+                   occasion, reveal_date, share_pages_as_ready, tier, recipe_quota,
+                   payment_status, book_token, cook_token, consent_at,
+                   reminders_paused_until, revealed_at
+recipes          + listen_token, listen_revoked_at, section, approved_at, dish_id, cook_name
+                   status ∈ received|transcribed|structured|awaiting_mom|needs_review|approved|failed
 recipe_audio     id, recipe_id, storage_key, duration_s, kind (original|followup|story),
                  play_order, created_at
+dishes           id, project_id, title, position, source (buyer|family|cook),
+                 requested_by_member_id, requested_by_label, status, recipe_id
+                 (one ordered list: the buyer's wishlist and family requests)
 recipe_questions id, recipe_id, question_text, answer_text, answer_audio_id,
                  status (open|answered|expired), asked_at, answered_at
-family_members   id, project_id, name, phone/email, invite_token, joined_at
-dish_requests    id, project_id, family_member_id, dish_name, status
+family_members   id, project_id, name, role (buyer|cook|member), join_token, joined_at
+upload_sessions  id, project_id, client_upload_id, dish_id, bytes_received, status
 orders           id, project_id, product, amount_paise, currency, provider,
                  provider_ref, status, created_at
 wa_messages      id, project_id, direction, template, wa_message_id, status, created_at
-listen_events    id, recipe_id, played_at  (no PII)
+listen_events    id, recipe_id, played_at, source (qr|link|book|app), is_owner  (no PII)
+events           id, name, project_id, recipe_id, actor, channel, props, created_at  (no PII)
 ```
+
+Screens and flows for these are in the mobile UX spec (project files `design/MOBILE_UX_SPEC.md`).
 
 ---
 
