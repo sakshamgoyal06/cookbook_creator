@@ -59,6 +59,8 @@ login_manager.login_message_category = "error"
 app.register_blueprint(screens.bp)
 # The OS share sheet posts here without our CSRF token; it only ever adds the user's own files to their own book.
 csrf.exempt(screens.share_target)
+# Razorpay can't send our CSRF token; the webhook checks Razorpay's signature instead.
+csrf.exempt(screens.razorpay_webhook)
 app.jinja_env.globals.update(status_chip=status_chip, days_until=days_until, cook_display_name=cook_display_name)
 
 

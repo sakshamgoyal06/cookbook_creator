@@ -53,6 +53,8 @@ MEMBER_ROLES = ("buyer", "cook", "member")
 UPLOAD_STATUSES = ("open", "complete", "abandoned")
 ACTORS = ("buyer", "cook", "family", "system", "anon")
 LISTEN_SOURCES = ("qr", "link", "book", "app")
+ORDER_STATUSES = ("created", "paid", "failed", "refunded")
+PAYMENT_STATUSES = ("unpaid", "pilot", "paid", "refunded")
 QUESTION_STATUSES = ("open", "answered", "kept", "skipped", "expired")
 
 # JSONB on Postgres, JSON text on SQLite.
@@ -127,9 +129,12 @@ projects = Table(
     # Public token for the cook's page /m/<token> (module 15).
     Column("cook_token", String(32), nullable=False, unique=True),
     Column("cook_token_revoked_at", DateTime(timezone=True)),
+    # unpaid until checkout succeeds (module 13); "pilot" books were made free during the invite-only pilot.
+    Column("payment_status", Text, nullable=False, server_default="unpaid"),
     _created_at(),
     _updated_at(),
     CheckConstraint(_in("cook_mode", COOK_MODES), name="cook_mode"),
+    CheckConstraint(_in("payment_status", PAYMENT_STATUSES), name="payment_status"),
     CheckConstraint(_in("storyteller_language", LANGUAGES), name="storyteller_language"),
 )
 
@@ -316,4 +321,27 @@ pipeline_runs = Table(
     CheckConstraint(_in("stage", PIPELINE_STAGES), name="stage"),
     CheckConstraint(_in("status", PIPELINE_STATUSES), name="status"),
     Index("ix_pipeline_runs_status_created_at", "status", "created_at"),
+)
+
+
+# One checkout attempt for a book (module 13). provider_ref is the Razorpay order id.
+orders = Table(
+    "orders",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("project_id", Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True),
+    Column("user_id", Integer, ForeignKey("users.id", ondelete="SET NULL")),
+    Column("product", Text, nullable=False),
+    Column("amount_paise", Integer, nullable=False),
+    Column("currency", Text, nullable=False, server_default="INR"),
+    Column("provider", Text, nullable=False, server_default="razorpay"),
+    Column("provider_ref", String(64), nullable=False, unique=True),
+    Column("provider_payment_id", String(64)),
+    Column("status", Text, nullable=False, server_default="created"),
+    Column("failure_reason", Text),
+    Column("invoice_number", String(32), unique=True),
+    Column("paid_at", DateTime(timezone=True)),
+    Column("refunded_at", DateTime(timezone=True)),
+    _created_at(),
+    CheckConstraint(_in("status", ORDER_STATUSES), name="status"),
 )

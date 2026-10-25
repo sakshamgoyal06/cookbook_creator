@@ -160,3 +160,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--leaf); outl
 
 @media (min-width: 720px) { .app-main { padding-top: 16px; } }
 .steps-list textarea { vertical-align: top; }
+
+/* Receipts print clean */
+@media print {
+  .app-top, .tabs, .no-print, .flash[role=status] { display: none !important; }
+  body { background: #fff; }
+  .card { border: 0; box-shadow: none; }
+}

@@ -23,6 +23,7 @@
   {% for step, label in [('occasion', 'Title, occasion and reveal date'), ('cook', 'About the cook'), ('dishes', 'Dish wishlist')] %}
   <li><a class="item" href="{{ url_for('screens.setup', project_id=project.id, step=step) }}"><span class="grow">{{ label }}</span>›</a></li>
   {% endfor %}
+  {% if order %}<li><a class="item" href="{{ url_for('screens.invoice', project_id=project.id, order_id=order.id) }}"><span class="grow">Receipt</span>›</a></li>{% endif %}
   {% if 'invite' in steps %}<li><a class="item" href="{{ url_for('screens.setup', project_id=project.id, step='invite') }}"><span class="grow">Send the invite again</span>›</a></li>{% endif %}
 </ul>
 <p class="center small"><a href="{{ url_for('screens.start') }}">Start another book</a> · <a href="{{ url_for('logout') }}">Sign out</a></p>
