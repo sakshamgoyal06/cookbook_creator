@@ -1,4 +1,6 @@
 import json
+import shutil
+import subprocess
 from types import SimpleNamespace
 from unittest import mock
 
@@ -84,3 +86,33 @@ def test_transcribe_audio_uses_configured_model(tmp_path, monkeypatch):
         assert kwargs["model"] == "gpt-4o-transcribe"
         assert kwargs["file"][0] == "note.m4a"
         assert openai_cls.call_args.kwargs["base_url"] == config.OPENAI_BASE_URL
+
+
+@pytest.mark.parametrize("name, sent_as", [("PTT-20261025-WA0001.opus", "PTT-20261025-WA0001.ogg"),
+                                           ("note.m4a", "note.m4a"), ("rec.WEBM", "rec.webm")])
+def test_transcribe_sends_a_name_the_api_accepts(tmp_path, name, sent_as):
+    audio = tmp_path / name
+    audio.write_bytes(b"fake")
+    with mock.patch.object(ai_service, "OpenAI") as openai_cls:
+        openai_cls.return_value.audio.transcriptions.create.return_value = SimpleNamespace(text="ok")
+        assert ai_service.transcribe_audio(str(audio)) == "ok"
+        assert openai_cls.return_value.audio.transcriptions.create.call_args.kwargs["file"][0] == sent_as
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
+def test_other_formats_are_converted_to_mp3_first(tmp_path):
+    audio = tmp_path / "voice.aac"
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440:duration=1",
+                    "-c:a", "aac", str(audio)], check=True)
+    with mock.patch.object(ai_service, "OpenAI") as openai_cls:
+        create = openai_cls.return_value.audio.transcriptions.create
+        create.side_effect = lambda model, file: SimpleNamespace(text=f"{file[0]}:{len(file[1].read())}")
+        name, size = ai_service.transcribe_audio(str(audio)).split(":")
+    assert name == "voice.mp3" and int(size) > 0
+
+
+def test_unreadable_audio_raises_a_clear_error(tmp_path):
+    audio = tmp_path / "broken.caf"
+    audio.write_bytes(b"not audio")
+    with mock.patch.object(ai_service, "OpenAI"), pytest.raises(RuntimeError, match="ffmpeg"):
+        ai_service.transcribe_audio(str(audio))
