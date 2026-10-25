@@ -1,0 +1,34 @@
+{% extends "public/_listen_base.html" %}
+{% block title %}Join {{ book.title }}{% endblock %}
+{% block content %}
+{% set asked = {'hi': 'ने पूछा है', 'en': 'asked for'}.get(book.storyteller_language, 'ne poocha hai') %}
+<p class="eyebrow">{{ book.title }}</p>
+<h1>{% if member %}Ask for another dish{% else %}Join the family cookbook{% endif %}</h1>
+<p class="meta">Tell us who you are, and which of {{ cook }}'s dishes you'd love to have in the book.</p>
+{% if error %}<p class="card" role="alert" style="border-color:#C2412D">{{ error }}</p>{% endif %}
+<form method="post" class="card" data-join>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label for="name" style="display:block;font-weight:600;margin-bottom:6px">Your name</label>
+  <input id="name" name="name" required maxlength="40" value="{{ member.name if member else '' }}" autocomplete="given-name"
+         style="width:100%;min-height:48px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;font:inherit">
+  <p style="font-weight:600;margin:16px 0 6px">A dish you'd like <span class="meta">(optional)</span></p>
+  <div style="display:flex;flex-wrap:wrap;gap:8px">
+    {% for dish in wanted %}<label class="btn" style="min-height:40px;padding:6px 14px"><input type="radio" name="dish" value="{{ dish }}" style="margin-right:6px">{{ dish }}</label>{% endfor %}
+  </div>
+  <input name="dish_other" maxlength="80" placeholder="Or type a dish" aria-label="Another dish" data-dish
+         style="width:100%;min-height:48px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;margin-top:10px">
+  <p class="meta" style="margin:12px 0 0" data-preview>{{ cook }} will see: “<span data-preview-name>{{ member.name if member else 'Your name' }}</span> {{ asked }}: <span data-preview-dish>…</span>”. The family organiser sees it first.</p>
+  <p style="margin:16px 0 0"><button class="btn" type="submit" style="background:var(--leaf);color:#fff;border-color:var(--leaf);width:100%">Send</button></p>
+</form>
+<script>
+(function () {
+  var f = document.querySelector("[data-join]"), n = f.querySelector("#name"), o = f.querySelector("[data-dish]");
+  function show() {
+    var picked = f.querySelector("input[name=dish]:checked");
+    f.querySelector("[data-preview-name]").textContent = n.value.trim() || "Your name";
+    f.querySelector("[data-preview-dish]").textContent = o.value.trim() || (picked ? picked.value : "…");
+  }
+  f.addEventListener("input", show); f.addEventListener("change", show);
+})();
+</script>
+{% endblock %}

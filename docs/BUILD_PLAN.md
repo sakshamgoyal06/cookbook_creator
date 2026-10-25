@@ -29,7 +29,7 @@
 | 9 | [WhatsApp capture](#9-whatsapp-capture) | C1, C2 | WA-1, WA-2, WA-5, WA-6, BUY-5 | 4, 5 | **On hold** |
 | 10 | [Follow-up questions and page back](#10-follow-up-questions-and-page-back) | C3, C4, S4 | WA-3, WA-4, AI-5, AI-6, ENG-5 | 7 or 9 | In-app part built (S4); WhatsApp part waits on 9 |
 | 11 | [Reminders and escalation](#11-reminders-and-escalation) | C5, R9 card | ENG-1, ENG-2, ENG-3 | 9 | |
-| 12 | [Family and dish requests](#12-family-and-dish-requests) | R11, F4 | ENG-4 | 5, 8 | |
+| 12 | [Family and dish requests](#12-family-and-dish-requests) | R11, F4 | ENG-4 | 5, 8 | Built |
 | 13 | [Payments](#13-payments) | R3, R7 | BUY-2 | 5 | |
 | 14 | [Book and reveal day](#14-book-and-reveal-day) | F2, R12 | BOOK-1…BOOK-5 | 6, 8 | |
 | 15 | [Mom's page](#15-moms-page-optional-p1) | C6–C8 | | 7, 9 | P1 unless Saksham decides otherwise |
@@ -453,20 +453,20 @@ Screens: **C5** Gentle nudge · R9 "needs you" escalation card.
 Screens: **R11** Family · **F4** Join + ask for a dish.
 
 ### Build
-- [ ] R11: share family link (`wa.me`), "share pages as they're ready" toggle (`share_pages_as_ready`), members list, dish requests
-- [ ] F4 (no login): name + dish chips or free text; shows exactly what the cook will hear ("Riya poochh rahi hai: aloo paratha")
-- [ ] Join creates a `family_members` row; a request creates a `dishes` row with `source = family`, `requested_by_member_id`
-- [ ] Buyer can approve, reorder or hide requests before they reach the cook
-- [ ] Nudges (module 11) and the recorder (S2) name who asked
+- [x] R11: share family link (`wa.me`), "share pages as they're ready" toggle (`share_pages_as_ready`), members list, dish requests
+- [x] F4 (no login): name + dish chips or free text; shows exactly what the cook will hear ("Riya poochh rahi hai: aloo paratha")
+- [x] Join creates a `family_members` row; a request creates a `dishes` row with `source = family`, `requested_by_member_id`
+- [~] (approve and hide; reorder later) Buyer can approve, reorder or hide requests before they reach the cook
+- [~] (recorder, Home and Recipes name who asked; nudges wait on module 11) Nudges (module 11) and the recorder (S2) name who asked
 
 ### Events
 `family_link_shared`, `family_member_joined`, `dish_requested`
 
 ### Edge cases
-- [ ] Same person joins twice (same name on the same device) → one member (device cookie), duplicates mergeable by the buyer
-- [ ] Rude or joke requests → buyer approval is on by default
-- [ ] Family link forwarded outside the family → buyer can regenerate it; old link stops working
-- [ ] Member asks for a dish already in the list → shown as "+1 asked" on the existing dish
+- [x] Same person joins twice (same name on the same device) → one member (device cookie), duplicates mergeable by the buyer
+- [x] Rude or joke requests → buyer approval is on by default
+- [x] Family link forwarded outside the family → buyer can regenerate it; old link stops working
+- [x] Member asks for a dish already in the list → shown as "+1 asked" on the existing dish
 
 **Acceptance:** three family members join from a shared link, each requests a dish, and the next nudge names one of them.
 

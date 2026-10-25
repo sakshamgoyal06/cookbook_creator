@@ -23,4 +23,5 @@
 {% else %}
 <p class="meta center">Recipes will appear here as they are recorded.</p>
 {% endif %}
+<p class="center" style="margin-top:2rem"><a class="btn" href="{{ url_for('book_join', token=request.view_args.token) }}">Ask for a dish</a></p>
 {% endblock %}

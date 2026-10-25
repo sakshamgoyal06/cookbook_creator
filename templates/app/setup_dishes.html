@@ -2,7 +2,7 @@
 {% block form %}
 <h1>Which dishes should be in it?</h1>
 <p class="muted">One per line, most important first.{% if project.cook_mode == 'whatsapp' %} The first one goes in the invite.{% endif %} Book has room for {{ project.max_recipes or 10 }}.</p>
-{% set listed = dishes | selectattr('status', 'equalto', 'wishlist') | map(attribute='title') | list %}
+{% set listed = dishes | selectattr('status', 'equalto', 'wishlist') | selectattr('source', 'equalto', 'buyer') | map(attribute='title') | list %}
 <label for="dishes" class="sr-only">Dishes</label>
 <textarea id="dishes" name="dishes" rows="10" data-dish-list placeholder="Rajma&#10;Aloo paratha&#10;Gajar ka halwa">{{ listed | join('\n') }}</textarea>
 <p class="small muted">Tap to add:</p>

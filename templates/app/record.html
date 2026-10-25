@@ -12,7 +12,7 @@
   <p class="section-title">{% if project.cook_mode == 'assisted' %}Recording {{ cook }}{% else %}Recording{% endif %}</p>
   <label for="dish" class="sr-only">Dish</label>
   <select id="dish" data-dish class="dish-select">
-    {% for d in dishes %}<option value="{{ d.id }}" {% if dish and d.id == dish.id %}selected{% endif %}>{{ d.title }}</option>{% endfor %}
+    {% for d in dishes %}<option value="{{ d.id }}" {% if dish and d.id == dish.id %}selected{% endif %}>{{ d.title }}{% if d.requested_by_label %} (for {{ d.requested_by_label }}){% endif %}</option>{% endfor %}
     <option value="" {% if not dish %}selected{% endif %}>A different dish</option>
   </select>
   {% endif %}
