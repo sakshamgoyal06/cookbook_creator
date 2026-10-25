@@ -143,3 +143,24 @@ def test_failed_recipes_do_not_use_up_recipe_slots(auth_client):
     assert project_service.get_project_recipe_count(project_id) == 1
     recipe_service.set_status(row_id, "failed")
     assert project_service.get_project_recipe_count(project_id) == 0
+
+
+def test_pipeline_records_events(auth_client, monkeypatch):
+    from models.schema import events
+
+    monkeypatch.setattr(ai_service, "transcribe_audio", lambda path: "   ")
+    project_id = create_project(auth_client)
+    failed = recipe_service.create_received_recipe(project_id, "a.m4a")
+    pipeline_service.process_recipe(failed)
+
+    monkeypatch.setattr(ai_service, "transcribe_audio", lambda path: "Rajma...")
+    monkeypatch.setattr(ai_service, "structure_recipe", lambda transcript: SAMPLE_RECIPE)
+    ok = recipe_service.create_received_recipe(project_id, "b.m4a")
+    pipeline_service.process_recipe(ok)
+
+    with get_engine().connect() as conn:
+        rows = conn.execute(select(events.c.name, events.c.recipe_id, events.c.props).order_by(events.c.id)).all()
+    assert [tuple(r) for r in rows] == [
+        ("pipeline_failed", failed, {"stage": "transcribe"}),
+        ("recipe_ready_for_review", ok, {}),
+    ]

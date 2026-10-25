@@ -12,7 +12,7 @@ from sqlalchemy import func, insert, select, update
 import config
 from models.database import get_engine
 from models.schema import pipeline_runs, recipe_audio, recipes
-from services import ai_service, recipe_service, storage_service
+from services import ai_service, events_service, recipe_service, storage_service
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ def process_recipe(recipe_id):
     """Run the stages a recipe still needs. Safe to re-run: finished stages are skipped."""
     with get_engine().connect() as conn:
         recipe = conn.execute(
-            select(recipes.c.status, recipes.c.raw_transcript).where(recipes.c.id == recipe_id)
+            select(recipes.c.status, recipes.c.raw_transcript, recipes.c.project_id).where(recipes.c.id == recipe_id)
         ).mappings().first()
         audio_key = conn.execute(
             select(recipe_audio.c.storage_key)
@@ -73,12 +73,18 @@ def process_recipe(recipe_id):
         recipe_data = _run_stage(recipe_id, "structure", "anthropic", config.ANTHROPIC_RECIPE_MODEL,
                                  lambda: ai_service.structure_recipe(transcript))
         recipe_service.save_structured_recipe(recipe_id, recipe_data)
-    except PermanentError:
-        recipe_service.set_status(recipe_id, "failed")
-    except Exception:
+        events_service.track("recipe_ready_for_review", project_id=recipe["project_id"], recipe_id=recipe_id)
+    except PermanentError as e:
+        _mark_failed(recipe, recipe_id, getattr(e, "stage", "transcribe"))
+    except Exception as e:
         if _is_last_attempt():
-            recipe_service.set_status(recipe_id, "failed")
+            _mark_failed(recipe, recipe_id, getattr(e, "stage", "structure"))
         raise
+
+
+def _mark_failed(recipe, recipe_id, stage):
+    recipe_service.set_status(recipe_id, "failed")
+    events_service.track("pipeline_failed", project_id=recipe["project_id"], recipe_id=recipe_id, stage=stage)
 
 
 def _transcribe(audio_key):
@@ -104,6 +110,7 @@ def _run_stage(recipe_id, stage, provider, model, work):
     except Exception as e:
         log.exception("Pipeline stage %s failed for recipe %s", stage, recipe_id)
         _finish_run(run_id, "failed", f"{type(e).__name__}: {e}"[:2000])
+        e.stage = stage
         raise
     _finish_run(run_id, "succeeded")
     return result

@@ -8,9 +8,9 @@
 <ul>
     {% for recipe in book.recipes if recipe.clip_count %}
     <li>
-        <a class="play" href="{{ url_for('listen', token=recipe.listen_token) }}" aria-label="Listen to {{ recipe.recipe_title }}"
+        <a class="play" href="{{ url_for('listen', token=recipe.listen_token, s='book') }}" aria-label="Listen to {{ recipe.recipe_title }}"
            style="display:flex;align-items:center;justify-content:center;text-decoration:none">&#9654;</a>
-        <a href="{{ url_for('listen', token=recipe.listen_token) }}">{{ recipe.recipe_title }}</a>
+        <a href="{{ url_for('listen', token=recipe.listen_token, s='book') }}">{{ recipe.recipe_title }}</a>
     </li>
     {% endfor %}
 </ul>

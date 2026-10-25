@@ -25,6 +25,7 @@ from flask_wtf.csrf import CSRFProtect
 import config
 from models.database import init_db
 from services import (
+    events_service,
     listen_service,
     pdf_service,
     pipeline_service,
@@ -219,7 +220,12 @@ def listen(token):
     if recipe is None or not recipe["clips"]:
         return render_template("listen_private.html"), 404
     clip_urls = [url_for("listen_audio", token=token, clip_number=n) for n in range(1, len(recipe["clips"]) + 1)]
-    return render_template("listen.html", recipe=recipe, token=token, clip_urls=clip_urls)
+    source = _listen_source()
+    if not events_service.is_bot(request.headers.get("User-Agent")):
+        events_service.track("listen_page_viewed", project_id=recipe["project_id"], recipe_id=recipe["id"],
+                             actor="anon", channel="qr" if source == "qr" else "web", source=source)
+    played_url = url_for("listen_played", token=token, s=source)
+    return render_template("listen.html", recipe=recipe, token=token, clip_urls=clip_urls, played_url=played_url)
 
 
 @app.route("/l/<token>/audio/<int:clip_number>")
@@ -236,9 +242,24 @@ def listen_audio(token, clip_number):
 @app.route("/l/<token>/played", methods=["POST"])
 @csrf.exempt
 def listen_played(token):
-    if not listen_service.record_play(token):
+    if events_service.is_bot(request.headers.get("User-Agent")):
+        return "", 204
+    if not listen_service.record_play(token, source=_listen_source(), is_owner=_is_listen_owner(token)):
         abort(404)
     return "", 204
+
+
+def _listen_source():
+    source = request.args.get("s", "link")
+    return source if source in ("qr", "link", "book", "app") else "link"
+
+
+def _is_listen_owner(token):
+    if not current_user.is_authenticated:
+        return False
+    recipe = listen_service.get_listen_recipe(token)
+    project = project_service.get_project(recipe["project_id"]) if recipe else None
+    return bool(project and project["user_id"] == current_user.id)
 
 
 @app.route("/b/<token>")
@@ -368,6 +389,7 @@ def upload(project_id):
         os.remove(temp_path)
 
     row_id = recipe_service.create_received_recipe(project_id, filename)
+    events_service.track("recipe_created", project_id=project_id, recipe_id=row_id, actor="buyer", source="upload")
     pipeline_service.enqueue_processing(row_id)
 
     status = recipe_service.get_recipe(row_id)["status"]
@@ -399,7 +421,8 @@ def recipe_detail(project_id, recipe_id):
         recipe=recipe,
         project=project,
         listen_url=listen_url,
-        qr_data_uri=qr_service.make_qr_data_uri(listen_url) if listen_url else None,
+        qr_data_uri=(qr_service.make_qr_data_uri(listen_service.listen_url(recipe["listen_token"], source="qr"))
+                     if listen_url else None),
         play_count=listen_service.play_count(recipe_id),
     )
 
@@ -412,7 +435,9 @@ def recipe_qr(project_id, recipe_id, fmt):
     recipe = _get_project_recipe(project_id, recipe_id)
     if recipe is None or recipe["listen_revoked_at"] is not None:
         return _recipe_not_found(project_id)
-    return _qr_response(listen_service.listen_url(recipe["listen_token"]), fmt, f"listen-{recipe_id}")
+    events_service.track("qr_downloaded", project_id=project_id, recipe_id=recipe_id, actor="buyer",
+                         format=fmt, target="recipe")
+    return _qr_response(listen_service.listen_url(recipe["listen_token"], source="qr"), fmt, f"listen-{recipe_id}")
 
 
 @app.route("/projects/<int:project_id>/qr.<fmt>")
@@ -421,6 +446,7 @@ def project_qr(project_id, fmt):
     project = _get_owned_project(project_id)
     if project is None:
         return _project_not_found()
+    events_service.track("qr_downloaded", project_id=project_id, actor="buyer", format=fmt, target="book")
     return _qr_response(listen_service.book_url(project["book_token"]), fmt, f"cookbook-{project_id}")
 
 
@@ -433,9 +459,11 @@ def recipe_listen_link(project_id, recipe_id, action):
         return _recipe_not_found(project_id)
     if action == "revoke":
         listen_service.revoke(recipe_id)
+        events_service.track("listen_link_revoked", project_id=project_id, recipe_id=recipe_id, actor="buyer")
         flash("Listen link turned off. The QR code now shows \"This recording is private\".", "success")
     else:
         listen_service.regenerate(recipe_id)
+        events_service.track("listen_link_regenerated", project_id=project_id, recipe_id=recipe_id, actor="buyer")
         flash("New listen link created. Old QR codes no longer work; regenerate the PDF to print the new one.",
               "success")
     return redirect(url_for("recipe_detail", project_id=project_id, recipe_id=recipe_id))
@@ -486,6 +514,8 @@ def recipe_edit(project_id, recipe_id):
             return redirect(url_for("recipe_edit", project_id=project_id, recipe_id=recipe_id))
 
     recipe_service.update_recipe(recipe_id, data)
+    events_service.track("recipe_edited", project_id=project_id, recipe_id=recipe_id, actor="buyer",
+                         fields_changed=_count_changed_fields(recipe, data))
     flash("Recipe updated successfully!", "success")
     return redirect(url_for("recipe_detail", project_id=project_id, recipe_id=recipe_id))
 
@@ -501,6 +531,7 @@ def recipe_approve(project_id, recipe_id):
         return _recipe_not_found(project_id)
 
     recipe_service.approve_recipe(recipe_id)
+    events_service.track("recipe_approved", project_id=project_id, recipe_id=recipe_id, actor="buyer")
     flash("Recipe approved!", "success")
     return redirect(url_for("recipe_detail", project_id=project_id, recipe_id=recipe_id))
 
@@ -538,6 +569,17 @@ def recipe_pdf(project_id, recipe_id):
     if recipe is None or not recipe["pdf_filename"]:
         return _recipe_not_found(project_id)
     return storage_service.send("pdfs", recipe["pdf_filename"])
+
+
+def _count_changed_fields(recipe, data):
+    changed = 0
+    for field, value in data.items():
+        before = recipe.get(field)
+        if field.endswith("_json"):
+            changed += json.loads(before or "[]") != json.loads(value or "[]")
+        else:
+            changed += (before if before is not None else "") != (value if value is not None else "")
+    return changed
 
 
 def _qr_response(url, fmt, download_stem):

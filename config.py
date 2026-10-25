@@ -49,6 +49,9 @@ S3_SIGNED_URL_SECONDS = int(os.getenv("S3_SIGNED_URL_SECONDS", "900"))
 # the request came in on, which is fine for local testing.
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/")
 
+# Raise on invalid analytics events instead of logging them (tests turn this on).
+EVENTS_STRICT = os.getenv("EVENTS_STRICT", "false").lower() in {"1", "true", "yes"}
+
 # Background jobs (RQ). Empty = run the transcribe -> structure pipeline inside the
 # upload request, which is fine for local development. With a worker in a separate
 # container, use STORAGE_BACKEND=s3 so the worker can read the uploaded audio.
