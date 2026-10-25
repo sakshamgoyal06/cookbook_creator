@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="breadcrumb">
-    <a href="{{ url_for('dashboard') }}">Projects</a> &rsaquo;
+    <a href="{{ url_for('project_list') }}">Projects</a> &rsaquo;
     <a href="{{ url_for('project_detail', project_id=project.id) }}">{{ project.title }}</a> &rsaquo;
     Upload
 </div>

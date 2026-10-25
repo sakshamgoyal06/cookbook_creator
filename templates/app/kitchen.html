@@ -1,0 +1,38 @@
+{% extends "app/_shell.html" %}
+{% from "components/ui.html" import chip, ring, record_button %}
+{% block content %}
+<section class="card center stack">
+  {% if next_dish %}
+  <p class="section-title" style="margin:0">Next up</p>
+  <h1>{{ next_dish.title }}</h1>
+  {{ record_button(url_for('screens.record', project_id=project.id, dish=next_dish.id), 'Record ' ~ next_dish.title) }}
+  <p class="muted small">Tap and talk it through, the way you'd explain it in the kitchen.</p>
+  {% else %}
+  <h1>What shall we record?</h1>
+  {{ record_button(url_for('screens.record', project_id=project.id), 'Record a recipe') }}
+  {% endif %}
+  <p><a href="{{ url_for('screens.import_notes', project_id=project.id) }}">{{ icon('upload') }} Add notes I already have</a></p>
+</section>
+
+<section class="row" style="margin-top:16px">
+  {{ ring(approved, quota) }}
+  <div class="grow"><strong>{{ project.title }}</strong><br><span class="muted small">{{ approved }} of {{ quota }} pages done{% if days_left and days_left > 0 %} · {{ days_left }} days to go{% endif %}</span></div>
+</section>
+
+{% if needs_you %}
+<section class="card needs-you" style="margin-top:16px"><p>{{ needs_you.text }}</p><a class="btn btn-primary" href="{{ needs_you.action }}">{{ needs_you.label }}</a></section>
+{% endif %}
+
+{% if recipes %}
+<h2 class="section-title">My recipes</h2>
+<ul class="list card">
+{% for r in recipes %}
+  <li><a class="item" href="{{ url_for('screens.review', project_id=project.id, recipe_id=r.id) }}"><span class="grow truncate">{{ r.recipe_title }}</span>{{ chip(r) }}</a></li>
+{% endfor %}
+</ul>
+{% endif %}
+{% if up_next | length > 1 %}
+<h2 class="section-title">Then</h2>
+<ul class="list card">{% for d in up_next[1:] %}<li><span class="grow">{{ d.title }}</span><a class="btn btn-ghost" href="{{ url_for('screens.record', project_id=project.id, dish=d.id) }}">Record</a></li>{% endfor %}</ul>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "app/_shell.html" %}
+{% from "components/ui.html" import csrf, ring %}
+{% block content %}
+<div class="row">{{ ring(approved | length, project.max_recipes or 10) }}<div class="grow"><h1>{{ project.title }}</h1>
+  <p class="muted small">{% if days_left is not none and days_left >= 0 %}{{ days_left }} days to {{ project.occasion or 'the reveal' }}{% else %}{{ approved | length }} pages approved{% endif %}</p></div></div>
+<div class="actions">
+  <a class="btn btn-primary btn-block" href="{{ book_url }}" target="_blank" rel="noopener">{{ icon('book') }} Open the family cookbook</a>
+  <a class="btn btn-secondary btn-block" href="{{ url_for('project_qr', project_id=project.id, fmt='png', download=1) }}">{{ icon('qr') }} QR code for the whole book</a>
+</div>
+<h2 class="section-title">Pages</h2>
+{% if approved %}
+<ul class="list card">
+{% for r in approved %}
+  <li><span class="grow truncate">{{ r.recipe_title }}</span>
+  {% if r.pdf_filename %}<a class="btn btn-ghost" href="{{ url_for('recipe_pdf', project_id=project.id, recipe_id=r.id) }}">PDF</a>
+  {% else %}<form method="post" action="{{ url_for('screens.make_pdf', project_id=project.id, recipe_id=r.id) }}">{{ csrf() }}<button class="btn btn-ghost" type="submit">Make PDF</button></form>{% endif %}</li>
+{% endfor %}
+</ul>
+{% else %}<p class="muted">Approved pages appear here, each with a printable PDF and its QR code.</p>{% endif %}
+<h2 class="section-title">Book details</h2>
+<ul class="list card">
+  {% for step, label in [('occasion', 'Title, occasion and reveal date'), ('cook', 'About the cook'), ('dishes', 'Dish wishlist')] %}
+  <li><a class="item" href="{{ url_for('screens.setup', project_id=project.id, step=step) }}"><span class="grow">{{ label }}</span>›</a></li>
+  {% endfor %}
+  {% if 'invite' in steps %}<li><a class="item" href="{{ url_for('screens.setup', project_id=project.id, step='invite') }}"><span class="grow">Send the invite again</span>›</a></li>{% endif %}
+</ul>
+<p class="center small"><a href="{{ url_for('screens.start') }}">Start another book</a> · <a href="{{ url_for('logout') }}">Sign out</a></p>
+{% endblock %}

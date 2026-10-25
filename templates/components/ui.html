@@ -1,0 +1,33 @@
+{% from "components/icons.html" import icon %}
+
+{% macro chip(recipe) -%}
+{%- set c = status_chip(recipe.status) -%}
+<span class="chip chip-{{ c.style }}">{{ c.label }}</span>
+{%- endmacro %}
+
+{% macro ring(done, total) -%}
+{%- set pct = (100 * done / total) | round | int if total else 0 -%}
+<div class="ring" style="--p: {{ pct }}" role="img" aria-label="{{ done }} of {{ total }} recipes done"><span>{{ done }}/{{ total }}</span></div>
+{%- endmacro %}
+
+{% macro record_button(href=None, label="Record", id=None) -%}
+{%- if href -%}
+<a class="record" href="{{ href }}" aria-label="{{ label }}">{{ icon('mic') }}</a>
+{%- else -%}
+<button type="button" class="record" {% if id %}id="{{ id }}"{% endif %} aria-label="{{ label }}">{{ icon('mic') }}</button>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro player(clip_urls, label="Play the recording", big=False, id="player") -%}
+<div class="player" data-player data-urls='{{ clip_urls | tojson }}' id="{{ id }}">
+  <button type="button" class="play{% if big %} big{% endif %}" data-play aria-label="{{ label }}">{{ icon('play') }}</button>
+  <span class="muted small" data-status aria-live="polite"></span>
+  <noscript>{% for url in clip_urls %}<audio controls preload="none" src="{{ url }}"></audio>{% endfor %}</noscript>
+</div>
+{%- endmacro %}
+
+{% macro empty(text, action_href=None, action_label=None) -%}
+<div class="empty"><p>{{ text }}</p>{% if action_href %}<a class="btn btn-primary" href="{{ action_href }}">{{ action_label }}</a>{% endif %}</div>
+{%- endmacro %}
+
+{% macro csrf() -%}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{%- endmacro %}

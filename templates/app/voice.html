@@ -1,0 +1,31 @@
+{% extends "app/_shell.html" %}
+{% from "components/ui.html" import csrf %}
+{% block content %}
+<h1>{{ recipe.recipe_title }}</h1>
+{% set next_url = url_for('screens.voice', project_id=project.id, recipe_id=recipe.id) %}
+{% if live %}
+<div class="card center stack">
+  <img src="{{ url_for('recipe_qr', project_id=project.id, recipe_id=recipe.id, fmt='svg') }}" alt="QR code that plays the recording" width="220" height="220" class="qr">
+  <p class="small muted">Anyone who scans this hears the recording. No app or login needed.</p>
+  <p>Played {{ plays_week }} time{{ 's' if plays_week != 1 }} this week · {{ plays_total }} in all</p>
+</div>
+<div class="actions">
+  <button class="btn btn-primary btn-block" type="button" data-copy-text="{{ listen_url }}">Copy the link</button>
+  <a class="btn btn-secondary btn-block" href="{{ listen_url }}" target="_blank" rel="noopener">Open the listen page</a>
+  <div class="row"><a class="btn btn-secondary grow" href="{{ url_for('recipe_qr', project_id=project.id, recipe_id=recipe.id, fmt='png', download=1) }}">Save PNG</a>
+  <a class="btn btn-secondary grow" href="{{ url_for('recipe_qr', project_id=project.id, recipe_id=recipe.id, fmt='svg', download=1) }}">Save SVG</a></div>
+</div>
+<h2 class="section-title">If the link was shared by mistake</h2>
+<form method="post" action="{{ url_for('recipe_listen_link', project_id=project.id, recipe_id=recipe.id, action='regenerate') }}">{{ csrf() }}<input type="hidden" name="next" value="{{ next_url }}">
+  <button class="btn btn-secondary btn-block" type="submit">Make a new link</button><p class="small muted">Old QR codes stop working. Print the page again for the new one.</p></form>
+<form method="post" action="{{ url_for('recipe_listen_link', project_id=project.id, recipe_id=recipe.id, action='revoke') }}">{{ csrf() }}<input type="hidden" name="next" value="{{ next_url }}">
+  <button class="btn btn-danger btn-block" type="submit">Make it private</button></form>
+{% else %}
+<div class="card stack">
+  <p><strong>This recording is private.</strong></p>
+  <p class="muted">Anyone who scans the old QR code sees “This recording is private”. You can still play it in the app.</p>
+  <form method="post" action="{{ url_for('recipe_listen_link', project_id=project.id, recipe_id=recipe.id, action='regenerate') }}">{{ csrf() }}<input type="hidden" name="next" value="{{ next_url }}">
+    <button class="btn btn-primary" type="submit">Turn on with a new link</button></form>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,93 @@
+// Shared behaviour for the app shell: busy buttons and the clip player.
+(function () {
+  // Forms: show a busy state and block double submits on slow networks.
+  document.addEventListener("submit", function (e) {
+    var form = e.target;
+    if (form.dataset.submitted) { e.preventDefault(); return; }
+    form.dataset.submitted = "1";
+    form.querySelectorAll("button[type=submit], button:not([type])").forEach(function (b) { b.classList.add("is-busy"); });
+  });
+
+  // Coming back (e.g. from WhatsApp) restores the page from cache; let its forms submit again.
+  window.addEventListener("pageshow", function (e) {
+    if (!e.persisted) return;
+    document.querySelectorAll("form[data-submitted]").forEach(function (f) {
+      delete f.dataset.submitted;
+      f.querySelectorAll(".is-busy").forEach(function (b) { b.classList.remove("is-busy"); });
+    });
+  });
+
+  // Copy buttons: data-copy="#selector" copies that element's text; data-copy-text copies the value.
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-copy], [data-copy-text]");
+    if (!b) return;
+    var text = b.dataset.copyText || (document.querySelector(b.dataset.copy) || {}).innerText || "";
+    var done = function () { var old = b.textContent; b.textContent = "Copied"; setTimeout(function () { b.textContent = old; }, 1600); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () { window.prompt("Copy this:", text); });
+    else window.prompt("Copy this:", text);
+  });
+
+  // Dish suggestions add a line to the wishlist.
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-add-dish]");
+    var list = document.querySelector("[data-dish-list]");
+    if (!b || !list) return;
+    var lines = list.value.split("\n").map(function (l) { return l.trim(); }).filter(Boolean);
+    if (lines.map(function (l) { return l.toLowerCase(); }).indexOf(b.dataset.addDish.toLowerCase()) < 0) lines.push(b.dataset.addDish);
+    list.value = lines.join("\n");
+    b.hidden = true;
+  });
+
+  // Reveal date: "N days away".
+  document.querySelectorAll("[data-days-away]").forEach(function (input) {
+    var label = document.querySelector("[data-days-away-label]");
+    function show() {
+      if (!label || !input.value) { if (label) label.textContent = ""; return; }
+      var days = Math.round((new Date(input.value + "T00:00:00") - new Date(new Date().toDateString())) / 864e5);
+      label.textContent = days > 0 ? days + " day" + (days === 1 ? "" : "s") + " away" + (days < 21 ? ". That's soon; start with the dishes that matter most." : ". Plenty of time.") : "";
+    }
+    input.addEventListener("input", show); show();
+  });
+
+  // Recipe / What they said toggle.
+  document.querySelectorAll(".toggle [data-toggle]").forEach(function (tab) {
+    tab.addEventListener("click", function (e) {
+      e.preventDefault();
+      document.querySelectorAll(".toggle [data-toggle]").forEach(function (t) { t.classList.toggle("on", t === tab); });
+      document.querySelectorAll("[data-pane]").forEach(function (p) { p.hidden = p.dataset.pane !== tab.dataset.toggle; });
+    });
+  });
+
+  // Pages that are waiting on the pipeline refresh themselves.
+  var waiting = document.querySelector("[data-autorefresh]");
+  if (waiting) setTimeout(function () { window.location.reload(); }, 1000 * Number(waiting.dataset.autorefresh));
+
+  // Players: a play button that plays a list of clip URLs in order.
+  var PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z" fill="currentColor"/></svg>';
+  var PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg>';
+  document.querySelectorAll("[data-player]").forEach(function (el) {
+    var urls = JSON.parse(el.dataset.urls || "[]"), current = 0, audio = new Audio(), retried = false;
+    var button = el.querySelector("[data-play]"), status = el.querySelector("[data-status]");
+    audio.preload = "none";
+    if (!urls.length) { button.disabled = true; return; }
+    function load(n) { current = n; audio.src = urls[n]; }
+    button.addEventListener("click", function () {
+      if (!audio.src) load(0);
+      if (audio.paused) audio.play(); else audio.pause();
+    });
+    audio.addEventListener("play", function () {
+      button.innerHTML = PAUSE; button.setAttribute("aria-label", "Pause");
+      if (status) status.textContent = urls.length > 1 ? "Part " + (current + 1) + " of " + urls.length : "";
+      el.dispatchEvent(new CustomEvent("player:play"));
+    });
+    audio.addEventListener("pause", function () { button.innerHTML = PLAY; button.setAttribute("aria-label", "Play"); });
+    audio.addEventListener("ended", function () {
+      if (current + 1 < urls.length) { load(current + 1); audio.play(); } else { load(0); if (status) status.textContent = ""; }
+    });
+    audio.addEventListener("error", function () {
+      // Signed URLs expire; ask the server for a fresh one once, then give up politely.
+      if (!retried) { retried = true; var t = audio.currentTime; load(current); audio.currentTime = t; audio.play(); return; }
+      if (status) status.textContent = "Couldn't load the recording. Try again.";
+    });
+  });
+})();

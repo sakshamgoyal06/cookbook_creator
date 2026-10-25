@@ -1,7 +1,7 @@
 import os
 import uuid
 
-ALLOWED_AUDIO_EXTENSIONS = (".mp3", ".m4a", ".mp4", ".wav", ".ogg")
+ALLOWED_AUDIO_EXTENSIONS = (".mp3", ".m4a", ".mp4", ".wav", ".ogg", ".opus", ".webm")
 
 MIME_TO_EXTENSION = {
     "audio/mpeg": ".mp3",
@@ -13,6 +13,9 @@ MIME_TO_EXTENSION = {
     "audio/wave": ".wav",
     "audio/x-wav": ".wav",
     "audio/ogg": ".ogg",
+    "audio/opus": ".ogg",
+    "audio/webm": ".webm",
+    "video/webm": ".webm",
     "audio/aac": ".aac",
     "audio/x-caf": ".caf",
     "audio/caf": ".caf",

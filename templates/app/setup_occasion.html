@@ -1,0 +1,17 @@
+{% extends "app/_setup.html" %}
+{% block form %}
+<h1>The book and the big day</h1>
+<label for="title">Title of the book</label>
+<input type="text" id="title" name="title" required maxlength="80" value="{{ project.title if project.title != 'Our family cookbook' else '' }}" placeholder="The Sharma Kitchen">
+<label>What's the occasion? <span class="hint">(optional)</span></label>
+<div class="chip-options">
+{% for option in occasions %}
+  <label class="chip-option"><input type="radio" name="occasion" value="{{ option }}" {% if project.occasion == option %}checked{% endif %}><span>{{ option }}</span></label>
+{% endfor %}
+</div>
+<label for="reveal_date">When will you give it? <span class="hint">(optional)</span></label>
+<input type="date" id="reveal_date" name="reveal_date" min="{{ today }}" value="{{ project.reveal_date or '' }}" data-days-away>
+<p class="small muted" data-days-away-label aria-live="polite"></p>
+<label for="dedication">A line for the first page <span class="hint">(optional)</span></label>
+<textarea id="dedication" name="dedication" maxlength="500" placeholder="For Mummy, who never measured anything and never got it wrong.">{{ project.dedication or '' }}</textarea>
+{% endblock %}

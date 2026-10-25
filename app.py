@@ -36,6 +36,8 @@ from services import (
     user_service,
 )
 from services.audio_utils import SUPPORTED_FORMATS_LABEL, build_storage_filename, is_allowed_audio
+from services.ui import cook_display_name, days_until, status_chip
+import screens
 
 if not config.FLASK_DEBUG and config.FLASK_SECRET_KEY in config.PLACEHOLDER_SECRET_KEYS:
     raise RuntimeError("Set FLASK_SECRET_KEY to a long random string before running with FLASK_DEBUG off.")
@@ -49,6 +51,10 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 login_manager.login_message_category = "error"
+
+
+app.register_blueprint(screens.bp)
+app.jinja_env.globals.update(status_chip=status_chip, days_until=days_until, cook_display_name=cook_display_name)
 
 
 @app.context_processor
@@ -273,8 +279,8 @@ def book(token):
 @app.route("/")
 def index():
     if current_user.is_authenticated:
-        return redirect(url_for("dashboard"))
-    return render_template("index.html")
+        return redirect(url_for("screens.home_redirect"))
+    return render_template("app/welcome.html")
 
 
 # ─── Dashboard ──────────────────────────────────────────────────
@@ -282,6 +288,13 @@ def index():
 @app.route("/dashboard")
 @login_required
 def dashboard():
+    """Where sign-in and the installed app land: the latest book, or onboarding."""
+    return redirect(url_for("screens.home_redirect"))
+
+
+@app.route("/projects")
+@login_required
+def project_list():
     projects = project_service.get_user_projects(current_user.id)
     return render_template("dashboard.html", projects=projects)
 
@@ -466,6 +479,8 @@ def recipe_listen_link(project_id, recipe_id, action):
         events_service.track("listen_link_regenerated", project_id=project_id, recipe_id=recipe_id, actor="buyer")
         flash("New listen link created. Old QR codes no longer work; regenerate the PDF to print the new one.",
               "success")
+    if screens._safe_next(request.form.get("next")):
+        return redirect(request.form["next"])
     return redirect(url_for("recipe_detail", project_id=project_id, recipe_id=recipe_id))
 
 

@@ -55,12 +55,11 @@ def process_recipe(recipe_id):
         recipe = conn.execute(
             select(recipes.c.status, recipes.c.raw_transcript, recipes.c.project_id).where(recipes.c.id == recipe_id)
         ).mappings().first()
-        audio_key = conn.execute(
+        audio_keys = conn.execute(
             select(recipe_audio.c.storage_key)
-            .where(recipe_audio.c.recipe_id == recipe_id)
+            .where(recipe_audio.c.recipe_id == recipe_id, recipe_audio.c.kind == "original")
             .order_by(recipe_audio.c.play_order, recipe_audio.c.id)
-            .limit(1)
-        ).scalar()
+        ).scalars().all()
     if recipe is None or recipe["status"] not in ("received", "transcribed", "failed"):
         return
 
@@ -68,7 +67,7 @@ def process_recipe(recipe_id):
         transcript = recipe["raw_transcript"]
         if not transcript:
             transcript = _run_stage(recipe_id, "transcribe", "openai", config.OPENAI_TRANSCRIBE_MODEL,
-                                    lambda: _transcribe(audio_key))
+                                    lambda: _transcribe(audio_keys))
             recipe_service.save_transcript(recipe_id, transcript)
         recipe_data = _run_stage(recipe_id, "structure", "anthropic", config.ANTHROPIC_RECIPE_MODEL,
                                  lambda: ai_service.structure_recipe(transcript))
@@ -87,12 +86,16 @@ def _mark_failed(recipe, recipe_id, stage):
     events_service.track("pipeline_failed", project_id=recipe["project_id"], recipe_id=recipe_id, stage=stage)
 
 
-def _transcribe(audio_key):
-    if not audio_key:
+def _transcribe(audio_keys):
+    """One transcript for all of a dish's voice notes, in play order."""
+    if not audio_keys:
         raise PermanentError("Recipe has no audio.")
-    with storage_service.local_copy("audio", audio_key) as path:
-        transcript = ai_service.transcribe_audio(path)
-    if not transcript or not transcript.strip():
+    parts = []
+    for key in audio_keys:
+        with storage_service.local_copy("audio", key) as path:
+            parts.append((ai_service.transcribe_audio(path) or "").strip())
+    transcript = "\n\n".join(p for p in parts if p)
+    if not transcript:
         raise PermanentError("Transcription returned empty text.")
     return transcript
 
