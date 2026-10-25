@@ -72,13 +72,30 @@ DATABASE_PATH = os.path.join(INSTANCE_FOLDER, "cookbook.db")
 # Postgres when hosted (postgresql://user:pass@host/db). Empty = local SQLite file.
 DATABASE_URL = os.getenv("DATABASE_URL", "") or f"sqlite:///{DATABASE_PATH}"
 
-# Books a buyer can pick (UX R3). Prices are display-only until payments (module 13).
+# Books a buyer can pick (UX R3). price_inr is what Razorpay charges (module 13); USD is display-only.
 TIERS = {
     "top10": {"label": "Top 10", "recipes": 10, "price_inr": 1200, "price_usd": 22, "available": True},
     "family": {"label": "Family Edition", "recipes": 25, "price_inr": None, "price_usd": None, "available": False},
 }
 # While true, onboarding skips payment (invite-only pilot).
 PILOT_FREE = os.getenv("PILOT_FREE", "true").strip().lower() in ("1", "true", "yes")
+
+# Razorpay Checkout (module 13). Used only when PILOT_FREE is off and both keys are set.
+# Test-mode keys (rzp_test_…) take no real money.
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "").strip()
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "").strip()
+RAZORPAY_WEBHOOK_SECRET = os.getenv("RAZORPAY_WEBHOOK_SECRET", "").strip()
+RAZORPAY_API_URL = os.getenv("RAZORPAY_API_URL", "https://api.razorpay.com/v1").rstrip("/")
+
+# Who the invoice is from. With no GSTIN it is a plain receipt; with one, a tax invoice
+# that splits out GST at GST_RATE_PERCENT (prices are GST-inclusive).
+SELLER_NAME = os.getenv("SELLER_NAME", "").strip() or APP_NAME
+SELLER_ADDRESS = os.getenv("SELLER_ADDRESS", "").strip()
+SELLER_GSTIN = os.getenv("SELLER_GSTIN", "").strip()
+SELLER_SAC = os.getenv("SELLER_SAC", "").strip()
+SELLER_STATE = os.getenv("SELLER_STATE", "").strip()
+GST_RATE_PERCENT = float(os.getenv("GST_RATE_PERCENT", "18"))
+INVOICE_PREFIX = os.getenv("INVOICE_PREFIX", "AZ").strip() or "AZ"
 
 COOKBOOK_THEMES = {
     "classic": {"name": "Classic Indian", "primary": "#5c1a1a", "accent": "#d4a84b", "bg": "#fdf8f0"},

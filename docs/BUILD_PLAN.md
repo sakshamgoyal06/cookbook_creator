@@ -30,7 +30,7 @@
 | 10 | [Follow-up questions and page back](#10-follow-up-questions-and-page-back) | C3, C4, S4 | WA-3, WA-4, AI-5, AI-6, ENG-5 | 7 or 9 | In-app part built (S4); WhatsApp part waits on 9 |
 | 11 | [Reminders and escalation](#11-reminders-and-escalation) | C5, R9 card | ENG-1, ENG-2, ENG-3 | 9 | |
 | 12 | [Family and dish requests](#12-family-and-dish-requests) | R11, F4 | ENG-4 | 5, 8 | Built |
-| 13 | [Payments](#13-payments) | R3, R7 | BUY-2 | 5 | |
+| 13 | [Payments](#13-payments) | R3, R7 | BUY-2 | 5 | Built behind config (off while PILOT_FREE); Razorpay test-mode run left |
 | 14 | [Book and reveal day](#14-book-and-reveal-day) | F2, R12 | BOOK-1…BOOK-5 | 6, 8 | Built; card images and phone-size PDF left |
 | 15 | [Mom's page](#15-moms-page-optional-p1) | C6–C8 | | 7, 9 | P1 unless Saksham decides otherwise |
 | 16 | [Upsell, admin and metrics](#16-upsell-admin-and-metrics) | | UP-1, OPS-1, OPS-3 | 3, 13 | |
@@ -477,20 +477,20 @@ Screens: **R11** Family · **F4** Join + ask for a dish.
 Screens: **R3** Pick a book (prices) · **R7** Pay.
 
 ### Build
-- [ ] `orders` table; `projects.tier`, `recipe_quota`, `payment_status` (§14)
-- [ ] Razorpay Checkout, UPI first (cards, netbanking) for the tiers and prices set in config (BUY-2)
-- [ ] Signature-verified webhook unlocks the project; idempotent on retries
-- [ ] GST-ready invoice per order
-- [ ] Refund path (manual via admin for now)
+- [x] (migration 0007; the quota stays `max_recipes`; books made so far are `pilot`) `orders` table; `projects.tier`, `recipe_quota`, `payment_status` (§14)
+- [x] (INR only; USD stays display-only) Razorpay Checkout, UPI first (cards, netbanking) for the tiers and prices set in config (BUY-2)
+- [x] (`/payments/razorpay/webhook`: payment.captured, order.paid, payment.failed) Signature-verified webhook unlocks the project; idempotent on retries
+- [x] (receipt without a GSTIN; tax invoice with GST split out once SELLER_GSTIN is set; numbered per financial year) GST-ready invoice per order
+- [~] (`payment_service.mark_refunded` after refunding in the Razorpay dashboard; admin button comes with module 16) Refund path (manual via admin for now)
 
 ### Events
 `checkout_started`, `payment_succeeded`, `payment_failed`
 
 ### Edge cases
-- [ ] Payment succeeds but the browser closes before the redirect → webhook unlocks; Home shows paid on next open
-- [ ] Webhook arrives before the order row commits → retry-safe lookup by `provider_ref`
-- [ ] UPI pending for minutes → "We'll confirm in a moment" state; no double charge on retry
-- [ ] Refund after recipes exist → project read-only, audio kept until the buyer asks for deletion
+- [x] Payment succeeds but the browser closes before the redirect → webhook unlocks; Home shows paid on next open
+- [x] (503, so Razorpay retries) Webhook arrives before the order row commits → retry-safe lookup by `provider_ref`
+- [x] (the open order is reused for 12 h, and a Razorpay order can be paid only once) UPI pending for minutes → "We'll confirm in a moment" state; no double charge on retry
+- [ ] (refunded books are marked; read-only mode not built yet) Refund after recipes exist → project read-only, audio kept until the buyer asks for deletion
 
 **Acceptance:** a new user pays with UPI in Razorpay test mode, completes setup, and the project unlocks; replayed webhooks don't create duplicate orders.
 

@@ -19,6 +19,7 @@ from services import (
     events_service,
     family_service,
     listen_service,
+    payment_service,
     pdf_service,
     pipeline_service,
     project_service,
@@ -165,6 +166,10 @@ def setup(project, step):
         "tiers": config.TIERS, "address_options": ADDRESS_OPTIONS, "occasions": OCCASIONS,
         "dish_suggestions": DISH_SUGGESTIONS, "dishes": dishes, "today": date.today().isoformat(),
     }
+    if step == "pay":
+        context["order"] = payment_service.latest_order(project["id"])
+        context["paid"] = payment_service.is_unlocked(project)
+        context["payments_on"] = payment_service.enabled()
     if step == "invite":
         first = next((d["title"] for d in dishes if d["status"] == "wishlist"), None)
         context["invite_text"] = copy.invite_text(project, first)
@@ -240,8 +245,14 @@ def _save_dishes(project):
 
 
 def _save_pay(project):
-    if not config.PILOT_FREE:
+    if config.PILOT_FREE:
+        payment_service.mark_pilot(project["id"])
+        return None
+    if payment_service.is_unlocked(project):
+        return None
+    if not payment_service.enabled():
         return "Payments open soon. You're on the pilot list, and we'll message you."
+    return "Please finish the payment first. If you've just paid, it can take a moment to confirm."
 
 
 def _save_invite(project):
@@ -250,6 +261,75 @@ def _save_invite(project):
 
 SAVE_STEP = {"tier": _save_tier, "cook": _save_cook, "occasion": _save_occasion, "dishes": _save_dishes,
              "pay": _save_pay, "invite": _save_invite}
+
+
+# ─── Payments R7 (module 13) ─────────────────────────────────────
+
+@bp.route("/p/<int:project_id>/pay/order", methods=["POST"])
+@owned_project
+def pay_order(project):
+    """Start (or resume) Razorpay Checkout for this book; the page opens Checkout with what we return."""
+    if not payment_service.enabled() or payment_service.is_unlocked(project):
+        return jsonify(error="Nothing to pay.", redirect=_after_pay(project)), 409
+    try:
+        order = payment_service.create_order(project, current_user.id)
+    except payment_service.PaymentError as e:
+        return jsonify(error=str(e)), 502
+    return jsonify(key=config.RAZORPAY_KEY_ID, order_id=order["provider_ref"], amount=order["amount_paise"],
+                   currency=order["currency"], name=config.APP_NAME, description=project["title"],
+                   prefill={"name": current_user.name, "email": current_user.email})
+
+
+@bp.route("/p/<int:project_id>/pay/verify", methods=["POST"])
+@owned_project
+def pay_verify(project):
+    body = request.get_json(silent=True) or {}
+    order_ref, payment_id = body.get("razorpay_order_id"), body.get("razorpay_payment_id")
+    order = payment_service.get_order_by_ref(order_ref or "")
+    if (order is None or order["project_id"] != project["id"]
+            or not payment_service.checkout_signature_ok(order_ref, payment_id, body.get("razorpay_signature"))):
+        return jsonify(error="We couldn't confirm that payment. If money left your account, "
+                             "it will show here within a few minutes."), 400
+    payment_service.mark_paid(order_ref, payment_id)
+    return jsonify(redirect=_after_pay(project_service.get_project(project["id"])))
+
+
+def _after_pay(project):
+    """Paying completes the pay step, so the buyer carries on with setup."""
+    if project.get("setup_step") == "done":
+        return url_for("screens.home", project_id=project["id"])
+    nxt = _next_step(project, "pay")
+    if nxt is None:
+        project_service.update_setup(project["id"], setup_step="done")
+        return url_for("screens.home", project_id=project["id"])
+    project_service.update_setup(project["id"], setup_step="pay")
+    return url_for("screens.setup", project_id=project["id"], step=nxt)
+
+
+@bp.route("/payments/razorpay/webhook", methods=["POST"])
+def razorpay_webhook():
+    """Signed by Razorpay; unlocks the book even if the buyer's browser closed after paying."""
+    body = request.get_data(cache=False)
+    if not payment_service.webhook_signature_ok(body, request.headers.get("X-Razorpay-Signature")):
+        abort(400)
+    try:
+        payload = json.loads(body)
+    except ValueError:
+        abort(400)
+    if not payment_service.handle_webhook(payload):
+        return "", 503  # order not saved yet: Razorpay retries
+    return "", 200
+
+
+@bp.route("/p/<int:project_id>/orders/<int:order_id>/invoice")
+@owned_project
+def invoice(project, order_id):
+    order = payment_service.get_order(project["id"], order_id)
+    if order is None or order["status"] not in ("paid", "refunded"):
+        abort(404)
+    buyer = {"name": current_user.name, "email": current_user.email}
+    return render_template("app/invoice.html", project=project, invoice=payment_service.invoice(order, project, buyer),
+                           back_url=url_for("screens.book", project_id=project["id"]))
 
 
 @bp.route("/p/<int:project_id>/invite", methods=["POST"])
@@ -840,7 +920,7 @@ def book(project):
                    approved=[r for r in recipes if r["status"] == "approved"],
                    book_url=listen_service.book_url(project["book_token"]),
                    days_left=days_until(project.get("reveal_date")),
-                   steps=SETUP_STEPS[project["cook_mode"]])
+                   steps=SETUP_STEPS[project["cook_mode"]], order=payment_service.paid_order(project["id"]))
 
 
 # ─── Whole book and reveal day R12 ─────────────────────────────

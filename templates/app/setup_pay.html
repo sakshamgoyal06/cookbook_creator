@@ -1,6 +1,7 @@
 {% extends "app/_setup.html" %}
 {% block form %}
 {% set tier = config.TIERS[project.tier] %}
+{% set needs_payment = payments_on and not paid %}
 <h1>Your book</h1>
 <div class="card">
   <p class="title">{{ project.title }}</p>
@@ -9,8 +10,21 @@
   <hr class="soft">
   <div class="row between"><span>Total</span><strong>₹{{ "{:,}".format(tier.price_inr) }}</strong></div>
 </div>
-{% if config.PILOT_FREE %}
+{% if project.payment_status == 'pilot' or (config.PILOT_FREE and not paid) %}
 <p class="flash flash-info">You're in the invite-only pilot, so there's nothing to pay today.</p>
+{% elif paid %}
+<p class="flash flash-success">Paid. Thank you!{% if order and order.status == 'paid' %} <a href="{{ url_for('screens.invoice', project_id=project.id, order_id=order.id) }}">See your receipt</a>{% endif %}</p>
+{% elif payments_on %}
+<p class="muted small">UPI, cards and netbanking, through Razorpay. You'll get a receipt here once it's paid.</p>
+{% if order and order.status == 'created' %}<p class="flash flash-info">Started a payment a little while ago? If it went through, we'll confirm it here in a moment. You won't be charged twice.</p>{% endif %}
+<p class="flash flash-error" data-pay-error hidden></p>
+{% endif %}
+{% if needs_payment %}<span hidden data-pay data-order-url="{{ url_for('screens.pay_order', project_id=project.id) }}" data-verify-url="{{ url_for('screens.pay_verify', project_id=project.id) }}"></span>{% endif %}
+{% endblock %}
+{% block submit %}{% if payments_on and not paid %}Pay ₹{{ "{:,}".format(config.TIERS[project.tier].price_inr) }}{% else %}{{ 'Save' if editing else 'Continue' }}{% endif %}{% endblock %}
+{% block after %}
+{% if payments_on and not paid %}
+<script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
+<script src="{{ url_for('static', filename='pay.js') }}" defer></script>
 {% endif %}
 {% endblock %}
-{% block submit %}{{ 'Continue' if config.PILOT_FREE else 'Pay' }}{% endblock %}

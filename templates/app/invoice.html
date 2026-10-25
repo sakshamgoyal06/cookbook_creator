@@ -1,0 +1,30 @@
+{% extends "app/_shell.html" %}
+{% block title %}{{ 'Tax invoice' if invoice.taxed else 'Receipt' }} {{ invoice.number }}{% endblock %}
+{% block content %}
+<article class="card stack invoice">
+  <div class="row between">
+    <h1 style="margin:0">{{ 'Tax invoice' if invoice.taxed else 'Receipt' }}</h1>
+    <button class="btn btn-ghost no-print" type="button" onclick="window.print()">Print</button>
+  </div>
+  {% if invoice.refunded %}<p class="flash flash-error">This order was refunded.</p>{% endif %}
+  <p class="small">No. <strong>{{ invoice.number }}</strong>{% if invoice.date %} · {{ invoice.date.strftime('%-d %B %Y') }}{% endif %}</p>
+  <div>
+    <p class="section-title" style="margin:0">From</p>
+    <p style="margin:0"><strong>{{ invoice.seller.name }}</strong>{% if invoice.seller.address %}<br>{{ invoice.seller.address }}{% endif %}
+    {% if invoice.seller.gstin %}<br>GSTIN {{ invoice.seller.gstin }}{% endif %}{% if invoice.seller.state %}<br>State: {{ invoice.seller.state }}{% endif %}</p>
+  </div>
+  <div>
+    <p class="section-title" style="margin:0">To</p>
+    <p style="margin:0">{{ invoice.buyer.name }}<br>{{ invoice.buyer.email }}</p>
+  </div>
+  <hr class="soft">
+  <p style="margin:0">{{ invoice.item }}{% if invoice.sac %}<br><span class="small muted">SAC {{ invoice.sac }}</span>{% endif %}</p>
+  {% if invoice.taxed %}
+  <div class="row between"><span>Taxable value</span><span>₹{{ "{:,.2f}".format(invoice.taxable) }}</span></div>
+  <div class="row between"><span>GST {{ invoice.rate | round(1) | replace('.0', '') }}%</span><span>₹{{ "{:,.2f}".format(invoice.gst) }}</span></div>
+  {% endif %}
+  <div class="row between"><strong>Total paid</strong><strong>₹{{ "{:,.2f}".format(invoice.total) }}</strong></div>
+  {% if not invoice.taxed %}<p class="small muted" style="margin:0">GST not charged.</p>{% endif %}
+  <p class="small muted" style="margin:0">Paid through Razorpay{% if invoice.payment_id %} · {{ invoice.payment_id }}{% endif %}</p>
+</article>
+{% endblock %}
