@@ -148,5 +148,14 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--leaf); outl
 .steps-list { padding-left: 24px; } .steps-list li { margin-bottom: 10px; }
 .qr { background: #fff; padding: 8px; margin: 0 auto; display: block; }
 
+/* Recorder */
+.dish-select { font-family: var(--font-title); font-size: 1.35rem; margin-bottom: 8px; }
+.rec-stage { padding: 16px 0; }
+.wave { width: 100%; max-width: 320px; height: 64px; display: block; margin: 0 auto; }
+.timer { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 4px 0 12px; }
+.rec-controls { justify-content: center; margin-top: 16px; }
+.record[disabled] { cursor: default; }
+.prompt { margin-top: 8px; }
+
 @media (min-width: 720px) { .app-main { padding-top: 16px; } }
 .steps-list textarea { vertical-align: top; }

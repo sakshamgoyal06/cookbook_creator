@@ -1,0 +1,49 @@
+{% extends "app/_shell.html" %}
+{% block head %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endblock %}
+{% block content %}
+<div class="recorder" data-recorder
+     data-open-url="{{ url_for('screens.upload_open', project_id=project.id) }}"
+     data-kind="{{ kind }}" data-recipe-id="{{ recipe.id if recipe else '' }}"
+     data-project="{{ project.id }}">
+  {% if kind == 'story' %}
+  <p class="section-title">The story behind</p>
+  <h1>{{ recipe.recipe_title }}</h1>
+  {% else %}
+  <p class="section-title">{% if project.cook_mode == 'assisted' %}Recording {{ cook }}{% else %}Recording{% endif %}</p>
+  <label for="dish" class="sr-only">Dish</label>
+  <select id="dish" data-dish class="dish-select">
+    {% for d in dishes %}<option value="{{ d.id }}" {% if dish and d.id == dish.id %}selected{% endif %}>{{ d.title }}</option>{% endfor %}
+    <option value="" {% if not dish %}selected{% endif %}>A different dish</option>
+  </select>
+  {% endif %}
+
+  <div class="rec-stage center">
+    <canvas class="wave" data-wave width="320" height="64" aria-hidden="true"></canvas>
+    <p class="timer" data-timer aria-live="off">0:00</p>
+    <button type="button" class="record" data-rec-start aria-label="Start recording">{{ icon('mic') }}</button>
+    <div class="row rec-controls" data-rec-controls hidden>
+      <button type="button" class="btn btn-secondary" data-rec-pause>Pause</button>
+      <button type="button" class="btn btn-primary" data-rec-done>{{ icon('check') }} Done</button>
+    </div>
+    <p class="muted" data-rec-status aria-live="polite">Tap the red button and start talking. Take your time.</p>
+  </div>
+
+  <div class="card prompt" data-prompts='{{ prompts | tojson }}'>
+    <p class="small muted" style="margin:0">Something to talk about</p>
+    <p data-prompt style="margin:0">{{ prompts[0] }}</p>
+  </div>
+  <p class="small muted center">Made a mistake? Just say it again; we'll keep the right version.</p>
+  {% if kind == 'original' %}<p class="small center"><a href="{{ url_for('screens.import_notes', project_id=project.id, dish=dish.id if dish else None) }}">Have voice notes already? Add the files</a></p>{% endif %}
+
+  <div class="card needs-you" data-rec-error hidden>
+    <p data-rec-error-text></p>
+    <a class="btn btn-secondary" href="{{ url_for('screens.import_notes', project_id=project.id) }}">Add a voice note file instead</a>
+  </div>
+  <div class="card" data-pending hidden>
+    <p>A recording didn't finish uploading. It's still safe on this phone.</p>
+    <button type="button" class="btn btn-primary" data-pending-retry>Upload it now</button>
+    <button type="button" class="btn btn-ghost" data-pending-discard>Delete it</button>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='record.js') }}" defer></script>{% endblock %}

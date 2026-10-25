@@ -9,7 +9,7 @@ import tempfile
 from datetime import date, datetime, timezone
 from functools import wraps
 
-from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 import config
@@ -23,6 +23,7 @@ from services import (
     project_service,
     recipe_service,
     storage_service,
+    upload_service,
 )
 from services.audio_utils import SUPPORTED_FORMATS_LABEL, build_storage_filename, is_allowed_audio
 from services.ui import cook_label, days_until, normalize_phone
@@ -505,6 +506,30 @@ def import_notes(project):
     return redirect(url_for("screens.review", project_id=pid, recipe_id=recipe_id))
 
 
+@bp.route("/share", methods=["POST"])
+@login_required
+def share_target():
+    """Android "Share" from WhatsApp into the installed app (manifest share_target): goes to the latest book."""
+    projects = project_service.get_user_projects(current_user.id)
+    files = [f for f in request.files.getlist("audio_files") if f and f.filename]
+    if not projects:
+        flash("Set up your book first, then share the voice notes again.", "error")
+        return redirect(url_for("screens.start"))
+    project = projects[0]
+    files = [f for f in files if is_allowed_audio(f.filename, f.mimetype)][:MAX_IMPORT_FILES]
+    if not files:
+        flash("That share didn't include a voice note. Choose the files here instead.", "error")
+        return redirect(url_for("screens.import_notes", project_id=project["id"]))
+    keys = [_store_upload(f) for f in files]
+    recipe_id = recipe_service.create_received_recipe(project["id"], keys[0], source="import", audio_keys=keys,
+                                                      cook_name=project.get("storyteller_name"))
+    events_service.track("recipe_created", project_id=project["id"], recipe_id=recipe_id, actor="buyer",
+                         source="share")
+    pipeline_service.enqueue_processing(recipe_id)
+    flash("Got the voice notes. We're writing the recipe down.", "success")
+    return redirect(url_for("screens.review", project_id=project["id"], recipe_id=recipe_id))
+
+
 def _dish_choice(project_id, wishlist):
     """The wishlist dish picked on the form, or a new dish typed in (None title lets the AI name it)."""
     choice = request.form.get("dish_id", type=int)
@@ -527,11 +552,129 @@ def _store_upload(file):
     return filename
 
 
+PROMPTS = {
+    "original": ["Start with the dish's name, and who you make it for.",
+                 "What goes in? Say the amounts the way you'd show them: a katori, a mutthi, andaaze se.",
+                 "Now the steps, one by one. What do you look, smell or listen for?",
+                 "How do you know it's done?", "Any tip you'd tell only family?"],
+    "story": ["When did you first make this?", "Who taught it to you?", "Which day or festival is it for?"],
+}
+
+
 @bp.route("/p/<int:project_id>/record")
 @owned_project
 def record(project):
-    """The Record tab. Until the in-app recorder lands (module 7) it opens the import screen."""
-    return redirect(url_for("screens.import_notes", project_id=project["id"], **request.args))
+    """S2: record a recipe (or the story behind one) in the app."""
+    pid = project["id"]
+    kind = "story" if request.args.get("kind") == "story" else "original"
+    recipe = None
+    if kind == "story":
+        recipe = _recipe_or_404(project, request.args.get("recipe", type=int))
+    wishlist = [d for d in dish_service.list_dishes(pid) if d["status"] == "wishlist"]
+    dish = next((d for d in wishlist if d["id"] == request.args.get("dish", type=int)), None)
+    if kind == "original" and dish is None and wishlist and "dish" not in request.args:
+        dish = wishlist[0]
+    return _render("app/record.html", project, tab="record", kind=kind, recipe=recipe, dish=dish, dishes=wishlist,
+                   prompts=PROMPTS[kind], back_url=url_for("screens.home", project_id=pid))
+
+
+@bp.route("/p/<int:project_id>/uploads", methods=["POST"])
+@owned_project
+def upload_open(project):
+    body = request.get_json(silent=True) or {}
+    kind = body.get("kind", "original")
+    recipe_id = dish_id = None
+    if kind == "story":
+        recipe_id = _recipe_or_404(project, _int(body.get("recipe_id")))["id"]
+    elif body.get("dish_id"):
+        dish = dish_service.get_dish(project["id"], _int(body.get("dish_id")))
+        dish_id = dish["id"] if dish and dish["recipe_id"] is None else None
+    try:
+        session = upload_service.open_session(project["id"], body.get("client_upload_id"), kind=kind,
+                                              content_type=body.get("content_type"), dish_id=dish_id,
+                                              recipe_id=recipe_id)
+    except upload_service.UploadError as e:
+        return jsonify(error=str(e)), 400
+    if session["chunks_received"] == 0 and session["status"] == "open":
+        events_service.track("recording_started", project_id=project["id"], actor=_actor(project), kind=kind)
+    return jsonify(_session_json(project, session))
+
+
+@bp.route("/p/<int:project_id>/uploads/<client_id>/chunk/<int:number>", methods=["PUT", "POST"])
+@owned_project
+def upload_chunk(project, client_id, number):
+    session = _own_session(project, client_id)
+    try:
+        session = upload_service.save_chunk(session, number, request.get_data(cache=False))
+    except upload_service.UploadError as e:
+        events_service.track("upload_failed", project_id=project["id"], actor=_actor(project), stage="chunk")
+        return jsonify(error=str(e)), 400
+    return jsonify(_session_json(project, session))
+
+
+@bp.route("/p/<int:project_id>/uploads/<client_id>/complete", methods=["POST"])
+@owned_project
+def upload_complete(project, client_id):
+    pid = project["id"]
+    session = _own_session(project, client_id)
+    body = request.get_json(silent=True) or {}
+    if session["status"] == "complete":
+        return jsonify(_session_json(project, session))
+    expected, seconds = _int(body.get("chunks")) or 0, max(0, _int(body.get("seconds")) or 0)
+    missing = upload_service.missing_chunks(session, expected) if expected else []
+    if not expected or missing:
+        return jsonify(error="Some parts haven't arrived yet.", missing=missing[:50]), 409
+    if not upload_service.claim(session):
+        return jsonify(_session_json(project, upload_service.get_session(client_id)))
+    try:
+        key = upload_service.assemble(session, expected)
+        if session["kind"] == "story":
+            recipe_service.add_clip(session["recipe_id"], key, kind="story", source="app",
+                                    content_type=session["content_type"])
+            recipe_id = session["recipe_id"]
+        else:
+            dish = dish_service.get_dish(pid, session["dish_id"]) if session["dish_id"] else None
+            recipe_id = recipe_service.create_received_recipe(
+                pid, key, source="app", title=(dish or {}).get("title"),
+                dish_id=dish["id"] if dish and dish["recipe_id"] is None else None,
+                cook_name=project.get("storyteller_name"), content_type=session["content_type"])
+            events_service.track("recipe_created", project_id=pid, recipe_id=recipe_id, actor=_actor(project),
+                                 source="app")
+    except Exception:
+        upload_service.release(session)
+        events_service.track("upload_failed", project_id=pid, actor=_actor(project), stage="complete")
+        raise
+    upload_service.mark_complete(session, recipe_id)
+    events_service.track("recording_finished", project_id=pid, recipe_id=recipe_id, actor=_actor(project),
+                         seconds=seconds, kind=session["kind"])
+    if session["kind"] == "original":
+        pipeline_service.enqueue_processing(recipe_id)
+    return jsonify(_session_json(project, upload_service.get_session(client_id)))
+
+
+def _own_session(project, client_id):
+    session = upload_service.get_session(client_id)
+    if session is None or session["project_id"] != project["id"]:
+        abort(404)
+    return session
+
+
+def _session_json(project, session):
+    done = session["status"] == "complete" and session["recipe_id"]
+    return {"status": session["status"], "chunks_received": session["chunks_received"],
+            "redirect": url_for("screens.review", project_id=project["id"], recipe_id=session["recipe_id"])
+            if done else None}
+
+
+def _actor(project):
+    return "cook" if project["cook_mode"] == "self" else "buyer"
+
+
+def _int(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 # ─── Family R11 and Book ────────────────────────────────────────
