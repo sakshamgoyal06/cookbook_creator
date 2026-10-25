@@ -42,6 +42,9 @@ OCCASIONS = ("Diwali", "Birthday", "Mother's Day", "Anniversary", "Wedding", "Ju
 DISH_SUGGESTIONS = ("Rajma", "Dal makhani", "Aloo paratha", "Kadhi pakora", "Chole", "Gajar ka halwa",
                     "Bhindi masala", "Paneer butter masala", "Besan ladoo", "Khichdi")
 MAX_IMPORT_FILES = 10
+QUIET_DAYS = 8  # UX R9: after this long with nothing from the cook, Home offers a gentle nudge
+WRITING_STATUSES = ("received", "transcribed", "structured")
+NUDGE_CHOICES = ("whatsapp", "call", "record", "later")
 
 
 def owned_project(view):
@@ -283,6 +286,7 @@ def home(project):
         "days_left": days_until(project.get("reveal_date")),
         "needs_you": _needs_you(project, recipes),
         "plays_week": listen_service.project_play_count(project["id"], days=7),
+        "writing": any(r["status"] in WRITING_STATUSES for r in recipes),
     }
     template = "app/kitchen.html" if project["cook_mode"] == "self" else "app/home.html"
     return _render(template, project, tab="home", **context)
@@ -308,6 +312,17 @@ def _needs_you(project, recipes):
     if pending:
         return {"text": f"{pending[0]['requested_by_label']} asked for {pending[0]['title']}. Add it to the list?",
                 "action": url_for("screens.family", project_id=pid), "label": "See requests"}
+    quiet = _days_quiet(project, recipes)
+    if quiet is not None:
+        nudge = url_for("screens.nudge", project_id=pid)
+        choices = [("whatsapp", "Send a gentle nudge")]
+        if project.get("storyteller_phone"):
+            choices.append(("call", "Call"))
+        choices += [("record", "Record together"), ("later", "Not now")]
+        return {"text": f"Nothing from {cook_label(project)} for {quiet} days. A gentle nudge or a call often "
+                        "helps, or cook together and record it here.",
+                "action": nudge, "post": True, "label": choices[0][1],
+                "choices": [{"do": do, "label": label} for do, label in choices]}
     if project["cook_mode"] == "whatsapp" and not project.get("invite_sent_at"):
         return {"text": f"Send {cook_label(project)} the invite from your WhatsApp.",
                 "action": url_for("screens.setup", project_id=pid, step="invite"), "label": "Send the invite"}
@@ -315,6 +330,46 @@ def _needs_you(project, recipes):
         return {"text": f"When {cook_label(project)} sends you voice notes, forward or save them and add them here.",
                 "action": url_for("screens.import_notes", project_id=pid), "label": "Add voice notes"}
     return None
+
+
+def _days_quiet(project, recipes):
+    """Days since anything happened with the cook, once that's QUIET_DAYS or more; otherwise None."""
+    if project["cook_mode"] != "whatsapp" or not project.get("invite_sent_at"):
+        return None
+    days_left = days_until(project.get("reveal_date"))
+    if days_left is not None and days_left < 0:
+        return None
+    if sum(r["status"] == "approved" for r in recipes) >= (project.get("max_recipes") or 10):
+        return None
+    moments = [project["invite_sent_at"], events_service.last_at(project["id"], "escalation_action")]
+    moments += [r["created_at"] for r in recipes]
+    last = max(_aware(m) for m in moments if m)
+    days = (datetime.now(timezone.utc) - last).days
+    return days if days >= QUIET_DAYS else None
+
+
+def _aware(value):
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+
+@bp.route("/p/<int:project_id>/nudge", methods=["POST"])
+@owned_project
+def nudge(project):
+    """The quiet-stretch card. Any choice, "Not now" included, starts the QUIET_DAYS clock again."""
+    pid = project["id"]
+    do = request.form.get("do")
+    if do not in NUDGE_CHOICES or (do == "call" and not project.get("storyteller_phone")):
+        abort(400)
+    events_service.track("escalation_action", project_id=pid, actor="buyer", action=do)
+    if do == "whatsapp":
+        dish = dish_service.next_dish(pid)
+        return redirect(copy.wa_link(copy.nudge_text(project, dish["title"] if dish else None),
+                                     project.get("storyteller_phone")))
+    if do == "call":
+        return redirect(f"tel:{project['storyteller_phone']}")
+    if do == "record":
+        return redirect(url_for("screens.record", project_id=pid))
+    return redirect(url_for("screens.home", project_id=pid))
 
 
 @bp.route("/p/<int:project_id>/recipes")

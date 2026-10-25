@@ -1,7 +1,7 @@
 {% extends "app/_shell.html" %}
 {% from "components/ui.html" import chip, ring, record_button %}
 {% block content %}
-<section class="card center stack">
+<section class="card center stack"{% if writing %} data-autorefresh="20"{% endif %}>
   {% if next_dish %}
   <p class="section-title" style="margin:0">Next up</p>
   <h1>{{ next_dish.title }}</h1>

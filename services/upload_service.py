@@ -8,6 +8,8 @@ import os
 import re
 import shutil
 import tempfile
+import time
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import insert, select, update
 
@@ -22,6 +24,7 @@ MAX_CHUNK_BYTES = 4 * 1024 * 1024
 MAX_CHUNKS = 720  # an hour at 5-second chunks
 MAX_TOTAL_BYTES = 60 * 1024 * 1024
 KINDS = ("original", "story")
+STALE_HOURS = 24
 
 
 class UploadError(ValueError):
@@ -43,6 +46,7 @@ def open_session(project_id, client_id, kind="original", content_type=None, dish
         if session["project_id"] != project_id:
             raise UploadError("Bad upload id.")
         return session
+    cleanup_stale()
     with get_engine().begin() as conn:
         conn.execute(insert(upload_sessions).values(
             project_id=project_id, client_upload_id=client_id, kind=kind, dish_id=dish_id, recipe_id=recipe_id,
@@ -61,8 +65,8 @@ def get_session(client_id):
 
 
 def save_chunk(session, number, data):
-    if session["status"] != "open":
-        return session  # already complete: a late retry of a chunk is harmless
+    if session["status"] == "complete":
+        return session  # a late retry of a chunk is harmless
     if not 0 <= number < MAX_CHUNKS:
         raise UploadError("Too many chunks.")
     if not data or len(data) > MAX_CHUNK_BYTES:
@@ -78,8 +82,10 @@ def save_chunk(session, number, data):
     if total > MAX_TOTAL_BYTES:
         raise UploadError("Recording is too long.")
     with get_engine().begin() as conn:
-        conn.execute(update(upload_sessions).where(upload_sessions.c.id == session["id"])
-                     .values(chunks_received=len(chunks), bytes_received=total))
+        # An abandoned session reopens when the phone comes back; a completed one never does.
+        conn.execute(update(upload_sessions)
+                     .where(upload_sessions.c.id == session["id"], upload_sessions.c.status != "complete")
+                     .values(chunks_received=len(chunks), bytes_received=total, status="open"))
     return get_session(session["client_upload_id"])
 
 
@@ -133,3 +139,38 @@ def _chunk_files(folder):
     if not os.path.isdir(folder):
         return []
     return sorted(name for name in os.listdir(folder) if name.isdigit())
+
+
+def cleanup_stale(max_age_hours=STALE_HOURS):
+    """Mark recordings nobody finished as abandoned and free their chunks. Returns how many.
+
+    A session counts as stale once nothing has arrived for `max_age_hours`. The phone keeps its own
+    copy, so if it comes back later, its chunks reopen the session (see save_chunk).
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
+    with get_engine().connect() as conn:
+        rows = conn.execute(select(upload_sessions.c.id, upload_sessions.c.client_upload_id,
+                                   upload_sessions.c.created_at)
+                            .where(upload_sessions.c.status == "open")).mappings().all()
+    stale = [r for r in rows if _aware(r["created_at"]) < cutoff
+             and _last_write(r["client_upload_id"]) < cutoff.timestamp()]
+    for row in stale:
+        with get_engine().begin() as conn:
+            conn.execute(update(upload_sessions)
+                         .where(upload_sessions.c.id == row["id"], upload_sessions.c.status == "open")
+                         .values(status="abandoned"))
+        shutil.rmtree(_chunk_dir(row["client_upload_id"]), ignore_errors=True)
+    return len(stale)
+
+
+def _aware(value):
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+
+def _last_write(client_id):
+    folder = _chunk_dir(client_id)
+    try:
+        times = [os.path.getmtime(os.path.join(folder, c)) for c in _chunk_files(folder)]
+        return max(times + [os.path.getmtime(folder)])
+    except OSError:
+        return 0 if not os.path.isdir(folder) else time.time()
