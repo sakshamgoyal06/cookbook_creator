@@ -1,7 +1,7 @@
 {% extends "app/_shell.html" %}
 {% from "components/ui.html" import chip, ring, empty %}
 {% block content %}
-<section class="card row">
+<section class="card row"{% if writing %} data-autorefresh="20"{% endif %}>
   {{ ring(approved, quota) }}
   <div class="grow">
     <h1 class="truncate">{{ project.title }}</h1>
@@ -14,7 +14,16 @@
 <section class="card needs-you">
   <p class="section-title" style="margin-top:0">Needs you</p>
   <p>{{ needs_you.text }}</p>
+  {% if needs_you.post %}
+  <form method="post" action="{{ needs_you.action }}" class="row wrap">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% for c in needs_you.choices %}
+    <button class="btn {{ 'btn-primary' if loop.first else 'btn-ghost' }}" type="submit" name="do" value="{{ c.do }}">{{ c.label }}</button>
+    {% endfor %}
+  </form>
+  {% else %}
   <a class="btn btn-primary" href="{{ needs_you.action }}">{{ needs_you.label }}</a>
+  {% endif %}
 </section>
 {% endif %}
 

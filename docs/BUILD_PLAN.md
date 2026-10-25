@@ -23,7 +23,7 @@
 | 3 | [Analytics events](#3-analytics-events) | | OPS-3, §10 | 1 | Done (each module adds its own events) |
 | 4 | [Data model v2](#4-data-model-v2) | | §14 | 1 | Done (edge cases land with modules 5–7) |
 | 5 | [Onboarding and gift setup](#5-onboarding-and-gift-setup) | R1–R8 | BUY-1…BUY-5, ENG-3 | 2, 3, 4 | Built; gift card and drag reorder left |
-| 6 | [Requester home and recipe review](#6-requester-home-and-recipe-review) | R9, R10, R13 | DASH-1…DASH-3 | 5 | Built; live Home refresh left |
+| 6 | [Requester home and recipe review](#6-requester-home-and-recipe-review) | R9, R10, R13 | DASH-1…DASH-3 | 5 | Built |
 | 7 | [Recording in the app (self and assisted)](#7-recording-in-the-app-self-and-assisted) | S1–S5 | DASH-5, QR-10 | 2, 4 | Built; device matrix and cook switcher left |
 | 8 | [Listen pages and QR](#8-listen-pages-and-qr) | F1, F3, F5, R13 | QR-1…QR-9 | 2 | Done; print test and in-app browser checks left |
 | 9 | [WhatsApp capture](#9-whatsapp-capture) | C1, C2 | WA-1, WA-2, WA-5, WA-6, BUY-5 | 4, 5 | **On hold** |
@@ -242,7 +242,7 @@ Screens: **R9** Home · **R10** Review a page · **R13** Voice link + QR (backen
 
 ### Build
 - [x] R9 Home: progress ring (approved / quota), last voice note (who, when, play), reveal countdown, **one** "needs you" card (priority: failed recipe > ready to review > escalation > invite not sent), recipe list with chips, "Up next" dishes
-- [~] (review page refreshes itself every 15 s while writing; Home not yet) Home refreshes status without a reload while anything is "Writing it down" (poll every 10 s for 5 minutes, then stop; no websockets)
+- [x] (Home and Kitchen reload every 20 s while anything is writing; review page every 15 s) Home refreshes status without a reload while anything is "Writing it down" (poll every 10 s for 5 minutes, then stop; no websockets)
 - [~] R10 (add and remove rows; reorder and "Ask her" later): player for all clips (original, follow-up, story) in order; "Recipe / What she said" toggle (structured vs transcript); ingredients and steps as **form rows** (add, remove, reorder) replacing the raw JSON editor (DASH-2); flagged approximations highlighted with "Ask her" (module 10) or "Leave as she said it"; Approve
 - [x] Approve also generates the page PDF and card image in the background (no separate Generate PDF button)
 - [x] Failed recipe: "We couldn't hear this one" chip, Try again (re-runs the pipeline from the failed stage) and "Record again" (goes to S2 or asks the cook)
@@ -303,7 +303,7 @@ This module needs no WhatsApp approval, so it's the first full capture path to s
 - [ ] Cook switcher changed after recording → only future recordings change; existing pages keep their cook name unless edited
 
 ### Tests
-- [~] (cleanup job later) Chunk endpoint: idempotent chunks, out-of-order chunks, abandoned sessions cleaned after 24 h
+- [x] (cleanup runs whenever a new recording opens; a phone that comes back later re-sends from its copy and reopens the session) Chunk endpoint: idempotent chunks, out-of-order chunks, abandoned sessions cleaned after 24 h
 - [x] Assembled file equals the concatenated chunks; pipeline enqueued once
 - [x] Share-target POST with 1 and 3 files creates one dish with ordered clips
 - [ ] Manual device test matrix: Android Chrome (budget phone), iPhone Safari, desktop Chrome
@@ -425,7 +425,7 @@ Screens: **C5** Gentle nudge · R9 "needs you" escalation card.
 ### Build
 - [ ] Daily scheduler (RQ scheduler) evaluates every active project
 - [ ] Day 4 without a recipe → nudge to the cook that leads with a fact (plays this week, who asked for which dish), then a no-pressure ask ("Koi jaldi nahi hai"), quick replies incl. "Kuch din baad yaad dilayein" (pauses 5 days) (ENG-1)
-- [ ] Day 8 → R9 card for the buyer: "Mummy's been quiet 8 days. Call her, or cook together and record?" with Call (`tel:`) and Record together (S2 in assisted mode)
+- [x] (in-app part, while the bot is off: counts from the invite, last voice note or last card action; adds "Send a gentle nudge" from the buyer's WhatsApp and "Not now") Day 8 → R9 card for the buyer: "Mummy's been quiet 8 days. Call her, or cook together and record?" with Call (`tel:`) and Record together (S2 in assisted mode)
 - [ ] Day 14 → offer "Interview Mummy for me" (copy only until UP-3 exists)
 - [ ] Quiet hours 9 pm–9 am in her time zone; "stop" pauses everything (`reminders_paused_until` far future) (ENG-2)
 - [ ] Buyer can change or pause the schedule from Home

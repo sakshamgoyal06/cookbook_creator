@@ -78,3 +78,20 @@ def reveal_text(project, url):
     language = project.get("storyteller_language") or "hinglish"
     who = project.get("storyteller_address_as") or project.get("storyteller_name") or "Mummy"
     return REVEAL[language].format(title=project["title"], who=who, url=url)
+
+
+NUDGE = {
+    "hi": "{who}, जब समय मिले, {dish} बनाने का तरीका एक वॉइस नोट में बता दीजिए। कोई जल्दी नहीं है, "
+          "बस आपकी आवाज़ में सुनना अच्छा लगता है।",
+    "hinglish": ("{who}, jab time mile, {dish} banane ka tareeka ek voice note mein bata dijiye. "
+                 "Koi jaldi nahi hai, bas aapki awaaz mein sunna accha lagta hai."),
+    "en": ("{who}, whenever you have a moment, could you tell me how you make {dish} in a voice note? "
+           "There's no hurry, it's just lovely to hear it in your voice."),
+}
+
+
+def nudge_text(project, dish=None):
+    """A gentle reminder after a quiet stretch (module 11, in-app part), sent from the buyer's WhatsApp."""
+    language = project.get("storyteller_language") or "hinglish"
+    who = project.get("storyteller_address_as") or ("मम्मी" if language == "hi" else "Mummy")
+    return NUDGE[language].format(who=who, dish=dish or FIRST_DISH_FALLBACK[language])

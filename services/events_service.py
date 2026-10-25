@@ -7,7 +7,7 @@ dropped (and fails loudly in tests). Tracking never breaks the request.
 import logging
 import re
 
-from sqlalchemy import insert
+from sqlalchemy import func, insert, select
 
 import config
 from models.database import get_engine
@@ -107,6 +107,13 @@ def track(name, project_id=None, recipe_id=None, actor="system", channel="web", 
         if config.EVENTS_STRICT:
             raise
         log.exception("Could not record analytics event %s", name)
+
+
+def last_at(project_id, name):
+    """When `name` last happened on this project, or None."""
+    with get_engine().connect() as conn:
+        return conn.execute(select(func.max(events.c.created_at))
+                            .where(events.c.project_id == project_id, events.c.name == name)).scalar()
 
 
 def _validate(name, project_id, recipe_id, actor, channel, props):
