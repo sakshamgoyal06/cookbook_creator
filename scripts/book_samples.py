@@ -28,6 +28,17 @@ from services import book_design, pdf_service, photo_service  # noqa: E402
 PREVIEW_WIDTH = 640
 
 
+def sample_photo(key, frame=None, crop=None):
+    image = PLACEHOLDERS.get(key)
+    if image is None:
+        return None
+    if frame:
+        image = image.crop(photo_service.crop_box(image.width, image.height, frame["width"] / frame["height"], crop))
+    buffer = io.BytesIO()
+    image.save(buffer, "JPEG", quality=80)
+    return "data:image/jpeg;base64," + base64.b64encode(buffer.getvalue()).decode()
+
+
 def _placeholder(width, height, top, bottom, label):
     image = Image.new("RGB", (width, height))
     draw = ImageDraw.Draw(image)
@@ -37,12 +48,10 @@ def _placeholder(width, height, top, bottom, label):
     font = ImageFont.truetype(os.path.join(ROOT, "static", "fonts", "poppins-latin-600-normal.woff"), width // 18)
     box = draw.textbbox((0, 0), label, font=font)
     draw.text(((width - box[2]) / 2, (height - box[3]) / 2), label, font=font, fill=(255, 255, 255))
-    buffer = io.BytesIO()
-    image.save(buffer, "JPEG", quality=80)
-    return "data:image/jpeg;base64," + base64.b64encode(buffer.getvalue()).decode()
+    return image
 
 
-PHOTOS = {
+PLACEHOLDERS = {
     "cook": _placeholder(800, 1000, (150, 118, 92), (205, 172, 138), "Cook's photo"),
     "family": _placeholder(1400, 1000, (118, 132, 140), (205, 180, 146), "Family photo"),
     "dish": _placeholder(1400, 1000, (168, 82, 40), (226, 160, 88), "Dish photo"),
@@ -284,7 +293,8 @@ def previews():
 
 
 def main():
-    photo_service.data_uri = PHOTOS.get  # placeholder photos instead of storage
+    # Placeholder photos instead of storage, cut to each spot as the real ones are.
+    photo_service.data_uri = sample_photo
     with flask_app.app.test_request_context():
         if sys.argv[1:] == ["--previews"]:
             previews()

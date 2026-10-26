@@ -1,0 +1,29 @@
+{% extends "app/_shell.html" %}
+{% from "components/ui.html" import csrf %}
+{% block content %}
+<h1>Fit the photo</h1>
+<p class="muted">{{ title }}. Drag the photo to move it and use the slider to zoom. The frame is the exact shape of its spot in the book.</p>
+
+<form method="post" class="stack" data-photo-fit data-src="{{ photo_url }}" data-max-zoom="{{ max_zoom }}">{{ csrf() }}
+  <input type="hidden" name="next" value="{{ next_url }}">
+  <input type="hidden" name="x" value="{{ crop.x }}">
+  <input type="hidden" name="y" value="{{ crop.y }}">
+  {% for f in frames %}
+  <figure class="fit-spot{{ ' fit-main' if loop.first else ' fit-extra' }}">
+    <div class="fit-frame shape-{{ f.shape }}" data-aspect="{{ f.width / f.height }}"
+         style="aspect-ratio: {{ f.width }} / {{ f.height }}; max-width: calc({{ '56vh' if loop.first else '30vh' }} * {{ f.width }} / {{ f.height }});">
+      <img src="{{ photo_url }}" alt="" draggable="false">
+    </div>
+    <figcaption class="small muted">{{ f.name }} · {{ (f.width / 10) | round(1) }} × {{ (f.height / 10) | round(1) }} cm</figcaption>
+  </figure>
+  {% endfor %}
+  <p class="small muted">{% if frames | length > 1 %}The same photo is used in both places, each cut to its own shape. {% endif %}If you change the book's style or size later, the frame changes and your photo stays centred on the same spot.</p>
+  <label for="fit-zoom">Zoom</label>
+  <input type="range" id="fit-zoom" name="zoom" min="1" max="{{ max_zoom }}" step="0.01" value="{{ crop.zoom }}">
+  <div class="row wrap">
+    <button class="btn btn-ghost" type="button" data-fit-reset>Back to the middle</button>
+  </div>
+  <button class="btn btn-primary btn-block" type="submit">Save</button>
+  <a class="btn btn-secondary btn-block" href="{{ next_url }}">Not now</a>
+</form>
+{% endblock %}

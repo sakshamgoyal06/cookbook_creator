@@ -21,7 +21,7 @@ def generate_recipe_pdf(recipe: dict) -> str:
     project = project_service.get_project(recipe["project_id"]) if recipe.get("project_id") else None
     voice, label = _names(project)
     html_content = render_template(
-        "pdf/recipe.html", page=_page(recipe, book_design.size_key(project) == "wide"),
+        "pdf/recipe.html", page=_page(recipe, project),
         voice_name=voice, cook_label=label,
         page_css=book_design.page_css(project), body_classes=book_design.body_classes(project),
     )
@@ -43,31 +43,49 @@ def generate_book_pdf(project: dict, recipes: list, print_ready=False) -> str:
 
 def render_book_html(project, recipes, print_ready=False):
     voice, label = _names(project)
-    wide = book_design.size_key(project) == "wide"
-    sections = _sections([_page(r, wide) for r in recipes])
+    sections = _sections([_page(r, project) for r in recipes])
     reveal = project.get("reveal_date")
+    layout = book_design.cover_layout(project)
+    crops = project.get("photo_crops") or {}
+
+    def photo(field, slot, place):
+        return photo_service.data_uri(project.get(field), book_design.photo_frame(project, place), crops.get(slot))
     return render_template(
         "pdf/book.html", project=project, sections=sections,
         show_dividers=len(sections) > 1 and len(recipes) >= MIN_RECIPES_FOR_CHAPTERS,
         voice_name=voice, cook_label=label, cook_name=project.get("storyteller_name"),
         kicker=_kicker(project), year=reveal.year if reveal else None,
-        layout=book_design.cover_layout(project),
-        cook_photo=photo_service.data_uri(project.get("cook_photo_key")),
-        family_photo=photo_service.data_uri(project.get("family_photo_key")),
+        layout=layout,
+        cover_photo=photo("cook_photo_key", "cook", "cover") if layout == "photo" else None,
+        about_photo=photo("cook_photo_key", "cook", "about"),
+        family_photo=photo("family_photo_key", "family", "family"),
         book_qr=qr_service.make_qr_data_uri(listen_service.book_url(project["book_token"]), scale=10),
         page_css=book_design.page_css(project, print_ready), body_classes=book_design.body_classes(project),
     )
 
 
-def _page(recipe, wide=False):
-    url = _listen_url(recipe)
-    photo = photo_service.data_uri(recipe.get("photo_key"))
+def dish_photo_place(project, recipe):
+    """Where a dish photo goes: "dish_page" (a page of its own) or "dish" (a band on the recipe page).
+
+    Always its own page in the wide book (photo on the left page, recipe on the right), and on A4
+    when the recipe is too long to share its page.
+    """
+    if book_design.size_key(project) == "wide":
+        return "dish_page"
     steps = recipe.get("method_steps") or []
     size = (len(recipe.get("ingredients") or []) + len(recipe.get("moms_tips") or [])
             + sum(1 + len(s.get("instruction") or "") // 90 for s in steps)
             + (2 if recipe.get("family_note") else 0) + (2 if recipe.get("serving_suggestion") else 0))
-    return {"recipe": recipe, "listen_url": url, "qr": _qr_for(recipe) if url else None, "photo": photo, "wide": wide,
-            "photo_page": bool(photo) and (wide or size > PHOTO_SHARES_PAGE_UP_TO)}
+    return "dish_page" if size > PHOTO_SHARES_PAGE_UP_TO else "dish"
+
+
+def _page(recipe, project):
+    url = _listen_url(recipe)
+    place = dish_photo_place(project, recipe)
+    photo = photo_service.data_uri(recipe.get("photo_key"), book_design.photo_frame(project, place),
+                                   recipe.get("photo_crop"))
+    return {"recipe": recipe, "listen_url": url, "qr": _qr_for(recipe) if url else None, "photo": photo,
+            "wide": book_design.size_key(project) == "wide", "photo_page": bool(photo) and place == "dish_page"}
 
 
 def _sections(pages):

@@ -8,9 +8,9 @@
 </head>
 <body class="{{ body_classes }}">
 
-<section class="cover cover-{{ layout }}{{ ' has-photo' if cook_photo and layout == 'photo' }}">
+<section class="cover cover-{{ layout }}{{ ' has-photo' if cover_photo }}">
     <div class="cover-frame">
-        {% if cook_photo and layout == 'photo' %}<figure class="cover-photo"><img src="{{ cook_photo }}" alt=""></figure>{% endif %}
+        {% if cover_photo %}<figure class="cover-photo"><img src="{{ cover_photo }}" alt=""></figure>{% endif %}
         <div class="cover-text">
             <p class="kicker">{{ kicker }}</p>
             <h1 class="cover-title">{{ project.title }}</h1>
@@ -28,9 +28,9 @@
 </section>
 {% endif %}
 
-{% if project.about_author or (cook_photo and layout != 'photo') %}
+{% if project.about_author or (about_photo and layout != 'photo') %}
 <section class="opening about">
-    {% if cook_photo %}<figure class="about-photo"><img src="{{ cook_photo }}" alt=""></figure>{% endif %}
+    {% if about_photo %}<figure class="about-photo"><img src="{{ about_photo }}" alt=""></figure>{% endif %}
     <p class="kicker">About the cook</p>
     <h2>{{ cook_name or voice_name or 'The cook' }}</h2>
     {% for para in (project.about_author or '').split('\n') if para.strip() %}<p>{{ para }}</p>{% endfor %}

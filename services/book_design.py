@@ -105,3 +105,50 @@ def validate(form, project):
     elif "theme" in values:
         values["book_accent"] = None
     return values
+
+
+# ─── Photo frames ──────────────────────────────────────────────
+# The size in mm of each photo's spot in the book, per style and size, so a photo can be cropped
+# to fit it exactly (see photo_service.crop_box). They follow static/book/*.css; tests measure the
+# laid-out book and fail if the two drift apart.
+#   cover: the cook's photo on the cover; about: the cook's photo on the About page;
+#   family: the family photo page; dish: the photo band at the top of an A4 recipe page;
+#   dish_page: a dish photo on a page of its own (always in the wide book; long recipes on A4).
+PHOTO_FRAMES = {
+    "classic": {
+        "a4": {"cover": (92, 118), "about": (64, 80), "family": (178, 205),
+               "dish": (170, 60), "dish_page": (174, 261)},
+        "wide": {"cover": (104, 138), "about": (64, 80), "family": (265, 140), "dish_page": (261, 174)},
+    },
+    "rustic": {
+        "a4": {"cover": (142, 127), "about": (64, 77), "family": (162, 192),
+               "dish": (162, 55), "dish_page": (158, 248)},
+        "wide": {"cover": (120, 137), "about": (64, 77), "family": (249, 127), "dish_page": (245, 161)},
+    },
+    "modern": {
+        "a4": {"cover": (210, 190), "about": (80, 100), "family": (174, 230),
+               "dish": (210, 96), "dish_page": (210, 297)},
+        "wide": {"cover": (168, 210), "about": (80, 100), "family": (261, 140), "dish_page": (297, 210)},
+    },
+    "festive": {
+        "a4": {"cover": (108, 108), "about": (70, 70), "family": (167, 190),
+               "dish": (167, 68), "dish_page": (165, 265)},
+        "wide": {"cover": (108, 108), "about": (70, 70), "family": (254, 120), "dish_page": (252, 178)},
+    },
+}
+# Spots that aren't plain rectangles; the photo editor shows the same shape.
+PHOTO_SHAPES = {("classic", "cover"): "oval", ("classic", "about"): "oval",
+                ("festive", "cover"): "round", ("festive", "about"): "round"}
+PHOTO_PLACE_NAMES = {"cover": "Cover", "about": "About the cook page", "family": "Family photo page",
+                     "dish": "Top of the recipe page", "dish_page": "A full page beside the recipe"}
+
+
+def photo_frame(project, place):
+    """{"place", "name", "width", "height", "shape"} for a photo's spot in this book's style and size."""
+    style, size = style_key(project), size_key(project)
+    frames = PHOTO_FRAMES[style][size]
+    if place == "dish" and place not in frames:
+        place = "dish_page"  # the wide book always gives the dish a page of its own
+    width, height = frames[place]
+    return {"place": place, "name": PHOTO_PLACE_NAMES[place], "width": width, "height": height,
+            "shape": PHOTO_SHAPES.get((style, place), "rect")}

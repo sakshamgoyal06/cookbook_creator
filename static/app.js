@@ -95,6 +95,89 @@
     });
   });
 
+  // Fit a photo to its spot in the book: drag to move, slider or pinch to zoom. Every frame shows
+  // the same crop cut to its own shape, worked out as photo_service.crop_box does for the PDF.
+  document.querySelectorAll("form[data-photo-fit]").forEach(function (form) {
+    var x = form.elements.x, y = form.elements.y, zoom = form.elements.zoom;
+    var maxZoom = parseFloat(form.dataset.maxZoom) || 4;
+    var frames = Array.prototype.slice.call(form.querySelectorAll(".fit-frame"));
+    var probe = new Image(), iw = 0, ih = 0;
+
+    function clamp(v, lo, hi) { return Math.min(Math.max(v, lo), hi); }
+    function box(frame) {  // the crop for this frame, in photo pixels
+      var aspect = parseFloat(frame.dataset.aspect), z = parseFloat(zoom.value);
+      var w = iw / ih > aspect ? ih * aspect : iw, h = iw / ih > aspect ? ih : iw / aspect;
+      w /= z; h /= z;
+      return { w: w, h: h,
+               left: clamp(parseFloat(x.value) * iw - w / 2, 0, iw - w),
+               top: clamp(parseFloat(y.value) * ih - h / 2, 0, ih - h) };
+    }
+    function draw() {
+      if (!iw) return;
+      frames.forEach(function (frame) {
+        var b = box(frame), scale = frame.clientWidth / b.w, img = frame.querySelector("img");
+        img.style.width = iw * scale + "px";
+        img.style.height = ih * scale + "px";
+        img.style.left = -b.left * scale + "px";
+        img.style.top = -b.top * scale + "px";
+      });
+    }
+    function keepInside() {  // store the centre the main frame actually shows, so dragging back responds at once
+      var b = box(frames[0]);
+      x.value = ((b.left + b.w / 2) / iw).toFixed(4);
+      y.value = ((b.top + b.h / 2) / ih).toFixed(4);
+    }
+
+    var pointers = {}, startGap = 0, startZoom = 1;
+    frames.forEach(function (frame) {
+      frame.addEventListener("pointerdown", function (e) {
+        frame.setPointerCapture(e.pointerId);
+        pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+        var ids = Object.keys(pointers);
+        if (ids.length === 2) {
+          startGap = Math.hypot(pointers[ids[0]].x - pointers[ids[1]].x, pointers[ids[0]].y - pointers[ids[1]].y);
+          startZoom = parseFloat(zoom.value);
+        }
+      });
+      frame.addEventListener("pointermove", function (e) {
+        var last = pointers[e.pointerId];
+        if (!last || !iw) return;
+        pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+        var ids = Object.keys(pointers);
+        if (ids.length === 2) {
+          var gap = Math.hypot(pointers[ids[0]].x - pointers[ids[1]].x, pointers[ids[0]].y - pointers[ids[1]].y);
+          if (startGap) zoom.value = clamp(startZoom * gap / startGap, 1, maxZoom);
+        } else {
+          var scale = frame.clientWidth / box(frame).w;
+          x.value = parseFloat(x.value) - (e.clientX - last.x) / scale / iw;
+          y.value = parseFloat(y.value) - (e.clientY - last.y) / scale / ih;
+        }
+        keepInside();
+        draw();
+      });
+      ["pointerup", "pointercancel"].forEach(function (type) {
+        frame.addEventListener(type, function (e) { delete pointers[e.pointerId]; startGap = 0; });
+      });
+      frame.addEventListener("wheel", function (e) {
+        e.preventDefault();
+        zoom.value = clamp(parseFloat(zoom.value) * (e.deltaY < 0 ? 1.06 : 1 / 1.06), 1, maxZoom);
+        keepInside();
+        draw();
+      }, { passive: false });
+    });
+    zoom.addEventListener("input", function () { keepInside(); draw(); });
+    form.querySelector("[data-fit-reset]").addEventListener("click", function () {
+      x.value = 0.5; y.value = 0.5; zoom.value = 1; draw();
+    });
+    window.addEventListener("resize", draw);
+    probe.onload = function () {
+      iw = probe.naturalWidth; ih = probe.naturalHeight;
+      form.classList.add("ready");
+      draw();
+    };
+    probe.src = form.dataset.src;
+  });
+
   // "Add an ingredient": copy the last row, empty.
   document.querySelectorAll("[data-add-row]").forEach(function (button) {
     var rows = button.previousElementSibling;

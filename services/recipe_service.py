@@ -125,11 +125,17 @@ def _reset(conn, recipe_id):
 
 
 def set_photo(recipe_id, key):
-    """Set (or with None, clear) the dish photo; returns the old key so its file can go."""
+    """Set (or with None, clear) the dish photo, centred; returns the old key so its file can go."""
     with get_engine().begin() as conn:
         old = conn.execute(select(recipes.c.photo_key).where(recipes.c.id == recipe_id)).scalar_one_or_none()
-        conn.execute(update(recipes).where(recipes.c.id == recipe_id).values(photo_key=key, updated_at=func.now()))
+        conn.execute(update(recipes).where(recipes.c.id == recipe_id)
+                     .values(photo_key=key, photo_crop=None, updated_at=func.now()))
     return old
+
+
+def set_photo_crop(recipe_id, crop):
+    with get_engine().begin() as conn:
+        conn.execute(update(recipes).where(recipes.c.id == recipe_id).values(photo_crop=crop, updated_at=func.now()))
 
 
 def delete_recipe(recipe_id):

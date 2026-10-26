@@ -1,7 +1,13 @@
+import base64
 import io
+from unittest.mock import patch
 
+import pytest
 from PIL import Image
 from pypdf import PdfReader
+from weasyprint import HTML
+
+import config
 
 from services import book_design, pdf_service, photo_service, project_service, recipe_service, storage_service
 from conftest import register
@@ -134,13 +140,19 @@ def test_chapters_appear_once_there_are_enough_recipes_of_different_kinds():
 
 
 def test_long_recipes_put_their_photo_on_its_own_page(monkeypatch):
-    monkeypatch.setattr(photo_service, "data_uri", lambda key: "data:image/jpeg;base64,xx" if key else None)
+    frames = []
+    monkeypatch.setattr(photo_service, "data_uri",
+                        lambda key, frame, crop: frames.append(frame) or ("data:image/jpeg;base64,xx" if key else None))
     short = {"photo_key": "k", "ingredients": [{}] * 4, "method_steps": [{"instruction": "Mix."}] * 3}
     long = dict(short, ingredients=[{}] * 14, moms_tips=["a", "b"], family_note="Story")
-    assert pdf_service._page(short)["photo_page"] is False
-    assert pdf_service._page(long)["photo_page"] is True
-    assert pdf_service._page(short, wide=True)["photo_page"] is True
-    assert pdf_service._page(dict(long, photo_key=None))["photo_page"] is False
+    a4, wide = {"theme": "classic"}, {"theme": "classic", "book_size": "wide"}
+    assert pdf_service._page(short, a4)["photo_page"] is False
+    assert pdf_service._page(long, a4)["photo_page"] is True
+    assert pdf_service._page(short, wide)["photo_page"] is True
+    assert pdf_service._page(dict(long, photo_key=None), a4)["photo_page"] is False
+    # Each photo is cut to the spot it lands in.
+    assert [f["place"] for f in frames] == ["dish", "dish_page", "dish_page", "dish_page"]
+    assert (frames[0]["width"], frames[0]["height"]) == (170, 60)
 
 
 def test_print_shop_pdf_has_bleed(auth_client, monkeypatch):
@@ -166,3 +178,83 @@ def test_recipe_pdf_uses_the_book_style(app, auth_client, monkeypatch):
     with app.test_request_context():
         pdf_service.generate_recipe_pdf(recipe_service.get_recipe(rid))
     assert captured["name"] == "pdf/recipe.html" and "style-modern" in captured["body_classes"]
+
+
+def _photo_boxes(html, project):
+    """{place: (width, height)} in mm of each photo as WeasyPrint lays the book out."""
+    places = {"cover-photo": "cover", "about-photo": "about", "family-photo": "family", "recipe-photo": "dish"}
+    found = {}
+
+    def walk(box, figure=None, photo_page=False):
+        element = getattr(box, "element", None)
+        classes = (element.get("class") or "") if element is not None else ""
+        photo_page = photo_page or "photo-page" in classes.split()
+        if getattr(box, "element_tag", None) == "figure":
+            figure = classes
+        if getattr(box, "element_tag", None) == "img" and figure in places:
+            place = "dish_page" if figure == "recipe-photo" and photo_page else places[figure]
+            found.setdefault(place, (round(box.width * 25.4 / 96), round(box.height * 25.4 / 96)))
+        for child in getattr(box, "children", None) or []:
+            walk(child, figure, photo_page)
+
+    for page in HTML(string=html, base_url=config.BASE_DIR).render(
+            stylesheets=book_design.stylesheets(project)).pages:
+        walk(page._page_box)
+    return found
+
+
+@pytest.mark.parametrize("style", sorted(book_design.STYLES))
+def test_photo_frames_match_the_book_layout(app, style):
+    from scripts import book_samples
+    for size in book_design.SIZES:
+        project = book_samples.sample_project(style, size)
+        with app.test_request_context(), patch.object(photo_service, "data_uri", book_samples.sample_photo):
+            html = pdf_service.render_book_html(project, book_samples.RECIPES)
+        assert _photo_boxes(html, project) == book_design.PHOTO_FRAMES[style][size], (style, size)
+
+
+def test_crop_box_fills_the_spot_and_stays_inside_the_photo():
+    # A 4:3 photo in a square spot: the full height, centred.
+    assert photo_service.crop_box(400, 300, 1.0) == (50, 0, 350, 300)
+    # Zoomed in twice on the top left corner: as far left and up as the photo goes.
+    assert photo_service.crop_box(400, 300, 1.0, {"x": 0, "y": 0, "zoom": 2}) == (0, 0, 150, 150)
+    # A wide band from a tall photo takes the full width.
+    assert photo_service.crop_box(300, 400, 3.0, {"x": 0.5, "y": 0.9}) == (0, 300, 300, 400)
+    assert photo_service.clean_crop({"x": "nan", "y": 7, "zoom": "a"}) == {"x": 0.5, "y": 1.0, "zoom": 1.0}
+    assert photo_service.clean_crop(None) == photo_service.DEFAULT_CROP
+
+
+def test_a_new_photo_goes_to_fit_and_the_fit_is_used_in_the_book(app, auth_client):
+    pid = _onboard(auth_client)
+    response = _upload(auth_client, f"/p/{pid}/photos/cook", _photo((1600, 800)))
+    assert f"/p/{pid}/photos/cook/fit" in response.headers["Location"]
+    page = auth_client.get(response.headers["Location"]).data.decode()
+    assert "Fit the photo" in page and "Cover" in page and "About the cook page" in page
+    assert 'aspect-ratio: 92 / 118' in page and "shape-oval" in page  # Heirloom's oval cover photo
+
+    fit = {"x": "0.1", "y": "0.5", "zoom": "1.5", "next": f"/p/{pid}/design#photos"}
+    saved = auth_client.post(f"/p/{pid}/photos/cook/fit", data=fit)
+    assert saved.headers["Location"].endswith(f"/p/{pid}/design#photos")
+    project = project_service.get_project(pid)
+    assert project["photo_crops"] == {"cook": {"x": 0.1, "y": 0.5, "zoom": 1.5}}
+
+    with app.test_request_context():
+        html = pdf_service.render_book_html(project, [])
+    cover = html.split('class="cover-photo"><img src="data:image/jpeg;base64,')[1].split('"')[0]
+    image = Image.open(io.BytesIO(base64.b64decode(cover)))
+    assert abs(image.width / image.height - 92 / 118) < 0.01  # cut to the cover's oval
+
+    # A new photo starts centred again.
+    _upload(auth_client, f"/p/{pid}/photos/cook")
+    assert project_service.get_project(pid)["photo_crops"] == {}
+
+
+def test_dish_photo_fit_is_saved_on_the_recipe(auth_client, monkeypatch):
+    pid, (rid, _) = _approved_recipes(auth_client, monkeypatch)
+    _upload(auth_client, f"/p/{pid}/r/{rid}/photo")
+    page = auth_client.get(f"/p/{pid}/photos/r{rid}/fit").data.decode()
+    assert "Top of the recipe page" in page or "A full page beside the recipe" in page
+    auth_client.post(f"/p/{pid}/photos/r{rid}/fit", data={"x": "0.3", "y": "0.7", "zoom": "9"})
+    assert recipe_service.get_recipe(rid)["photo_crop"] == {"x": 0.3, "y": 0.7, "zoom": photo_service.MAX_ZOOM}
+    assert auth_client.get(f"/p/{pid}/photos/r999999/fit").status_code == 404
+    assert auth_client.get(f"/p/{pid}/photos/family/fit").status_code == 302  # no photo yet: back

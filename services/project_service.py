@@ -80,7 +80,7 @@ SETUP_FIELDS = {
 # The R14 "Design your book" screen (module 18).
 DESIGN_FIELDS = {
     "theme", "book_size", "book_accent", "cover_layout", "cook_photo_key", "family_photo_key",
-    "title", "subtitle", "dedication", "about_author", "introduction", "acknowledgement",
+    "photo_crops", "title", "subtitle", "dedication", "about_author", "introduction", "acknowledgement",
 }
 
 
