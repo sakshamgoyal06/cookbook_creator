@@ -124,12 +124,16 @@ def _reset(conn, recipe_id):
                          updated_at=func.now()))
 
 
-def set_photo(recipe_id, key):
-    """Set (or with None, clear) the dish photo, centred; returns the old key so its file can go."""
+def set_photo(recipe_id, key, credit=None, image_id=None):
+    """Set (or with None, clear) the dish photo, centred; returns the old key so its file can go.
+
+    A photo from the internet or the shared library comes with its credit line and library id.
+    """
     with get_engine().begin() as conn:
         old = conn.execute(select(recipes.c.photo_key).where(recipes.c.id == recipe_id)).scalar_one_or_none()
         conn.execute(update(recipes).where(recipes.c.id == recipe_id)
-                     .values(photo_key=key, photo_crop=None, updated_at=func.now()))
+                     .values(photo_key=key, photo_crop=None, photo_credit=credit, photo_image_id=image_id,
+                             updated_at=func.now()))
     return old
 
 

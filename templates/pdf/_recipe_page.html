@@ -74,5 +74,6 @@
             {% if page.wide %}{{ tips() }}{% else %}{{ extras() }}{% endif %}
         </section>
     </div>
+    {% if page.photo and recipe.photo_credit %}<p class="photo-credit">{{ recipe.photo_credit }}</p>{% endif %}
 </article>
 {%- endmacro %}

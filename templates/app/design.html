@@ -70,7 +70,7 @@
 <h2 class="section-title">Dish photos</h2>
 <div class="card stack">
   {% for r in approved %}
-  {{ photo_card('r' ~ r.id, r.photo_key, r.recipe_title, 'Optional. Shown on the recipe page.', url_for('screens.recipe_photo', project_id=project.id, recipe_id=r.id)) }}
+  {{ photo_card('r' ~ r.id, r.photo_key, r.recipe_title, 'Optional. Shown on the recipe page.', url_for('screens.recipe_photo', project_id=project.id, recipe_id=r.id), find=url_for('screens.find_dish_photo', project_id=project.id, recipe_id=r.id, next=request.path ~ '#photos')) }}
   {% endfor %}
 </div>
 {% endif %}

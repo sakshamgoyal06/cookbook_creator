@@ -1,0 +1,47 @@
+{% extends "app/_shell.html" %}
+{% from "components/ui.html" import csrf %}
+{% block content %}
+<h1>Find a photo of {{ recipe.recipe_title or 'the dish' }}</h1>
+<p class="muted">No photo of your own? Pick one here. These are free to print in your book, and each one's credit goes in small print on the recipe page.</p>
+
+<form method="get" class="row find-search">
+  <input type="hidden" name="next" value="{{ next_url }}">
+  <input type="search" name="q" value="{{ query }}" maxlength="80" aria-label="Search for a dish photo" class="grow">
+  <button class="btn btn-secondary" type="submit">Search</button>
+</form>
+
+<form method="post" class="stack">{{ csrf() }}
+  <input type="hidden" name="next" value="{{ next_url }}">
+  <input type="hidden" name="q" value="{{ query }}">
+  {% if library %}
+  <h2 class="section-title">From other {{ config.APP_NAME }} books</h2>
+  <div class="find-grid">
+  {% for img in library %}
+    <button class="find-tile" type="submit" name="pick" value="lib-{{ img.id }}">
+      <img src="{{ url_for('screens.library_photo', image_id=img.id) }}" alt="{{ img.title or '' }}">
+      <span class="small muted">{{ img.creator or img.title or img.license }}</span>
+    </button>
+  {% endfor %}
+  </div>
+  {% if not searched %}<p class="small muted">Want more choice? Search above for free photos from the internet.</p>{% endif %}
+  {% endif %}
+
+  {% if searched %}
+  <h2 class="section-title">Free photos from the internet</h2>
+  {% if error %}<p class="muted">{{ error }}</p>
+  {% elif not web %}<p class="muted">Nothing suitable for “{{ query }}”. Try another name for the dish, like “dal makhani” or “black dal”.</p>
+  {% else %}
+  <div class="find-grid">
+  {% for img in web %}
+    <button class="find-tile" type="submit" name="pick" value="web-{{ img.source }}-{{ img.source_id }}">
+      <img src="{{ img.thumb_url }}" alt="{{ img.title or '' }}" loading="lazy" referrerpolicy="no-referrer">
+      <span class="small muted">{{ img.creator or img.title }} · {{ img.license }}</span>
+    </button>
+  {% endfor %}
+  </div>
+  <p class="small muted">From {{ 'Pexels and ' if config.PEXELS_API_KEY }}Openverse. Only photos free to print and crop are shown.</p>
+  {% endif %}
+  {% endif %}
+</form>
+<a class="btn btn-secondary btn-block" href="{{ next_url }}">Not now</a>
+{% endblock %}

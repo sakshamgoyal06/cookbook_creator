@@ -52,6 +52,11 @@ PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").strip().rstrip("/")
 # Raise on invalid analytics events instead of logging them (tests turn this on).
 EVENTS_STRICT = os.getenv("EVENTS_STRICT", "false").lower() in {"1", "true", "yes"}
 
+# Dish photo search (module 18). Openverse needs no key; with a Pexels key, Pexels photos come first.
+OPENVERSE_API_URL = os.getenv("OPENVERSE_API_URL", "https://api.openverse.org/v1").rstrip("/")
+PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "").strip()
+PHOTO_SEARCH_ENABLED = os.getenv("PHOTO_SEARCH_ENABLED", "true").lower() in {"1", "true", "yes"}
+
 # Background jobs (RQ). Empty = run the transcribe -> structure pipeline inside the
 # upload request, which is fine for local development. With a worker in a separate
 # container, use STORAGE_BACKEND=s3 so the worker can read the uploaded audio.
