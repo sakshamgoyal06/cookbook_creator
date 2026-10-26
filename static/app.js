@@ -79,6 +79,14 @@
     });
   });
 
+  // Typing a new dish name picks the "A new dish" option.
+  document.querySelectorAll("input[data-picks]").forEach(function (input) {
+    input.addEventListener("input", function () {
+      var radio = input.form.querySelector("input[type=radio][value='" + input.dataset.picks + "']");
+      if (radio && input.value.trim()) radio.checked = true;
+    });
+  });
+
   // Photo pickers send their form as soon as a photo is chosen.
   document.querySelectorAll("input[type=file][data-autosubmit]").forEach(function (input) {
     input.addEventListener("change", function () {

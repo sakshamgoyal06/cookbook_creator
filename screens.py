@@ -10,6 +10,7 @@ from datetime import date, datetime, timedelta, timezone
 from functools import wraps
 
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask import session as flask_session
 from flask_login import current_user, login_required
 
 import config
@@ -780,21 +781,19 @@ def import_notes(project):
     if bad:
         flash(f"“{bad[0]}” isn't a voice note we can read. Please use {SUPPORTED_FORMATS_LABEL}.", "error")
         return redirect(url_for("screens.import_notes", project_id=pid))
-    if request.form.get("replace"):
-        replacing = _recipe_or_404(project, request.form.get("replace", type=int))
-        recipe_service.replace_audio(replacing["id"], [_store_upload(f) for f in files], source="import")
-        events_service.track("recipe_retry_requested", project_id=pid, recipe_id=replacing["id"], actor="buyer",
-                             stage="transcribe")
-        pipeline_service.enqueue_processing(replacing["id"])
-        flash("Got it. We're writing it down again from the new voice note.", "success")
-        return redirect(url_for("screens.review", project_id=pid, recipe_id=replacing["id"]))
-    over_quota = project_service.get_project_recipe_count(pid) >= (project.get("max_recipes") or 10)
-
-    dish_id, title = _dish_choice(pid, wishlist)
     keys = [_store_upload(f) for f in files]
+    if request.form.get("replace"):
+        return _replace_notes(project, _recipe_or_404(project, request.form.get("replace", type=int)), keys, "import")
+    return _add_dish(project, keys, *_dish_choice(pid, wishlist), source="import")
+
+
+def _add_dish(project, keys, dish_id, title, source):
+    """A new recipe from stored voice notes (one dish), written down in the background."""
+    pid = project["id"]
+    over_quota = project_service.get_project_recipe_count(pid) >= (project.get("max_recipes") or 10)
     recipe_id = recipe_service.create_received_recipe(pid, keys[0], source="import", audio_keys=keys, title=title,
                                                       dish_id=dish_id, cook_name=project.get("storyteller_name"))
-    events_service.track("recipe_created", project_id=pid, recipe_id=recipe_id, actor="buyer", source="import")
+    events_service.track("recipe_created", project_id=pid, recipe_id=recipe_id, actor="buyer", source=source)
     pipeline_service.enqueue_processing(recipe_id)
     flash("Got it. We're writing the recipe down; it takes about a minute.", "success")
     if over_quota:  # never turn a voice note away; extra pages wait for Volume 2
@@ -802,28 +801,91 @@ def import_notes(project):
     return redirect(url_for("screens.review", project_id=pid, recipe_id=recipe_id))
 
 
+def _replace_notes(project, recipe, keys, source):
+    recipe_service.replace_audio(recipe["id"], keys, source=source)
+    events_service.track("recipe_retry_requested", project_id=project["id"], recipe_id=recipe["id"], actor="buyer",
+                         stage="transcribe")
+    pipeline_service.enqueue_processing(recipe["id"])
+    flash("Got it. We're writing it down again from the new voice note.", "success")
+    return redirect(url_for("screens.review", project_id=project["id"], recipe_id=recipe["id"]))
+
+
+# ─── Share from WhatsApp (S3, Android) ─────────────────────────
+# The installed app is a share target (manifest share_target): WhatsApp → Share → Andaaz posts
+# the voice notes to /share. We keep them, then ask which book and dish they belong to.
+
+SHARED_KEY = "shared_notes"
+
+
 @bp.route("/share", methods=["POST"])
 @login_required
 def share_target():
-    """Android "Share" from WhatsApp into the installed app (manifest share_target): goes to the latest book."""
-    projects = project_service.get_user_projects(current_user.id)
     files = [f for f in request.files.getlist("audio_files") if f and f.filename]
+    files = [f for f in files if is_allowed_audio(f.filename, f.mimetype)][:MAX_IMPORT_FILES]
+    projects = project_service.get_user_projects(current_user.id)
     if not projects:
         flash("Set up your book first, then share the voice notes again.", "error")
         return redirect(url_for("screens.start"))
-    project = projects[0]
-    files = [f for f in files if is_allowed_audio(f.filename, f.mimetype)][:MAX_IMPORT_FILES]
     if not files:
         flash("That share didn't include a voice note. Choose the files here instead.", "error")
-        return redirect(url_for("screens.import_notes", project_id=project["id"]))
-    keys = [_store_upload(f) for f in files]
-    recipe_id = recipe_service.create_received_recipe(project["id"], keys[0], source="import", audio_keys=keys,
-                                                      cook_name=project.get("storyteller_name"))
-    events_service.track("recipe_created", project_id=project["id"], recipe_id=recipe_id, actor="buyer",
-                         source="share")
-    pipeline_service.enqueue_processing(recipe_id)
-    flash("Got the voice notes. We're writing the recipe down.", "success")
-    return redirect(url_for("screens.review", project_id=project["id"], recipe_id=recipe_id))
+        return redirect(url_for("screens.import_notes", project_id=projects[0]["id"]))
+    _drop_shared()  # an earlier share that was never placed
+    flask_session[SHARED_KEY] = {"user": current_user.id, "keys": [_store_upload(f) for f in files]}
+    return redirect(url_for("screens.share_choose"))
+
+
+@bp.route("/share", methods=["GET"])
+@login_required
+def share_choose():
+    """Where do the shared notes go: a wishlist dish, a new dish, or instead of a page's voice note."""
+    keys = _shared_keys()
+    projects = project_service.get_user_projects(current_user.id)
+    if not keys or not projects:
+        return redirect(url_for("screens.home_redirect"))
+    project = next((p for p in projects if p["id"] == request.args.get("book", type=int)), projects[0])
+    recipes = recipe_service.get_project_recipes(project["id"])
+    return _render("app/share.html", project, count=len(keys), books=projects,
+                   dishes=[d for d in dish_service.list_dishes(project["id"]) if d["status"] == "wishlist"],
+                   redo=[r for r in recipes if r["status"] in ("needs_review", "failed")],
+                   back_url=url_for("screens.home", project_id=project["id"]))
+
+
+@bp.route("/p/<int:project_id>/share", methods=["POST"])
+@owned_project
+def share_place(project):
+    keys = _shared_keys()
+    if not keys:
+        flash("Those voice notes have already been added.", "info")
+        return redirect(url_for("screens.home", project_id=project["id"]))
+    choice = request.form.get("place", "")
+    if choice.startswith("redo-"):
+        recipe = _recipe_or_404(project, int(choice[5:]) if choice[5:].isdigit() else 0)
+        flask_session.pop(SHARED_KEY, None)
+        return _replace_notes(project, recipe, keys, "share")
+    wishlist = [d for d in dish_service.list_dishes(project["id"]) if d["status"] == "wishlist"]
+    dish = next((d for d in wishlist if choice == f"dish-{d['id']}"), None)
+    typed = dish_service.clean_titles([request.form.get("new_dish", "")])
+    flask_session.pop(SHARED_KEY, None)
+    return _add_dish(project, keys, dish["id"] if dish else None,
+                     dish["title"] if dish else (typed[0] if typed else None), source="share")
+
+
+@bp.route("/share/cancel", methods=["POST"])
+@login_required
+def share_cancel():
+    _drop_shared()
+    flash("Left out. Nothing was added.", "info")
+    return redirect(url_for("screens.home_redirect"))
+
+
+def _shared_keys():
+    pending = flask_session.get(SHARED_KEY) or {}
+    return pending.get("keys") if pending.get("user") == current_user.id else None
+
+
+def _drop_shared():
+    pending = flask_session.pop(SHARED_KEY, None) or {}
+    recipe_service.discard_audio(pending.get("keys") or [])
 
 
 def _dish_choice(project_id, wishlist):

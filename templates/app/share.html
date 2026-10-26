@@ -1,0 +1,33 @@
+{% extends "app/_shell.html" %}
+{% from "components/ui.html" import csrf %}
+{% block content %}
+<h1>Where does {{ 'this voice note' if count == 1 else 'these ' ~ count ~ ' voice notes' }} go?</h1>
+<p class="muted">Shared from your phone. {% if count > 1 %}All of them go on one page, in the order they were shared.{% endif %}</p>
+
+{% if books | length > 1 %}
+<label>Which book?</label>
+<div class="chip-options">
+{% for b in books %}<a class="chip-option" href="{{ url_for('screens.share_choose', book=b.id) }}"><span {% if b.id == project.id %}class="on"{% endif %}>{{ b.title }}</span></a>{% endfor %}
+</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('screens.share_place', project_id=project.id) }}" class="stack">{{ csrf() }}
+  <div class="chip-options stacked">
+  {% for d in dishes %}
+    <label class="chip-option"><input type="radio" name="place" value="dish-{{ d.id }}" {% if loop.first %}checked{% endif %}><span>{{ d.title }}</span></label>
+  {% endfor %}
+    <label class="chip-option"><input type="radio" name="place" value="new" {% if not dishes %}checked{% endif %}><span>A new dish</span></label>
+  </div>
+  <input type="text" name="new_dish" placeholder="Dish name (optional)" maxlength="80" aria-label="Dish name" data-picks="new">
+  {% if redo %}
+  <p class="small muted">Or use {{ 'it' if count == 1 else 'them' }} instead of the voice note on a page that came out wrong:</p>
+  <div class="chip-options stacked">
+  {% for r in redo %}
+    <label class="chip-option"><input type="radio" name="place" value="redo-{{ r.id }}"><span>Instead of “{{ r.recipe_title or 'Untitled' }}”</span></label>
+  {% endfor %}
+  </div>
+  {% endif %}
+  <button class="btn btn-primary btn-block" type="submit">{{ icon('upload') }} Add to {{ project.title }}</button>
+</form>
+<form method="post" action="{{ url_for('screens.share_cancel') }}">{{ csrf() }}<button class="btn btn-ghost btn-block" type="submit">Leave {{ 'it' if count == 1 else 'them' }} out</button></form>
+{% endblock %}

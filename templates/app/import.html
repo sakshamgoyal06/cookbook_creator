@@ -7,7 +7,12 @@
 {% else %}
 <h1>Add voice notes</h1>
 {% endif %}
-<p class="muted">Pick all the notes for one dish. On WhatsApp, long-press a voice note, tap Share (or Forward to yourself), and save it to your phone.</p>
+<p class="muted">Pick all the notes for one dish.</p>
+<details class="more-actions">
+  <summary>Getting voice notes out of WhatsApp</summary>
+  <p class="small"><b>Android:</b> in the chat, long-press the voice notes, tap ⋮ then Share, and pick {{ config.APP_NAME }}. They come straight here; no need to save them first. (This needs {{ config.APP_NAME }} added to your home screen.)</p>
+  <p class="small"><b>iPhone:</b> long-press a voice note, tap Forward, then the share icon at the bottom right, and Save to Files. Then tap the button below and pick it from Files. iPhones don't let home-screen apps receive shares directly.</p>
+</details>
 <form method="post" enctype="multipart/form-data" class="stack">
   {{ csrf() }}
   <label for="audio_files">Voice notes <span class="hint">(up to {{ max_files }}; {{ formats }})</span></label>

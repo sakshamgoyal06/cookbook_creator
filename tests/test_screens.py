@@ -377,13 +377,89 @@ def test_uploads_are_validated_and_private(client, monkeypatch):
     assert client.post(f"/p/{other}/uploads/rec-mine-0001/chunk/0", data=b"x").status_code == 404
 
 
-def test_sharing_voice_notes_from_whatsapp_adds_them_to_the_latest_book(auth_client, monkeypatch):
+def _share(client, *files):
+    return client.post("/share", data={"text": "", "audio_files": [
+        (io.BytesIO(body), name, kind) for body, name, kind in files]}, content_type="multipart/form-data")
+
+
+WA_NOTE = (b"a", "PTT-20261025-WA0001.opus", "audio/ogg")
+
+
+def test_sharing_from_whatsapp_asks_which_dish_then_adds_the_page(auth_client, monkeypatch):
     _stub_ai(monkeypatch)
-    assert auth_client.post("/share", data={}).headers["Location"].endswith("/start")
+    assert _share(auth_client, WA_NOTE).headers["Location"].endswith("/start")
     pid = _onboard(auth_client)
-    response = auth_client.post("/share", data={"text": "", "audio_files": [
-        (io.BytesIO(b"a"), "PTT-20261025-WA0001.opus", "audio/ogg"), (io.BytesIO(b"b"), "x.jpg", "image/jpeg")]},
-        content_type="multipart/form-data")
+
+    response = _share(auth_client, WA_NOTE, (b"b", "x.jpg", "image/jpeg"), (b"c", "PTT-2.opus", "audio/ogg"))
+    assert response.headers["Location"].endswith("/share")
+    page = auth_client.get("/share").data.decode()
+    assert "these 2 voice notes" in page and "Rajma" in page and "Aloo paratha" in page and "A new dish" in page
+    assert not recipe_service.get_project_recipes(pid)  # nothing is added until a dish is picked
+
+    rajma = next(d for d in dish_service.list_dishes(pid) if d["title"] == "Rajma")
+    response = auth_client.post(f"/p/{pid}/share", data={"place": f"dish-{rajma['id']}"})
     rid = int(response.headers["Location"].split("/")[-1])
-    assert len(recipe_service.get_recipe(rid)["audio_clips"]) == 1
-    assert recipe_service.get_recipe(rid)["project_id"] == pid
+    recipe = recipe_service.get_recipe(rid)
+    assert recipe["project_id"] == pid and len(recipe["audio_clips"]) == 2
+    assert next(d for d in dish_service.list_dishes(pid) if d["id"] == rajma["id"])["recipe_id"] == rid
+    assert "recipe_created" in _event_names()
+    # The share is used up: a second tap (or the back button) adds nothing.
+    assert auth_client.get("/share").headers["Location"].endswith("/home")
+    auth_client.post(f"/p/{pid}/share", data={"place": "new"})
+    assert len(recipe_service.get_project_recipes(pid)) == 1
+
+
+def test_a_shared_note_can_be_a_new_dish_or_replace_a_page(auth_client, monkeypatch):
+    _stub_ai(monkeypatch)
+    pid = _onboard(auth_client)
+    _share(auth_client, WA_NOTE)
+    response = auth_client.post(f"/p/{pid}/share", data={"place": "new", "new_dish": "  Kadhi pakora "})
+    rid = int(response.headers["Location"].split("/")[-1])
+    assert next(d for d in dish_service.list_dishes(pid) if d["title"] == "Kadhi pakora")["recipe_id"] == rid
+
+    recipe_service.set_status(rid, "failed")
+    _share(auth_client, (b"new", "PTT-3.opus", "audio/ogg"))
+    title = recipe_service.get_recipe(rid)["recipe_title"]
+    assert f"Instead of “{title}”" in auth_client.get("/share").data.decode()
+    old_keys = [c["storage_key"] for c in recipe_service.get_recipe(rid)["audio_clips"]]
+    auth_client.post(f"/p/{pid}/share", data={"place": f"redo-{rid}"})
+    new_keys = [c["storage_key"] for c in recipe_service.get_recipe(rid)["audio_clips"]]
+    assert new_keys and new_keys != old_keys and len(recipe_service.get_project_recipes(pid)) == 1
+
+
+def test_leaving_a_share_out_deletes_the_files(auth_client, monkeypatch):
+    _stub_ai(monkeypatch)
+    pid = _onboard(auth_client)
+    deleted = []
+    monkeypatch.setattr(recipe_service, "discard_audio", lambda keys: deleted.extend(keys))
+    _share(auth_client, WA_NOTE)
+    _share(auth_client, WA_NOTE)  # a second share replaces an unplaced first one
+    assert len(deleted) == 1
+    auth_client.post("/share/cancel")
+    assert len(deleted) == 2 and not recipe_service.get_project_recipes(pid)
+    assert auth_client.get("/share").status_code == 302
+
+
+def test_a_share_with_several_books_can_go_to_any_of_them(auth_client, monkeypatch):
+    _stub_ai(monkeypatch)
+    first = _onboard(auth_client)
+    second = _onboard(auth_client)
+    project_service.update_setup(first, title="Nani's kitchen")
+    _share(auth_client, WA_NOTE)
+    page = auth_client.get(f"/share?book={first}").data.decode()
+    assert "Nani&#39;s kitchen" in page and f'action="/p/{first}/share"' in page
+    auth_client.post(f"/p/{first}/share", data={"place": "new"})
+    assert len(recipe_service.get_project_recipes(first)) == 1 and not recipe_service.get_project_recipes(second)
+
+
+def test_sign_in_remembers_the_phone_and_only_returns_to_local_pages(client):
+    register(client)
+    client.get("/logout")
+    login = {"email": "mom@example.com", "password": "secret123"}
+    response = client.post("/login?next=https://evil.example/x", data=login)
+    assert response.headers["Location"] == "/dashboard"
+    assert "remember_token=" in response.headers.get("Set-Cookie", "") or any(
+        "remember_token" in h for h in response.headers.getlist("Set-Cookie"))
+    client.get("/logout")
+    response = client.post("/login?next=/share", data=login)
+    assert response.headers["Location"] == "/share"

@@ -151,6 +151,11 @@ def delete_recipe(recipe_id):
     _delete_files([photo] if photo else [], namespace="photos")
 
 
+def discard_audio(keys):
+    """Voice notes that were stored but never became part of a recipe (e.g. a share left unplaced)."""
+    _delete_files(keys)
+
+
 def _delete_files(keys, namespace="audio"):
     from services import storage_service
     for key in keys:
