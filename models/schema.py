@@ -137,6 +137,8 @@ projects = Table(
     Column("cover_layout", Text, nullable=False, server_default="photo"),
     Column("cook_photo_key", Text),
     Column("family_photo_key", Text),
+    # How each photo sits in its spot: {"cook": {"x", "y", "zoom"}, "family": {...}} (photo_service).
+    Column("photo_crops", JSONType),
     _created_at(),
     _updated_at(),
     CheckConstraint(_in("cook_mode", COOK_MODES), name="cook_mode"),
@@ -178,6 +180,7 @@ recipes = Table(
     # Set in assisted mode when the person speaking isn't the project's storyteller.
     Column("cook_name", Text),
     Column("photo_key", Text),
+    Column("photo_crop", JSONType),
     _created_at(),
     _updated_at(),
     CheckConstraint(_in("status", RECIPE_STATUSES), name="status"),

@@ -210,5 +210,17 @@ a.chip-option { text-decoration: none; color: inherit; }
 .photo-empty { display: flex; align-items: center; justify-content: center; color: var(--tawa-2); }
 .photo-title { font-weight: 600; margin: 0; overflow-wrap: anywhere; }
 .photo-slot form { margin-top: 6px; }
+
+/* Fit the photo: the frame is the photo's spot in the book, in its real shape. */
+.fit-spot { margin: 0; }
+.fit-frame { position: relative; overflow: hidden; width: 100%; margin: 0 auto; background: var(--line);
+  border-radius: 6px; touch-action: none; cursor: grab; user-select: none; }
+.fit-frame:active { cursor: grabbing; }
+.fit-frame.shape-oval, .fit-frame.shape-round { border-radius: 50%; }
+.fit-frame img { position: absolute; max-width: none; pointer-events: none; }
+[data-photo-fit]:not(.ready) .fit-frame img { visibility: hidden; }
+.fit-extra .fit-frame { width: 60%; }
+.fit-spot figcaption { text-align: center; margin-top: 6px; }
 .file-btn { position: relative; overflow: hidden; }
 .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+[data-photo-fit] input[type=range] { width: 100%; accent-color: var(--leaf); height: 28px; }

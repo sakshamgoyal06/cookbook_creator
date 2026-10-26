@@ -1156,10 +1156,14 @@ def book_photo(project, slot):
     field = PHOTO_SLOTS[slot]
     key = None if request.form.get("remove") else _save_upload(f"p{project['id']}-{slot}")
     if key or request.form.get("remove"):
-        project_service.update_design(project["id"], **{field: key})
+        crops = {k: v for k, v in (project.get("photo_crops") or {}).items() if k != slot}  # a new photo starts centred
+        project_service.update_design(project["id"], **{field: key, "photo_crops": crops})
         photo_service.delete_photo(project.get(field))
     nxt = request.form.get("next")
-    return redirect(nxt if _safe_next(nxt) else url_for("screens.design", project_id=project["id"]))
+    nxt = nxt if _safe_next(nxt) else url_for("screens.design", project_id=project["id"])
+    if key:  # straight on to fitting it into its spot
+        return redirect(url_for("screens.photo_fit", project_id=project["id"], slot=slot, next=nxt))
+    return redirect(nxt)
 
 
 @bp.route("/p/<int:project_id>/r/<int:recipe_id>/photo", methods=["POST"])
@@ -1172,8 +1176,54 @@ def recipe_photo(project, recipe_id):
         if recipe["status"] == "approved" and recipe.get("pdf_filename"):
             _make_pdf(recipe["id"])  # the page's PDF shows the photo
     nxt = request.form.get("next")
-    return redirect(nxt if _safe_next(nxt)
-                    else url_for("screens.review", project_id=project["id"], recipe_id=recipe_id))
+    nxt = nxt if _safe_next(nxt) else url_for("screens.review", project_id=project["id"], recipe_id=recipe_id)
+    if key:
+        return redirect(url_for("screens.photo_fit", project_id=project["id"], slot=f"r{recipe_id}", next=nxt))
+    return redirect(nxt)
+
+
+def _photo_spots(project, slot):
+    """(photo key, crop, the spots it appears in, title, recipe or None) for a cook, family or r<id> slot."""
+    if slot in PHOTO_SLOTS:
+        crop = (project.get("photo_crops") or {}).get(slot)
+        if slot == "cook":
+            places = (["cover"] if book_design.cover_layout(project) == "photo" else []) + ["about"]
+            title = f"{cook_label(project)}'s photo"
+        else:
+            places, title = ["family"], "Family photo"
+        return project.get(PHOTO_SLOTS[slot]), crop, [book_design.photo_frame(project, p) for p in places], title, None
+    if slot.startswith("r") and slot[1:].isdigit():
+        recipe = _recipe_or_404(project, int(slot[1:]))
+        frame = book_design.photo_frame(project, pdf_service.dish_photo_place(project, recipe))
+        title = recipe.get("recipe_title") or "Dish photo"
+        return recipe.get("photo_key"), recipe.get("photo_crop"), [frame], title, recipe
+    abort(404)
+
+
+@bp.route("/p/<int:project_id>/photos/<slot>/fit", methods=["GET", "POST"])
+@owned_project
+def photo_fit(project, slot):
+    """Drag and zoom a photo to sit right in its spot in the book (photo_service crops)."""
+    key, crop, frames, title, recipe = _photo_spots(project, slot)
+    nxt = request.values.get("next")
+    nxt = nxt if _safe_next(nxt) else url_for("screens.design", project_id=project["id"]) + "#photos"
+    if not key:
+        return redirect(nxt)
+    if request.method == "POST":
+        crop = photo_service.clean_crop(request.form)
+        if recipe is None:
+            project_service.update_design(project["id"], photo_crops={**(project.get("photo_crops") or {}), slot: crop})
+        else:
+            recipe_service.set_photo_crop(recipe["id"], crop)
+            if recipe["status"] == "approved" and recipe.get("pdf_filename"):
+                _make_pdf(recipe["id"])
+        events_service.track("photo_fitted", project_id=project["id"], actor="buyer", slot=slot[:1])
+        flash("Saved. Make the book PDF again to see it in place.", "success")
+        return redirect(nxt)
+    return _render("app/photo_fit.html", project, tab="book", slot=slot, title=title, frames=frames,
+                   crop=photo_service.clean_crop(crop), max_zoom=photo_service.MAX_ZOOM, next_url=nxt,
+                   photo_url=url_for("screens.book_photo_file", project_id=project["id"], slot=slot, v=key[-8:]),
+                   back_url=nxt)
 
 
 @bp.route("/p/<int:project_id>/photos/<slot>.jpg")
