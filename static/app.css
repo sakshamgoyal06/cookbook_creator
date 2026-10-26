@@ -109,6 +109,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--leaf); outl
 .list { list-style: none; margin: 0; padding: 0; }
 .list li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .list li:last-child { border-bottom: 0; }
+.list.card { padding: 0 16px; }
+.list .item { min-width: 0; }
+h1, h2, .title { overflow-wrap: anywhere; }
 .list a.item { color: inherit; text-decoration: none; display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
 
 /* Progress ring */
@@ -143,10 +146,26 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--leaf); outl
 .toggle { display: flex; background: var(--line); border-radius: 999px; padding: 4px; margin: 16px 0; }
 .toggle a { flex: 1; text-align: center; padding: 8px; border-radius: 999px; color: var(--tawa-2); text-decoration: none; font-weight: 600; }
 .toggle a.on { background: var(--steel); color: var(--tawa); }
-.ing-row { display: grid; grid-template-columns: 3.5em 5.5em 1fr; gap: 6px; margin-bottom: 8px; }
-.ing-row input { min-height: 44px; padding: 8px 10px; }
-.ing-row input[name=ing_note] { grid-column: 1 / -1; font-size: .9rem; min-height: 40px; }
-.steps-list { padding-left: 24px; } .steps-list li { margin-bottom: 10px; }
+/* One ingredient: the name on top, amount and measure side by side, then the note */
+.ing-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px; margin-bottom: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--steel); }
+.ing-row textarea, .ing-row input { min-height: 44px; padding: 8px 10px; }
+.ing-row textarea { resize: none; overflow: hidden; line-height: 1.4; }
+.ing-row [name=ing_item] { grid-column: 1 / -1; font-weight: 600; }
+.ing-row [name=ing_note] { grid-column: 1 / -1; font-size: .9rem; min-height: 40px; }
+/* Method: the number sits in its own gutter, the text box takes the rest */
+.steps-list { list-style: none; counter-reset: step; padding: 0; margin: 0; }
+.steps-list li { counter-increment: step; display: grid; grid-template-columns: 28px 1fr; column-gap: 8px; margin-bottom: 12px; }
+.steps-list li::before { content: counter(step) "."; font-weight: 600; padding-top: 11px; color: var(--tawa-2); }
+.steps-list li > * { grid-column: 2; }
+textarea[data-autogrow] { resize: none; overflow: hidden; }
+textarea[rows="1"] { min-height: 48px; }
+.amount-row + .amount-row { border-top: 1px solid var(--line); padding-top: 12px; }
+.amount-item { margin: 0 0 6px; overflow-wrap: anywhere; }
+.amount-fields { display: grid; grid-template-columns: 1fr 1.4fr; gap: 6px; }
+.more-actions { margin-top: 24px; }
+.more-actions summary { cursor: pointer; color: var(--tawa-2); padding: 12px 0; }
+.more-actions > * + * { margin-top: 10px; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--leaf); font: inherit; text-decoration: underline; cursor: pointer; }
 .qr { background: #fff; padding: 8px; margin: 0 auto; display: block; }
 
 /* Recorder */

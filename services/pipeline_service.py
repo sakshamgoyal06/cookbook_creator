@@ -20,6 +20,9 @@ log = logging.getLogger(__name__)
 RETRY_INTERVALS = [30, 120, 600]
 
 
+MISSING_AUDIO = "The voice note file is missing."
+
+
 class PermanentError(Exception):
     """A failure that retrying will not fix, such as an empty transcript."""
 
@@ -102,12 +105,24 @@ def _transcribe(audio_keys):
         raise PermanentError("Recipe has no audio.")
     parts = []
     for key in audio_keys:
-        with storage_service.local_copy("audio", key) as path:
-            parts.append((ai_service.transcribe_audio(path) or "").strip())
+        try:
+            with storage_service.local_copy("audio", key) as path:
+                parts.append((ai_service.transcribe_audio(path) or "").strip())
+        except FileNotFoundError as e:  # e.g. local storage wiped by a redeploy: retrying can't bring it back
+            raise PermanentError(MISSING_AUDIO) from e
     transcript = "\n\n".join(p for p in parts if p)
     if not transcript:
         raise PermanentError("Transcription returned empty text.")
     return transcript
+
+
+def failure_reason(recipe_id):
+    """Why a recipe last failed, in words the buyer can act on: "missing_audio" or "unclear"."""
+    with get_engine().connect() as conn:
+        error = conn.execute(select(pipeline_runs.c.error)
+                             .where(pipeline_runs.c.recipe_id == recipe_id, pipeline_runs.c.status == "failed")
+                             .order_by(pipeline_runs.c.id.desc()).limit(1)).scalar()
+    return "missing_audio" if error and MISSING_AUDIO in error else "unclear"
 
 
 def _run_stage(recipe_id, stage, provider, model, work):

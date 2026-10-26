@@ -23,7 +23,7 @@
 | 3 | [Analytics events](#3-analytics-events) | | OPS-3, §10 | 1 | Done (each module adds its own events) |
 | 4 | [Data model v2](#4-data-model-v2) | | §14 | 1 | Done (edge cases land with modules 5–7) |
 | 5 | [Onboarding and gift setup](#5-onboarding-and-gift-setup) | R1–R8 | BUY-1…BUY-5, ENG-3 | 2, 3, 4 | Built; gift card and drag reorder left |
-| 6 | [Requester home and recipe review](#6-requester-home-and-recipe-review) | R9, R10, R13 | DASH-1…DASH-3 | 5 | Built |
+| 6 | [Requester home and recipe review](#6-requester-home-and-recipe-review) | R9, R10, R13 | DASH-1…DASH-3 | 5 | Built; amounts step, delete/restart and page PDF added after the first phone test |
 | 7 | [Recording in the app (self and assisted)](#7-recording-in-the-app-self-and-assisted) | S1–S5 | DASH-5, QR-10 | 2, 4 | Built; device matrix and cook switcher left |
 | 8 | [Listen pages and QR](#8-listen-pages-and-qr) | F1, F3, F5, R13 | QR-1…QR-9 | 2 | Done; print test and in-app browser checks left |
 | 9 | [WhatsApp capture](#9-whatsapp-capture) | C1, C2 | WA-1, WA-2, WA-5, WA-6, BUY-5 | 4, 5 | **On hold** |
@@ -35,6 +35,9 @@
 | 15 | [Mom's page](#15-moms-page-optional-p1) | C6–C8 | | 7, 9 | P1 unless Saksham decides otherwise |
 | 16 | [Upsell, admin and metrics](#16-upsell-admin-and-metrics) | | UP-1, OPS-1, OPS-3 | 3, 13 | |
 | 17 | [Launch readiness](#17-launch-readiness) | | §13 | all | |
+| 18 | [**Book design and customization**](#18-book-design-and-customization-priority) | R14 (new) | BOOK-1…BOOK-5 | 14 | **Priority** (added 2026-10-26): today's PDF is too generic |
+
+**Next up (2026-10-26):** module 18, book design and customization, is the top priority after the first phone test.
 
 Why this order: modules 2–4 unblock every screen. Module 7 (recording in the app) needs no WhatsApp approval, so self mode and assisted mode can be tested end to end while module 9 is on hold. The Phase 0 pilot runs by hand alongside all of this.
 
@@ -246,6 +249,10 @@ Screens: **R9** Home · **R10** Review a page · **R13** Voice link + QR (backen
 - [~] R10 (add and remove rows; reorder and "Ask her" later): player for all clips (original, follow-up, story) in order; "Recipe / What she said" toggle (structured vs transcript); ingredients and steps as **form rows** (add, remove, reorder) replacing the raw JSON editor (DASH-2); flagged approximations highlighted with "Ask her" (module 10) or "Leave as she said it"; Approve
 - [x] Approve also generates the page PDF and card image in the background (no separate Generate PDF button)
 - [x] Failed recipe: "We couldn't hear this one" chip, Try again (re-runs the pipeline from the failed stage) and "Record again" (goes to S2 or asks the cook)
+- [x] (added after the first phone test, 2026-10-26) Amounts step before approval: every vague or missing quantity on one screen, one WhatsApp message to ask the cook for all of them; blanks keep "andaaze se"; AI follow-up questions now cover steps and timings only
+- [x] (2026-10-26) Recipe page PDF from the recipe itself (draft preview while checking, the approved page after)
+- [x] (2026-10-26) Stuck or wrong recipe: Try again after 10 minutes "writing", "Write it again from the voice note", Record again or Upload instead (both replace the old note), Delete
+- [x] (2026-10-26) A voice note lost to a redeploy says so, instead of "we couldn't hear this one"
 - [x] R13 restyled on the new shell (QR, play count this week and all time, save PNG/SVG, copy link, make new link, make private)
 - [x] Edits count recorded (fields changed) for the PRD quality metric
 
@@ -558,6 +565,32 @@ Screens: **C6** Cook's page · **C7** Speaking a recipe · **C8** Her finished p
 - [ ] Cost check: AI + messaging per 10-recipe book ≤ ₹250 on real pilot data (§11)
 - [ ] Support playbook: cook stuck, payment failed, QR doesn't scan, recording lost
 - [ ] Trademark and domain checked for the final name; `APP_NAME` and `PUBLIC_BASE_URL` set
+
+---
+
+## 18. Book design and customization (priority)
+
+Added 2026-10-26 after Saksham's first phone test: the generated PDF works but looks generic. The book is the thing people pay for and give, so it has to feel made for this family.
+
+Screens: **R14** Design your book (new; from the Book tab), with a live preview of the cover and one recipe page.
+
+### Build
+- [ ] 3–4 designed book styles, not colour swaps: e.g. *Heirloom* (warm paper, serif, ornament dividers), *Modern kitchen* (clean, photo-led), *Festive* (rich colours, rangoli-style borders), *Handwritten* (Kalam for tips and notes). Each with Devanagari-safe fonts.
+- [ ] Cover: title, subtitle, the cook's photo (upload + crop), occasion line, and a choice of 2–3 cover layouts
+- [ ] Opening pages: dedication, "about the cook" with photo, a family photo page, a contents page with page numbers
+- [ ] Recipe pages: optional dish photo; tips in a handwritten style; the cook's own phrases pulled out as a quote; QR with "Scan to hear Sunita ji" styled per theme; one-page and two-page layouts chosen automatically by length
+- [ ] Sections by category (Breakfast, Dal, Sabzi, Sweets…) with divider pages; drag to reorder recipes
+- [ ] Closing pages: a note from the family, a blank "add your own" page, back cover with the book QR
+- [ ] Print-ready output: A5 and 8×8 in square, 3 mm bleed, 300 dpi images, embedded fonts; a phone-friendly digital PDF as well
+- [ ] R14 screen: style picker, colour accent, cover photo, fonts preview, "Preview whole book" (first 4 pages as images)
+- [ ] Per-recipe PDF uses the same style as the book
+
+### Decisions needed from Saksham
+- Which 3–4 styles to design first (a moodboard thread can prepare options)
+- Print sizes to support at launch (A5 only, or A5 + square)
+- Whether photos are P0 (needs uploads and storage on R2)
+
+**Acceptance:** five people shown the book PDF without context describe it as a "keepsake" or "gift", not a "printout"; it prints cleanly on a home inkjet and at a print shop.
 
 ---
 
