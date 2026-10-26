@@ -6,13 +6,13 @@
 <input type="text" id="storyteller_name" name="storyteller_name" value="{{ project.storyteller_name or current_user.name }}" required maxlength="60" autocomplete="name">
 {% else %}
 <h1>Who's the cook?</h1>
-<label>What do you call them?</label>
+<label>What do you call them? <span class="hint">(this is how the app and the book will name them)</span></label>
 <div class="chip-options">
 {% for option in address_options %}
-  <label class="chip-option"><input type="radio" name="storyteller_address_as" value="{{ option }}" {% if (project.storyteller_address_as or 'Mummy') == option %}checked{% endif %}><span>{{ option }}</span></label>
+  <label class="chip-option"><input type="radio" name="storyteller_address_as" value="{{ option }}" {% if project.storyteller_address_as == option %}checked{% endif %}><span>{{ option }}</span></label>
 {% endfor %}
 </div>
-<input type="text" name="address_as_other" placeholder="Something else, like Ammi or Badi Mummy" maxlength="30" aria-label="Something else" value="{{ project.storyteller_address_as if project.storyteller_address_as and project.storyteller_address_as not in address_options else '' }}">
+<input type="text" name="address_as_other" placeholder="Something else, like Ammi, Badi Mummy or Mamaji" maxlength="30" aria-label="Something else" value="{{ project.storyteller_address_as if project.storyteller_address_as and project.storyteller_address_as not in address_options else '' }}">
 <label for="storyteller_name">Their name for the cover <span class="hint">(optional, e.g. Sunita Sharma)</span></label>
 <input type="text" id="storyteller_name" name="storyteller_name" value="{{ project.storyteller_name or '' }}" maxlength="60">
 {% if project.cook_mode == 'whatsapp' %}

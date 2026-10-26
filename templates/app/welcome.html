@@ -1,11 +1,11 @@
 {% extends "app/_shell.html" %}
 {% block content %}
 <section class="hero">
-  <h1>Her recipes, in her voice, for the whole family.</h1>
-  <p class="muted">Mummy speaks a recipe the way she always explains it. We write it down as a beautiful page, and a QR code on every page plays her voice.</p>
+  <h1>Family recipes, in the voice of the one who cooks them.</h1>
+  <p class="muted">Mummy, Nani or Papa explains a recipe the way they always do. We write it down as a beautiful page, and a QR code on every page plays their voice.</p>
   <div class="card sample">
     <p class="quote">“Rajma raat bhar bhigo ke rakhna, aur tadka tab tak bhuno jab tak tel alag na ho jaaye.”</p>
-    <p class="small muted">From a sample page · Every page keeps her own words and measures: katori, mutthi, andaaze se.</p>
+    <p class="small muted">From a sample page · Every page keeps the cook's own words and measures: katori, mutthi, andaaze se.</p>
   </div>
   <div class="actions">
     <a class="btn btn-primary btn-block" href="{{ url_for('register') }}">Start a cookbook</a>
@@ -13,9 +13,9 @@
   </div>
 </section>
 <ol class="how">
-  <li><strong>She speaks.</strong> A voice note on WhatsApp, or you record her in the app.</li>
+  <li><strong>They speak.</strong> A voice note on WhatsApp, or you record them in the app.</li>
   <li><strong>We write it down.</strong> You check the page before it goes in the book.</li>
-  <li><strong>The family listens.</strong> Scan a page, hear her voice. Keep it forever.</li>
+  <li><strong>The family listens.</strong> Scan a page, hear their voice. Keep it forever.</li>
 </ol>
 <p class="small muted center">Top 10 recipes · ₹{{ "{:,}".format(config.TIERS.top10.price_inr) }} in India · about ${{ config.TIERS.top10.price_usd }} abroad</p>
 {% endblock %}
