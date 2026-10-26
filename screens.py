@@ -15,6 +15,7 @@ from flask_login import current_user, login_required
 import config
 from services import (
     amounts_service,
+    book_design,
     copy,
     dish_service,
     events_service,
@@ -22,6 +23,7 @@ from services import (
     listen_service,
     payment_service,
     pdf_service,
+    photo_service,
     pipeline_service,
     project_service,
     question_service,
@@ -1038,26 +1040,130 @@ def book(project):
                    steps=SETUP_STEPS[project["cook_mode"]], order=payment_service.paid_order(project["id"]))
 
 
+# ─── Design your book R14 (module 18) ──────────────────────────
+
+DESIGN_TEXT_FIELDS = {"title": 80, "subtitle": 120, "dedication": 400, "about_author": 1500,
+                      "introduction": 200, "acknowledgement": 800}
+PHOTO_SLOTS = {"cook": "cook_photo_key", "family": "family_photo_key"}
+
+
+@bp.route("/p/<int:project_id>/design", methods=["GET", "POST"])
+@owned_project
+def design(project):
+    pid = project["id"]
+    if request.method == "POST":
+        values = book_design.validate(request.form, project)
+        for field, limit in DESIGN_TEXT_FIELDS.items():
+            if field in request.form:
+                values[field] = request.form[field].strip()[:limit]
+        if not values.get("title", project["title"]):
+            values.pop("title")
+        project_service.update_design(pid, **values)
+        events_service.track("book_design_saved", project_id=pid, actor="buyer",
+                             style=values.get("theme", project.get("theme")))
+        flash("Saved. Make the book PDF again to see the changes.", "success")
+        return redirect(url_for("screens.design", project_id=pid))
+    approved = [r for r in recipe_service.get_project_recipes(pid) if r["status"] == "approved"]
+    return _render("app/design.html", project, tab="book", approved=approved,
+                   styles=book_design.STYLES, sizes=book_design.SIZES, layouts=book_design.COVER_LAYOUTS,
+                   style=book_design.style_key(project), size=book_design.size_key(project),
+                   accent=book_design.accent(project), layout=book_design.cover_layout(project),
+                   latest_pdf=project_service.latest_book_pdf(pid), back_url=url_for("screens.book", project_id=pid))
+
+
+def _save_upload(prefix):
+    """The uploaded photo's storage key, or None after flashing why it couldn't be used."""
+    upload = request.files.get("photo")
+    if not upload or not upload.filename:
+        flash("Pick a photo first.", "error")
+        return None
+    try:
+        return photo_service.save_photo(upload.stream, prefix)
+    except photo_service.PhotoError as exc:
+        flash(str(exc), "error")
+        return None
+
+
+@bp.route("/p/<int:project_id>/photos/<slot>", methods=["POST"])
+@owned_project
+def book_photo(project, slot):
+    """The cook's photo (cover, About the cook) or the family photo; `remove` takes it off."""
+    if slot not in PHOTO_SLOTS:
+        abort(404)
+    field = PHOTO_SLOTS[slot]
+    key = None if request.form.get("remove") else _save_upload(f"p{project['id']}-{slot}")
+    if key or request.form.get("remove"):
+        project_service.update_design(project["id"], **{field: key})
+        photo_service.delete_photo(project.get(field))
+    nxt = request.form.get("next")
+    return redirect(nxt if _safe_next(nxt) else url_for("screens.design", project_id=project["id"]))
+
+
+@bp.route("/p/<int:project_id>/r/<int:recipe_id>/photo", methods=["POST"])
+@owned_project
+def recipe_photo(project, recipe_id):
+    recipe = _recipe_or_404(project, recipe_id)
+    key = None if request.form.get("remove") else _save_upload(f"p{project['id']}-r{recipe['id']}")
+    if key or request.form.get("remove"):
+        photo_service.delete_photo(recipe_service.set_photo(recipe["id"], key))
+        if recipe["status"] == "approved" and recipe.get("pdf_filename"):
+            _make_pdf(recipe["id"])  # the page's PDF shows the photo
+    nxt = request.form.get("next")
+    return redirect(nxt if _safe_next(nxt)
+                    else url_for("screens.review", project_id=project["id"], recipe_id=recipe_id))
+
+
+@bp.route("/p/<int:project_id>/photos/<slot>.jpg")
+@owned_project
+def book_photo_file(project, slot):
+    """A photo for the owner's own screens; slot is cook, family or r<recipe id>."""
+    if slot in PHOTO_SLOTS:
+        key = project.get(PHOTO_SLOTS[slot])
+    elif slot.startswith("r") and slot[1:].isdigit():
+        key = _recipe_or_404(project, int(slot[1:])).get("photo_key")
+    else:
+        abort(404)
+    if not key or not storage_service.exists("photos", key):
+        abort(404)
+    return storage_service.send("photos", key)
+
+
 # ─── Whole book and reveal day R12 ─────────────────────────────
 
 @bp.route("/p/<int:project_id>/book/compile", methods=["POST"])
 @owned_project
 def compile_book(project):
+    nxt = request.form.get("next")
+    back = nxt if _safe_next(nxt) else url_for("screens.book", project_id=project["id"])
     approved = [recipe_service.get_recipe(r["id"]) for r in recipe_service.get_project_recipes(project["id"])
                 if r["status"] == "approved"]
     if not approved:
         flash("Approve at least one page first.", "error")
-        return redirect(url_for("screens.book", project_id=project["id"]))
+        return redirect(back)
     try:
         key = pdf_service.generate_book_pdf(project, approved)
     except Exception:
         current_app.logger.exception("Book PDF failed for project %s", project["id"])
         flash("We couldn't make the book PDF just now. Please try again in a minute.", "error")
-        return redirect(url_for("screens.book", project_id=project["id"]))
+        return redirect(back)
     project_service.save_book_pdf(project["id"], key)
     events_service.track("book_compiled", project_id=project["id"], actor="buyer", recipes=len(approved))
     flash(f"The book is ready: {len(approved)} page{'s' if len(approved) != 1 else ''}.", "success")
-    return redirect(url_for("screens.book", project_id=project["id"]))
+    return redirect(back)
+
+
+@bp.route("/p/<int:project_id>/book/print.pdf")
+@owned_project
+def book_print_file(project):
+    """The print-shop PDF: same book with 3 mm bleed and crop marks. Made fresh each time."""
+    approved = [recipe_service.get_recipe(r["id"]) for r in recipe_service.get_project_recipes(project["id"])
+                if r["status"] == "approved"]
+    if not approved:
+        abort(404)
+    key = pdf_service.generate_book_pdf(project, approved, print_ready=True)
+    events_service.track("book_print_pdf_made", project_id=project["id"], actor="buyer",
+                         size=book_design.size_key(project))
+    return storage_service.send("pdfs", key, download_name=f"{project['title']} (print).pdf")
 
 
 @bp.route("/p/<int:project_id>/book.pdf")

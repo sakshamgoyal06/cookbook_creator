@@ -162,8 +162,8 @@ def test_pdf_includes_qr_and_listen_link(auth_client, monkeypatch):
 
     monkeypatch.setattr(pdf_service, "render_template", spy)
     auth_client.post(f"/projects/{project_id}/recipes/{row_id}/generate-pdf")
-    assert captured["listen_url"] == f"https://cookbook.example.com/l/{token}"
-    assert captured["qr_data_uri"].startswith("data:image/svg+xml")
+    assert captured["page"]["listen_url"] == f"https://cookbook.example.com/l/{token}"
+    assert captured["page"]["qr"].startswith("data:image/svg+xml")
 
 
 def test_book_page_lists_recipes_with_players(auth_client, client):

@@ -4,38 +4,88 @@
 <head>
     <meta charset="UTF-8">
     <title>{{ project.title }}</title>
-    <style>
-        .book-cover, .book-front { page-break-after: always; text-align: center; padding-top: 6cm; }
-        .book-cover h1 { font-size: 2.8rem; color: #2E5B45; margin: 0 0 .4cm; font-weight: normal; }
-        .book-cover .by { font-size: 1.2rem; color: #5E574C; }
-        .book-cover .qr { margin-top: 3cm; font-size: .85rem; color: #5E574C; }
-        .book-front { padding-top: 5cm; font-size: 1.2rem; font-style: italic; color: #24211C; }
-        .contents { page-break-after: always; }
-        .contents h2 { color: #2E5B45; font-weight: normal; }
-        .contents ol { font-size: 1.1rem; line-height: 2; }
-        .book-recipe { page-break-after: always; }
-        .closing { text-align: center; padding-top: 6cm; color: #5E574C; }
-    </style>
+    <style>{{ page_css }}</style>
 </head>
-<body>
-<section class="book-cover">
-    <h1>{{ project.title }}</h1>
-    {% if voice_name %}<p class="by">Recipes in {{ voice_name }}'s own voice</p>{% endif %}
-    {% if project.occasion %}<p class="by">{{ project.occasion }}{% if project.reveal_date %} · {{ project.reveal_date.year }}{% endif %}</p>{% endif %}
-    {% if book_qr %}<div class="qr"><img src="{{ book_qr }}" alt="" style="width:3cm;height:3cm"><br>Scan to open the family cookbook</div>{% endif %}
+<body class="{{ body_classes }}">
+
+<section class="cover cover-{{ layout }}{{ ' has-photo' if cook_photo and layout == 'photo' }}">
+    <div class="cover-frame">
+        {% if cook_photo and layout == 'photo' %}<figure class="cover-photo"><img src="{{ cook_photo }}" alt=""></figure>{% endif %}
+        <div class="cover-text">
+            <p class="kicker">{{ kicker }}</p>
+            <h1 class="cover-title">{{ project.title }}</h1>
+            {% if project.subtitle %}<p class="cover-subtitle">{{ project.subtitle }}</p>{% endif %}
+            <div class="ornament"><span></span></div>
+            {% if voice_name %}<p class="cover-by">Recipes in {{ voice_name }}'s own voice</p>{% endif %}
+        </div>
+    </div>
 </section>
-{% if project.dedication %}<section class="book-front"><p>{{ project.dedication }}</p></section>{% endif %}
+
+{% if project.dedication %}
+<section class="opening dedication">
+    <div class="ornament"><span></span></div>
+    <p>{{ project.dedication }}</p>
+</section>
+{% endif %}
+
+{% if project.about_author or (cook_photo and layout != 'photo') %}
+<section class="opening about">
+    {% if cook_photo %}<figure class="about-photo"><img src="{{ cook_photo }}" alt=""></figure>{% endif %}
+    <p class="kicker">About the cook</p>
+    <h2>{{ cook_name or voice_name or 'The cook' }}</h2>
+    {% for para in (project.about_author or '').split('\n') if para.strip() %}<p>{{ para }}</p>{% endfor %}
+</section>
+{% endif %}
+
+{% if family_photo %}
+<section class="opening family">
+    <figure class="family-photo"><img src="{{ family_photo }}" alt=""></figure>
+    {% if project.introduction %}<p class="caption">{{ project.introduction }}</p>{% endif %}
+</section>
+{% endif %}
+
 <section class="contents">
+    <p class="kicker">Inside</p>
     <h2>Contents</h2>
-    <ol>{% for page in pages %}<li>{{ page.recipe.recipe_title }}</li>{% endfor %}</ol>
-    <p style="color:#5E574C;font-size:.9rem">Every page has a QR code. Scan it with a phone camera to hear the recipe told in {{ voice_name ~ "'s" if voice_name else "the cook's" }} voice.</p>
+    {% for section in sections %}
+    {% if show_dividers %}<h3><a href="#s-{{ loop.index }}">{{ section.title }}</a></h3>{% endif %}
+    <ol>{% for page in section.pages %}<li><a href="#r-{{ page.recipe.id }}">{{ page.recipe.recipe_title }}</a></li>{% endfor %}</ol>
+    {% endfor %}
+    <p class="contents-note">Every recipe has a QR code. Scan it with a phone camera to hear it told in {{ voice_name ~ "'s" if voice_name else "the cook's" }} voice.</p>
 </section>
-{% for page in pages %}
-<section class="book-recipe">{{ recipe_page(page.recipe, page.listen_url, page.qr, voice_name, cook_label) }}</section>
+
+{% for section in sections %}
+{% if show_dividers %}
+<section class="divider" id="s-{{ loop.index }}">
+    <p class="kicker">Chapter {{ loop.index }}</p>
+    <h2>{{ section.title }}</h2>
+    <div class="ornament"><span></span></div>
+    <p class="divider-count">{{ section.pages | length }} recipe{{ 's' if section.pages | length != 1 }}</p>
+</section>
+{% endif %}
+{% for page in section.pages %}{{ recipe_page(page, voice_name, cook_label) }}{% endfor %}
 {% endfor %}
-<section class="closing">
-    <p>Made with love, and with {{ config.APP_NAME }}.</p>
-    <p style="font-size:.85rem">The recordings stay private to the family. Anyone with a page can listen; the organiser can turn any link off.</p>
+
+<section class="closing notes">
+    <p class="kicker">For the next cook</p>
+    <h2>Add your own</h2>
+    <div class="lines">{% for _ in range(16) %}<div></div>{% endfor %}</div>
+</section>
+
+{% if project.acknowledgement %}
+<section class="closing note">
+    <div class="ornament"><span></span></div>
+    {% for para in project.acknowledgement.split('\n') if para.strip() %}<p>{{ para }}</p>{% endfor %}
+</section>
+{% endif %}
+
+<section class="back">
+    <div class="back-inner">
+        {% if book_qr %}<img class="qr" src="{{ book_qr }}" alt="QR code">
+        <p class="back-qr">Scan to open the family cookbook and hear every recipe</p>{% endif %}
+        <p class="back-made">Made with love{% if year %}, {{ year }}{% endif %} · {{ config.APP_NAME }}</p>
+        <p class="back-small">The recordings stay private to the family. The organiser can turn any link off.</p>
+    </div>
 </section>
 </body>
 </html>

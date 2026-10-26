@@ -1,0 +1,59 @@
+/* Rasoi diary: kraft paper, handwritten headings, taped-in photos, stamped labels. */
+:root {
+    --display-font: "Kalam", "Kalam Deva", cursive;
+    --body-font: "Lora", "Tiro Deva", serif;
+    --label-font: "Lora", "Tiro Deva", serif;
+    --ink: #3A2A1C;
+    --muted: #7B634A;
+    --rule: #B79D7A;
+}
+@page { background: #E9DABE url(paper-kraft.jpg); }
+@page cover { background: #E9DABE url(paper-kraft.jpg); }
+h1, h2, h3 { font-weight: 700; }
+.kicker { font-weight: 700; letter-spacing: .14em; }
+
+/* Photos look taped into the notebook: white border, a slight tilt, a strip of tape. */
+.cover-photo, .about-photo, .family-photo, .recipe-photo { position: relative; }
+.cover-photo img, .about-photo img, .family-photo img, .recipe-photo img {
+    border: 4mm solid #FFFDF7; border-bottom-width: 9mm; box-sizing: border-box;
+    box-shadow: .6mm .8mm 0 rgba(58, 42, 28, .18);
+}
+.cover-photo::after, .about-photo::after, .family-photo::after, .recipe-photo::after {
+    content: ""; position: absolute; top: -3mm; left: 50%; width: 34mm; height: 8mm; margin-left: -17mm;
+    background: rgba(240, 228, 196, .82); transform: rotate(-3deg);
+}
+
+.cover-title { color: var(--accent); font-size: 50pt; }
+.cover-subtitle { font-style: italic; }
+.cover.has-photo .cover-photo { left: 30mm; right: 30mm; top: 34mm; height: 140mm; transform: rotate(-2deg); }
+.size-a4 .cover.has-photo .cover-text { top: 190mm; }
+.size-wide .cover.has-photo .cover-photo { left: 24mm; right: auto; width: 128mm; top: 30mm; height: 150mm; }
+.size-wide .cover.has-photo .cover-text { left: 168mm; right: 20mm; top: 66mm; }
+.cover .ornament span, .divider .ornament span { border-radius: 50%; transform: none; }
+.ornament::before { border-top-style: dashed; }
+
+.about-photo { transform: rotate(-2deg); }
+.about-photo img { width: 72mm; height: 90mm; }
+.family-photo { transform: rotate(1deg); margin: 6mm 4mm 0; }
+
+.contents li { border-bottom-style: dashed; }
+.divider h2 { color: var(--accent); font-size: 54pt; }
+.divider .kicker { display: inline-block; border: 1.2pt solid var(--accent); padding: 1.5mm 4mm; transform: rotate(-3deg); }
+
+.recipe-title { color: var(--accent); font-size: 36pt; }
+.recipe-head .kicker { display: inline-block; border: 1pt solid var(--accent); padding: 1mm 3mm; transform: rotate(-2deg); }
+.recipe-meta li { border-left: 1pt dashed var(--rule); padding-left: 3mm; }
+.recipe-photo { transform: rotate(-1deg); margin: 2mm 4mm 9mm; }
+.photo-page .recipe-photo { padding: 18mm 22mm; margin: 0; transform: none; }
+.photo-page .recipe-photo img { transform: rotate(-1.5deg); }
+.photo-page .recipe-photo::after { top: 14mm; }
+.recipe-quote p { font-family: var(--display-font); font-size: 14pt; font-style: normal; color: var(--accent); }
+.recipe-body h2 { color: var(--ink); font-size: 18pt; }
+.ingredients li { border-bottom-style: dashed; }
+.tips { background: #FFFBF0; padding: 4mm 5mm 1mm; transform: rotate(.8deg); box-shadow: .6mm .8mm 0 rgba(58, 42, 28, .15);
+        background-image: linear-gradient(#FFFBF0 6.2mm, #E7DCC6 6.2mm, #E7DCC6 6.5mm); background-size: 100% 6.5mm; }
+.tips h2 { color: var(--accent); }
+.tips li { font-family: var(--display-font); font-size: 11.5pt; line-height: 6.5mm; margin: 0; }
+.method li::before { font-weight: 700; font-size: 18pt; }
+.listen { background: #FFFDF7; padding: 2mm 1.5mm; transform: rotate(2.5deg); box-shadow: .6mm .8mm 0 rgba(58, 42, 28, .15); }
+.listen-title { font-family: var(--display-font); font-size: 8.5pt; }

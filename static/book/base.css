@@ -1,0 +1,205 @@
+/* Shared structure for every book style (module 18). Each style sheet sets the fonts and colours
+   through custom properties on :root, so @page rules can use them too; --accent comes from the
+   book itself (book_design.page_css).
+   The recipe's two columns are a CSS table: in WeasyPrint, flex and grid columns don't split across
+   pages and a split float lets the next section start on its continuation page. */
+
+/* ── Fonts (Fontsource, SIL OFL; see static/fonts/LICENSE.txt). Latin and Devanagari are separate
+   families so a line of Hinglish or Hindi picks the right glyphs from the same typeface. ── */
+@font-face { font-family: "Cormorant"; src: url(../fonts/cormorant-garamond-latin-500-normal.woff); font-weight: 400 500; }
+@font-face { font-family: "Cormorant"; src: url(../fonts/cormorant-garamond-latin-500-italic.woff); font-weight: 400 500; font-style: italic; }
+@font-face { font-family: "Cormorant"; src: url(../fonts/cormorant-garamond-latin-700-normal.woff); font-weight: 600 700; }
+@font-face { font-family: "EB Garamond"; src: url(../fonts/eb-garamond-latin-400-normal.woff); }
+@font-face { font-family: "EB Garamond"; src: url(../fonts/eb-garamond-latin-400-italic.woff); font-style: italic; }
+@font-face { font-family: "EB Garamond"; src: url(../fonts/eb-garamond-latin-600-normal.woff); font-weight: 600 700; }
+@font-face { font-family: "Tiro Deva"; src: url(../fonts/tiro-devanagari-hindi-devanagari-400-normal.woff); }
+@font-face { font-family: "Tiro Deva"; src: url(../fonts/tiro-devanagari-hindi-devanagari-400-italic.woff); font-style: italic; }
+@font-face { font-family: "Kalam"; src: url(../fonts/kalam-latin-400-normal.woff); }
+@font-face { font-family: "Kalam"; src: url(../fonts/kalam-latin-700-normal.woff); font-weight: 600 700; }
+@font-face { font-family: "Kalam Deva"; src: url(../fonts/kalam-devanagari-400-normal.woff); }
+@font-face { font-family: "Kalam Deva"; src: url(../fonts/kalam-devanagari-700-normal.woff); font-weight: 600 700; }
+@font-face { font-family: "Lora"; src: url(../fonts/lora-latin-400-normal.woff); }
+@font-face { font-family: "Lora"; src: url(../fonts/lora-latin-400-italic.woff); font-style: italic; }
+@font-face { font-family: "Lora"; src: url(../fonts/lora-latin-700-normal.woff); font-weight: 600 700; }
+@font-face { font-family: "Poppins"; src: url(../fonts/poppins-latin-400-normal.woff); }
+@font-face { font-family: "Poppins"; src: url(../fonts/poppins-latin-600-normal.woff); font-weight: 500 600; }
+@font-face { font-family: "Poppins"; src: url(../fonts/poppins-latin-700-normal.woff); font-weight: 700 800; }
+@font-face { font-family: "Poppins Deva"; src: url(../fonts/poppins-devanagari-400-normal.woff); }
+@font-face { font-family: "Poppins Deva"; src: url(../fonts/poppins-devanagari-600-normal.woff); font-weight: 500 600; }
+@font-face { font-family: "Poppins Deva"; src: url(../fonts/poppins-devanagari-700-normal.woff); font-weight: 700 800; }
+@font-face { font-family: "Mukta"; src: url(../fonts/mukta-latin-400-normal.woff); }
+@font-face { font-family: "Mukta"; src: url(../fonts/mukta-latin-700-normal.woff); font-weight: 600 700; }
+@font-face { font-family: "Mukta Deva"; src: url(../fonts/mukta-devanagari-400-normal.woff); }
+@font-face { font-family: "Mukta Deva"; src: url(../fonts/mukta-devanagari-700-normal.woff); font-weight: 600 700; }
+@font-face { font-family: "Rozha"; src: url(../fonts/rozha-one-latin-400-normal.woff); }
+@font-face { font-family: "Rozha Deva"; src: url(../fonts/rozha-one-devanagari-400-normal.woff); }
+
+/* ── Pages ── */
+@page {
+    margin: 17mm 16mm 19mm;
+    @bottom-center { content: counter(page); font-size: 8.5pt; color: var(--muted); font-family: var(--body-font); }
+}
+@page cover { margin: 0; @bottom-center { content: none; } }
+@page full { margin: 0; @bottom-center { content: none; } }
+@page quiet { @bottom-center { content: none; } }
+
+html { font-size: 10.5pt; }
+body {
+    margin: 0;
+    font-family: var(--body-font);
+    color: var(--ink);
+    line-height: 1.45;
+}
+h1, h2, h3 { font-family: var(--display-font); font-weight: normal; margin: 0; }
+p { margin: 0 0 2.5mm; }
+a { color: inherit; text-decoration: none; }
+img { display: block; }
+
+.kicker {
+    font-family: var(--label-font);
+    font-size: 7.5pt;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 2mm;
+}
+
+/* A short rule with a diamond in the middle. */
+.ornament { position: relative; height: 4mm; width: 46mm; margin: 5mm auto; }
+.ornament::before {
+    content: ""; position: absolute; left: 0; right: 0; top: 2mm;
+    border-top: .6pt solid var(--rule);
+}
+.ornament span {
+    position: absolute; left: 21.6mm; top: .6mm; width: 2.8mm; height: 2.8mm;
+    background: var(--accent); transform: rotate(45deg);
+}
+
+/* ── Full-page sections. Their height is the page height, which differs by size. ── */
+.cover, .back { page: cover; break-before: page; overflow: hidden; position: relative; }
+.size-a4 .cover, .size-a4 .back { height: 297mm; }
+.size-wide .cover, .size-wide .back { height: 210mm; }
+.opening, .contents, .closing { page: quiet; break-before: page; }
+
+.cover-frame { position: absolute; top: 0; left: 0; right: 0; bottom: 0; text-align: center; }
+.cover-text { position: absolute; left: 20mm; right: 20mm; }
+.cover-title { font-size: 40pt; line-height: 1.05; }
+.cover-subtitle { font-size: 13pt; margin-top: 4mm; }
+.cover-by { font-size: 11pt; font-style: italic; }
+
+/* Title-only cover, and the photo cover when there's no photo: text centred on the page. */
+.cover .cover-text { top: 38%; }
+.cover.has-photo .cover-photo { position: absolute; margin: 0; }
+.cover.has-photo .cover-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+.dedication { text-align: center; padding-top: 70mm; }
+.size-wide .dedication { padding-top: 45mm; }
+.dedication p { font-size: 16pt; font-style: italic; line-height: 1.5; max-width: 120mm; margin: 0 auto; }
+
+.about { padding-top: 10mm; }
+.about-photo { margin: 0 0 8mm; }
+.about-photo img { width: 70mm; height: 88mm; object-fit: cover; }
+.about h2 { font-size: 26pt; margin-bottom: 5mm; }
+.about p { font-size: 11.5pt; line-height: 1.6; max-width: 150mm; }
+.size-wide .about-photo { float: left; margin: 0 12mm 0 0; }
+.size-wide .about::after { content: ""; display: block; clear: both; }
+
+.family { text-align: center; }
+.family-photo { margin: 0; }
+.family-photo img { width: 100%; height: 205mm; object-fit: cover; }
+.size-wide .family-photo img { height: 140mm; }
+.family .caption { font-style: italic; margin-top: 5mm; }
+
+.contents h2 { font-size: 26pt; margin-bottom: 8mm; }
+.contents h3 { font-size: 13pt; margin: 6mm 0 2mm; color: var(--accent); }
+.contents ol { list-style: none; padding: 0; margin: 0; }
+.contents li { font-size: 11.5pt; padding: 1.6mm 0; border-bottom: .4pt dotted var(--rule); }
+.contents li a::after { content: target-counter(attr(href), page); float: right; color: var(--muted); }
+.contents h3 a::after { content: target-counter(attr(href), page); float: right; font-size: 10pt; }
+.contents-note { margin-top: 10mm; font-size: 9.5pt; color: var(--muted); max-width: 120mm; }
+
+.divider { page: cover; break-before: page; position: relative; text-align: center; overflow: hidden; }
+.size-a4 .divider { height: 297mm; padding-top: 115mm; box-sizing: border-box; }
+.size-wide .divider { height: 210mm; padding-top: 72mm; box-sizing: border-box; }
+.divider h2 { font-size: 44pt; }
+.divider-count { font-size: 10pt; letter-spacing: .1em; }
+
+.notes h2 { font-size: 26pt; margin-bottom: 6mm; }
+.lines div { border-bottom: .5pt solid var(--rule); height: 12mm; }
+.size-wide .lines div { height: 7.5mm; }
+.note { text-align: center; padding-top: 60mm; }
+.note p { font-size: 13pt; font-style: italic; max-width: 130mm; margin: 0 auto 4mm; line-height: 1.6; }
+
+.back { text-align: center; }
+.back-inner { position: absolute; left: 20mm; right: 20mm; top: 34%; }
+.back .qr { width: 36mm; height: 36mm; margin: 0 auto 5mm; }
+.back-qr { font-size: 11pt; }
+.back-made { margin-top: 12mm; font-size: 10pt; }
+.back-small { font-size: 8pt; color: var(--muted); max-width: 110mm; margin: 0 auto; }
+
+/* ── Recipe pages ── */
+.recipe { break-before: page; }
+.recipe-head { margin-bottom: 5mm; }
+.recipe-title { font-size: 30pt; line-height: 1.08; }
+.recipe-aka { font-style: italic; color: var(--muted); margin: 2mm 0 0; }
+.recipe-meta { list-style: none; padding: 0; margin: 4mm 0 0; }
+.recipe-meta li { display: inline-block; margin-right: 9mm; vertical-align: top; }
+.recipe-meta .label { display: block; font-family: var(--label-font); font-size: 7pt; letter-spacing: .16em;
+                      text-transform: uppercase; color: var(--muted); }
+.recipe-meta .value { font-size: 11pt; }
+
+/* A4: the photo is a wide band at the top of the page. */
+.recipe-photo { margin: 0 0 6mm; }
+.recipe-photo img { width: 100%; height: 68mm; object-fit: cover; }
+
+/* A photo page: the photo fills a page of its own and the recipe follows. Always in the wide
+   hardcover (photo on the left page, recipe on the right), and on A4 when the recipe is too long
+   to share a page with its photo. */
+.photo-page .recipe-photo { page: full; break-after: page; margin: 0; box-sizing: border-box; }
+.size-a4 .photo-page .recipe-photo { height: 297mm; }
+.size-wide .photo-page .recipe-photo { height: 210mm; }
+.photo-page .recipe-photo img { height: 100%; }
+
+.recipe-quote { margin: 0 0 6mm; padding: 0; }
+.recipe-quote p { font-size: 13pt; font-style: italic; line-height: 1.4; margin: 0; }
+.recipe-quote cite { display: block; font-style: normal; font-size: 8.5pt; letter-spacing: .14em;
+                     text-transform: uppercase; color: var(--muted); margin-top: 2mm; }
+.recipe-quote cite::before { content: "— "; }
+
+.recipe-body { display: table; width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
+.recipe-side, .method { display: table-cell; vertical-align: top; }
+.recipe-side { width: 34%; }
+.method { padding-left: 7mm; }
+.recipe-body h2 { font-size: 15pt; margin-bottom: 3mm; }
+
+.ingredients ul, .tips ul { list-style: none; padding: 0; margin: 0 0 7mm; }
+.ingredients li { padding: 1mm 0; border-bottom: .4pt solid var(--rule); font-size: 10pt; line-height: 1.35; }
+.ingredients .qty { font-weight: 600; }
+.ingredients .prep { color: var(--muted); }
+.tips { break-inside: avoid; }
+.tips li { font-size: 10pt; margin-bottom: 2mm; }
+
+.method ol { list-style: none; padding: 0; margin: 0; counter-reset: step; }
+.method li { counter-increment: step; position: relative; padding-left: 10mm; margin-bottom: 3.2mm; break-inside: avoid; }
+.method li::before { content: counter(step); position: absolute; left: 0; top: -.5mm; font-family: var(--display-font);
+                     font-size: 15pt; line-height: 1; color: var(--accent); }
+.method li p { margin: 0; font-size: 10.5pt; hyphens: auto; }
+/* The wide page is short: a tighter head and list so most recipes still fit on one page. */
+.size-wide .recipe-head { margin-bottom: 4mm; min-height: 26mm; }
+.size-wide .recipe-title { font-size: 26pt; }
+.size-wide .recipe-meta { margin-top: 2.5mm; }
+.size-wide .recipe-quote { margin-bottom: 4mm; }
+.size-wide .recipe-quote p { font-size: 12pt; }
+.size-wide .recipe-side { width: 31%; }
+.size-wide .ingredients li { padding: .7mm 0; font-size: 9.5pt; }
+.size-wide .ingredients ul, .size-wide .tips ul { margin-bottom: 5mm; }
+.method .cues { font-size: 8.5pt; color: var(--muted); margin-top: 1mm; font-style: italic; }
+.extras { margin: 7mm 0 0; break-inside: avoid; }
+.extras dt { font-family: var(--label-font); font-size: 7pt; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+.extras dd { margin: .5mm 0 3mm; font-size: 10pt; }
+
+/* The QR sits in the top corner of the recipe, beside the title. */
+.recipe-head { position: relative; padding-right: 30mm; min-height: 30mm; }
+.listen { position: absolute; top: 0; right: 0; width: 25mm; text-align: center; }
+.listen .qr { width: 22mm; height: 22mm; margin: 0 auto 1.5mm; }
+.listen-title { font-family: var(--label-font); font-size: 7pt; line-height: 1.25; margin: 0; color: var(--accent); }

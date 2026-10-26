@@ -1,0 +1,87 @@
+{% extends "app/_shell.html" %}
+{% from "components/ui.html" import csrf %}
+{% from "app/_photo_card.html" import photo_card with context %}
+{% block content %}
+<h1>Design your book</h1>
+<p class="muted">Pick a look and add photos. Every page of the book, and each recipe's own PDF, follows it.</p>
+
+<form method="post" id="design-form">{{ csrf() }}
+  <h2 class="section-title">Style</h2>
+  <div class="style-cards">
+  {% for key, s in styles.items() %}
+    <label class="style-card">
+      <input type="radio" name="theme" value="{{ key }}" {% if key == style %}checked{% endif %}>
+      <span class="style-body">
+        <img src="{{ url_for('static', filename='book/previews/' ~ key ~ '.png') }}" alt="" loading="lazy" width="640" height="452">
+        <strong>{{ s.name }}</strong>
+        <span class="small muted">{{ s.blurb }}</span>
+      </span>
+    </label>
+  {% endfor %}
+  </div>
+
+  <h2 class="section-title">Colour</h2>
+  {% for key, s in styles.items() %}
+  <div class="chip-options" data-accents-for="{{ key }}" {% if key != style %}hidden{% endif %}>
+  {% for name, value in s.accents.items() %}
+    <label class="chip-option"><input type="radio" name="book_accent" value="{{ value }}" {% if key == style and value == accent %}checked{% endif %}><span><i class="swatch" style="background: {{ value }}"></i>{{ name }}</span></label>
+  {% endfor %}
+  </div>
+  {% endfor %}
+
+  <h2 class="section-title">Size</h2>
+  <div class="chip-options stacked">
+  {% for key, z in sizes.items() %}
+    <label class="chip-option"><input type="radio" name="book_size" value="{{ key }}" {% if key == size %}checked{% endif %}><span><b>{{ z.name }}</b>&nbsp;· {{ z.detail }}</span></label>
+  {% endfor %}
+  </div>
+
+  <h2 class="section-title">Cover</h2>
+  <div class="chip-options">
+  {% for key, label in layouts.items() %}
+    <label class="chip-option"><input type="radio" name="cover_layout" value="{{ key }}" {% if key == layout %}checked{% endif %}><span>{{ label }}</span></label>
+  {% endfor %}
+  </div>
+  <label for="title">Title</label>
+  <input type="text" id="title" name="title" maxlength="80" value="{{ project.title }}" required>
+  <label for="subtitle">A line under the title <span class="hint">(optional)</span></label>
+  <input type="text" id="subtitle" name="subtitle" maxlength="120" value="{{ project.subtitle or '' }}" placeholder="Forty years of Sunday lunches">
+
+  <h2 class="section-title">Opening and closing pages</h2>
+  <label for="dedication">Dedication <span class="hint">(optional, its own page)</span></label>
+  <textarea id="dedication" name="dedication" maxlength="400" rows="2" data-autogrow placeholder="For Mummy, who never measured anything and never got it wrong.">{{ project.dedication or '' }}</textarea>
+  <label for="about_author">About {{ cook }} <span class="hint">(optional; a page with their photo)</span></label>
+  <textarea id="about_author" name="about_author" maxlength="1500" rows="4" data-autogrow placeholder="Where they learnt to cook, the dish everyone asks for, what Sundays smelled like.">{{ project.about_author or '' }}</textarea>
+  <label for="introduction">Caption for the family photo <span class="hint">(optional)</span></label>
+  <input type="text" id="introduction" name="introduction" maxlength="200" value="{{ project.introduction or '' }}" placeholder="Diwali 2025, everyone at Nani's house">
+  <label for="acknowledgement">A note from the family <span class="hint">(optional, near the end)</span></label>
+  <textarea id="acknowledgement" name="acknowledgement" maxlength="800" rows="3" data-autogrow placeholder="We made this book so the recipes, and the voice, stay with us.">{{ project.acknowledgement or '' }}</textarea>
+
+  <div class="actions"><button class="btn btn-primary btn-block" type="submit">Save the design</button></div>
+</form>
+
+<h2 class="section-title" id="photos">Photos</h2>
+<p class="small muted">Phone photos are fine. Daylight near a window looks best; we size them for print.</p>
+<div class="card stack">
+  {{ photo_card('cook', project.cook_photo_key, cook ~ "'s photo", 'On the cover and the About page.', url_for('screens.book_photo', project_id=project.id, slot='cook')) }}
+  {{ photo_card('family', project.family_photo_key, 'Family photo', 'A full page near the start.', url_for('screens.book_photo', project_id=project.id, slot='family')) }}
+</div>
+{% if approved %}
+<h2 class="section-title">Dish photos</h2>
+<div class="card stack">
+  {% for r in approved %}
+  {{ photo_card('r' ~ r.id, r.photo_key, r.recipe_title, 'Optional. Shown on the recipe page.', url_for('screens.recipe_photo', project_id=project.id, recipe_id=r.id)) }}
+  {% endfor %}
+</div>
+{% endif %}
+
+<h2 class="section-title">See it</h2>
+<div class="actions">
+  <form method="post" action="{{ url_for('screens.compile_book', project_id=project.id) }}">{{ csrf() }}
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <button class="btn btn-primary btn-block" type="submit" {% if not approved %}disabled{% endif %}>{{ icon('book') }} Make the book PDF</button></form>
+  {% if latest_pdf %}<a class="btn btn-secondary btn-block" href="{{ url_for('screens.book_file', project_id=project.id) }}" target="_blank" rel="noopener">Open the latest book PDF</a>{% endif %}
+  {% if approved %}<a class="btn btn-ghost btn-block" href="{{ url_for('screens.book_print_file', project_id=project.id) }}">Print-shop PDF (with bleed and crop marks)</a>{% endif %}
+</div>
+{% if not approved %}<p class="small muted center">Approve a recipe first; the book PDF needs at least one page.</p>{% endif %}
+{% endblock %}

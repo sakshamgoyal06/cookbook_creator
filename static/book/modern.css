@@ -1,0 +1,68 @@
+/* Modern kitchen: white pages, Poppins, photo-led, big numbers, one strong colour. */
+:root {
+    --display-font: "Poppins", "Poppins Deva", sans-serif;
+    --body-font: "Mukta", "Mukta Deva", sans-serif;
+    --label-font: "Poppins", "Poppins Deva", sans-serif;
+    --ink: #1C1C1C;
+    --muted: #6E6E6E;
+    --rule: #E2E2E2;
+}
+@page { background: #FFFFFF; margin: 16mm 18mm 18mm;
+        @bottom-center { content: none; }
+        @bottom-right { content: counter(page); font-family: "Poppins"; font-weight: 600; font-size: 8pt; color: var(--muted); } }
+@page cover { background: #FFFFFF; }
+html { font-size: 10.5pt; }
+h1, h2, h3 { font-weight: 700; letter-spacing: -.01em; }
+.kicker { font-weight: 600; letter-spacing: .16em; }
+.ornament { width: 18mm; margin: 6mm 0; }
+.ornament::before { border-top: 2.5pt solid var(--accent); }
+.ornament span { display: none; }
+
+/* Cover: photo fills the top, title set big and left-aligned on white below. */
+.cover-frame { text-align: left; }
+.cover .cover-text { left: 20mm; right: 20mm; top: auto; bottom: 26mm; }
+.cover-title { font-size: 52pt; line-height: 1; }
+.cover-subtitle { color: var(--muted); }
+.cover-by { font-style: normal; font-weight: 600; color: var(--accent); }
+.cover.has-photo .cover-photo { top: 0; left: 0; right: 0; height: 190mm; }
+.size-wide .cover.has-photo .cover-photo { right: auto; width: 168mm; height: 210mm; }
+.size-wide .cover.has-photo .cover-text { left: 182mm; right: 16mm; bottom: auto; top: 60mm; }
+.size-wide .cover.has-photo .cover-title { font-size: 38pt; }
+.cover:not(.has-photo) { background: var(--accent); color: #fff; }
+.cover:not(.has-photo) .kicker, .cover:not(.has-photo) .cover-by, .cover:not(.has-photo) .cover-subtitle { color: #fff; }
+.cover:not(.has-photo) .ornament::before { border-top-color: #fff; }
+
+.dedication { text-align: left; padding-left: 10mm; }
+.dedication p { font-style: normal; font-family: var(--display-font); font-weight: 600; font-size: 20pt; margin: 0; }
+.dedication .ornament { margin-left: 0; }
+.note .ornament { margin-left: auto; margin-right: auto; }
+.about-photo img { width: 80mm; height: 100mm; }
+.about h2 { font-size: 30pt; }
+.family-photo img { height: 230mm; }
+
+.contents h2 { font-size: 34pt; }
+.contents li { border-bottom: .5pt solid var(--rule); font-weight: 600; font-family: var(--display-font); font-size: 10.5pt; }
+.contents li a::after { color: var(--accent); }
+
+.divider { background: var(--accent); color: #fff; text-align: left; padding-left: 22mm; }
+.divider .kicker, .divider-count { color: #fff; }
+.divider h2 { font-size: 58pt; }
+.divider .ornament { margin-left: 0; }
+.divider .ornament::before { border-top-color: #fff; }
+
+/* Recipe: photo band bleeds into the top margin, title bold, numbers big. */
+.recipe-photo { margin: -16mm -18mm 8mm; }
+.recipe-photo img { height: 96mm; }
+.photo-page .recipe-photo { margin: 0; }
+.recipe-title { font-size: 34pt; line-height: 1.02; }
+.recipe-meta { border-top: 2.5pt solid var(--accent); padding-top: 3mm; margin-top: 5mm; }
+.recipe-meta .value { font-family: var(--display-font); font-weight: 600; font-size: 10.5pt; }
+.recipe-quote { border-left: 2.5pt solid var(--accent); padding-left: 5mm; }
+.recipe-quote p { font-style: normal; font-size: 13pt; font-family: var(--display-font); font-weight: 400; }
+.recipe-side { background: #F5F3F0; padding: 5mm 5mm 1mm; box-sizing: border-box; }
+.recipe-body h2 { font-size: 11pt; text-transform: uppercase; letter-spacing: .14em; color: var(--accent); }
+.ingredients li { border-bottom-color: #E6E2DC; }
+.tips h2 { color: var(--ink); }
+.method li { padding-left: 13mm; }
+.method li::before { font-weight: 700; font-size: 22pt; top: -1.5mm; }
+.listen-title { font-weight: 600; }

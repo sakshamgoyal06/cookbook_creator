@@ -5,42 +5,92 @@ import uuid
 from flask import render_template
 from weasyprint import HTML
 import config
-from services import listen_service, project_service, qr_service, storage_service
+from services import book_design, listen_service, photo_service, project_service, qr_service, storage_service
+
+# A rough measure of how much of an A4 page a recipe fills (see _page); past this its photo
+# moves to a page of its own instead of sharing the page.
+PHOTO_SHARES_PAGE_UP_TO = 17
+# Chapters (section dividers) only make sense once a book has a few recipes in more than one kind.
+MIN_RECIPES_FOR_CHAPTERS = 4
+# The order chapters appear in when the categories match; anything else follows in recipe order.
+CHAPTER_ORDER = ("breakfast", "snack", "starter", "dal", "sabzi", "curry", "main", "rice", "bread", "roti",
+                 "side", "chutney", "pickle", "achaar", "sweet", "dessert", "mithai", "drink")
 
 
 def generate_recipe_pdf(recipe: dict) -> str:
-    listen_url = _listen_url(recipe)
-    voice, label = _names(recipe.get("project_id"))
+    project = project_service.get_project(recipe["project_id"]) if recipe.get("project_id") else None
+    voice, label = _names(project)
     html_content = render_template(
-        "cookbook_recipe_template.html",
-        recipe=recipe,
-        listen_url=listen_url,
-        qr_data_uri=_qr_for(recipe) if listen_url else None,
-        voice_name=voice,
-        cook_label=label,
+        "pdf/recipe.html", page=_page(recipe, book_design.size_key(project) == "wide"),
+        voice_name=voice, cook_label=label,
+        page_css=book_design.page_css(project), body_classes=book_design.body_classes(project),
     )
-
     slug = _slugify(recipe.get("recipe_title", "recipe"))
-    recipe_id = recipe.get("recipe_id", "unknown")
-    filename = f"{recipe_id}_{slug}.pdf"
-    _write_pdf(html_content, filename)
+    filename = f"{recipe.get('recipe_id', 'unknown')}_{slug}.pdf"
+    _write_pdf(html_content, filename, project)
     return filename
 
 
-def generate_book_pdf(project: dict, recipes: list) -> str:
-    """The whole book (BOOK-1/BOOK-2): cover, dedication, contents, one page per approved recipe, closing."""
-    voice, label = _names(project["id"])
-    pages = []
-    for recipe in recipes:
-        url = _listen_url(recipe)
-        pages.append({"recipe": recipe, "listen_url": url, "qr": _qr_for(recipe) if url else None})
-    html_content = render_template(
-        "pdf/book.html", project=project, pages=pages, voice_name=voice, cook_label=label,
-        book_qr=qr_service.make_qr_data_uri(listen_service.book_url(project["book_token"]), scale=10),
-    )
+def generate_book_pdf(project: dict, recipes: list, print_ready=False) -> str:
+    """The whole book (BOOK-1/BOOK-2, module 18) in the project's style and size.
+
+    print_ready adds 3 mm bleed and crop marks for a print shop; the default is the screen PDF.
+    """
     filename = f"book-{project['id']}-{uuid.uuid4().hex[:12]}_{_slugify(project['title'])}.pdf"
-    _write_pdf(html_content, filename)
+    _write_pdf(render_book_html(project, recipes, print_ready), filename, project)
     return filename
+
+
+def render_book_html(project, recipes, print_ready=False):
+    voice, label = _names(project)
+    wide = book_design.size_key(project) == "wide"
+    sections = _sections([_page(r, wide) for r in recipes])
+    reveal = project.get("reveal_date")
+    return render_template(
+        "pdf/book.html", project=project, sections=sections,
+        show_dividers=len(sections) > 1 and len(recipes) >= MIN_RECIPES_FOR_CHAPTERS,
+        voice_name=voice, cook_label=label, cook_name=project.get("storyteller_name"),
+        kicker=_kicker(project), year=reveal.year if reveal else None,
+        layout=book_design.cover_layout(project),
+        cook_photo=photo_service.data_uri(project.get("cook_photo_key")),
+        family_photo=photo_service.data_uri(project.get("family_photo_key")),
+        book_qr=qr_service.make_qr_data_uri(listen_service.book_url(project["book_token"]), scale=10),
+        page_css=book_design.page_css(project, print_ready), body_classes=book_design.body_classes(project),
+    )
+
+
+def _page(recipe, wide=False):
+    url = _listen_url(recipe)
+    photo = photo_service.data_uri(recipe.get("photo_key"))
+    steps = recipe.get("method_steps") or []
+    size = (len(recipe.get("ingredients") or []) + len(recipe.get("moms_tips") or [])
+            + sum(1 + len(s.get("instruction") or "") // 90 for s in steps)
+            + (2 if recipe.get("family_note") else 0) + (2 if recipe.get("serving_suggestion") else 0))
+    return {"recipe": recipe, "listen_url": url, "qr": _qr_for(recipe) if url else None, "photo": photo, "wide": wide,
+            "photo_page": bool(photo) and (wide or size > PHOTO_SHARES_PAGE_UP_TO)}
+
+
+def _sections(pages):
+    """Recipes grouped into chapters by category, in kitchen order where the names allow."""
+    groups = {}
+    for page in pages:
+        title = (page["recipe"].get("category") or "").strip().capitalize() or "More recipes"
+        groups.setdefault(title, []).append(page)
+
+    def rank(entry):
+        index, (title, _) = entry
+        name = title.lower()
+        return next((i for i, word in enumerate(CHAPTER_ORDER) if word in name), len(CHAPTER_ORDER)), index
+
+    ordered = sorted(enumerate(groups.items()), key=rank)
+    return [{"title": title, "pages": group} for _, (title, group) in ordered]
+
+
+def _kicker(project):
+    occasion = project.get("occasion")
+    if occasion and occasion != "Just because":
+        return f"A family cookbook for {occasion}"
+    return "A family cookbook"
 
 
 def _listen_url(recipe):
@@ -49,9 +99,8 @@ def _listen_url(recipe):
     return None
 
 
-def _names(project_id):
+def _names(project):
     """("Sunita ji", "Mummy") for the page's Listen line and tips heading."""
-    project = project_service.get_project(project_id) if project_id else None
     if not project:
         return None, None
     voice = listen_service.voice_name({"storyteller_name": project.get("storyteller_name"),
@@ -60,15 +109,12 @@ def _names(project_id):
     return voice, label
 
 
-def _write_pdf(html_content, filename):
-    css_path = os.path.join(config.BASE_DIR, "static", "cookbook.css")
+def _write_pdf(html_content, filename, project=None):
     handle, temp_path = tempfile.mkstemp(suffix=".pdf")
     os.close(handle)
     try:
-        HTML(string=html_content).write_pdf(
-            temp_path,
-            stylesheets=[css_path] if os.path.exists(css_path) else [],
-        )
+        HTML(string=html_content, base_url=config.BASE_DIR).write_pdf(
+            temp_path, stylesheets=book_design.stylesheets(project))
         storage_service.save_file("pdfs", filename, temp_path, content_type="application/pdf")
     finally:
         os.remove(temp_path)

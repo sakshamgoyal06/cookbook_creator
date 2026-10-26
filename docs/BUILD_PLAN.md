@@ -575,20 +575,20 @@ Added 2026-10-26 after Saksham's first phone test: the generated PDF works but l
 Screens: **R14** Design your book (new; from the Book tab), with a live preview of the cover and one recipe page.
 
 ### Build
-- [ ] 3–4 designed book styles, not colour swaps: e.g. *Heirloom* (warm paper, serif, ornament dividers), *Modern kitchen* (clean, photo-led), *Festive* (rich colours, rangoli-style borders), *Handwritten* (Kalam for tips and notes). Each with Devanagari-safe fonts.
-- [ ] Cover: title, subtitle, the cook's photo (upload + crop), occasion line, and a choice of 2–3 cover layouts
-- [ ] Opening pages: dedication, "about the cook" with photo, a family photo page, a contents page with page numbers
-- [ ] Recipe pages: optional dish photo; tips in a handwritten style; the cook's own phrases pulled out as a quote; QR with "Scan to hear Sunita ji" styled per theme; one-page and two-page layouts chosen automatically by length
-- [ ] Sections by category (Breakfast, Dal, Sabzi, Sweets…) with divider pages; drag to reorder recipes
-- [ ] Closing pages: a note from the family, a blank "add your own" page, back cover with the book QR
-- [ ] Print-ready output: A5 and 8×8 in square, 3 mm bleed, 300 dpi images, embedded fonts; a phone-friendly digital PDF as well
-- [ ] R14 screen: style picker, colour accent, cover photo, fonts preview, "Preview whole book" (first 4 pages as images)
-- [ ] Per-recipe PDF uses the same style as the book
+- [x] 4 designed book styles, not colour swaps (2026-10-26): *Heirloom* (cream paper, Garamond, gold rules; key `classic`), *Rasoi diary* (kraft paper, Kalam headings, taped-in photos; `rustic`), *Modern kitchen* (white, Poppins, photo-led; `modern`), *Utsav* (maroon and marigold, Rozha One, rangoli corners; `festive`). Each has 3 accent colours and Devanagari-safe fonts bundled in `static/fonts/` (Fontsource, OFL)
+- [x] Cover: title, subtitle, the cook's photo, occasion line; 2 layouts (with photo, title only). Crop is centre-crop for now
+- [x] Opening pages: dedication, "about the cook" with photo, a family photo page with caption, contents with page numbers
+- [x] Recipe pages: optional dish photo; tips styled per theme; the family note pulled out as a quote; QR with "Scan to hear Sunita ji" beside the title; a long recipe's photo moves to its own page automatically
+- [x] Sections by category (Breakfast, Dal, Sweets…) with divider pages, once a book has 4+ recipes in 2+ kinds
+- [ ] Drag to reorder recipes
+- [x] Closing pages: a note from the family, an "add your own" lined page, back cover with the book QR
+- [x] Print-ready output: A4 portrait and a wide hardcover (29.7 × 21 cm landscape, photo on its own page facing the recipe); print-shop PDF with 3 mm bleed and crop marks; photos stored at up to 2,500 px; fonts embedded. The normal PDF is the digital one
+- [x] R14 screen (`/p/<id>/design`): style picker with previews, colour, size, cover layout, opening and closing words, cook, family and dish photos
+- [ ] R14 "Preview whole book" as page images (needs poppler in the image); for now "Make the book PDF" and open it
+- [x] Per-recipe PDF uses the same style as the book
+- [ ] Interactive photo crop; spreads forced to left/right pages for print
 
-### Decisions needed from Saksham
-- Which 3–4 styles to design first (a moodboard thread can prepare options)
-- Print sizes to support at launch (A5 only, or A5 + square)
-- Whether photos are P0 (needs uploads and storage on R2)
+Decided by Saksham (2026-10-26): research-led styles (rustic, classy, modern, festive), print sizes A4 and a wider hardcover, photos in v1. Samples: `scripts/book_samples.py out/` (and `--previews` for the R14 images).
 
 **Acceptance:** five people shown the book PDF without context describe it as a "keepsake" or "gift", not a "printout"; it prints cleanly on a home inkjet and at a print shop.
 

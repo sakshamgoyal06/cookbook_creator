@@ -1,5 +1,6 @@
 {% extends "app/_shell.html" %}
 {% from "components/ui.html" import chip, player, csrf %}
+{% from "app/_photo_card.html" import photo_card with context %}
 {% macro ing_row(ing) %}
     <div class="ing-row">
       <textarea name="ing_item" rows="1" data-autogrow placeholder="Ingredient" aria-label="Ingredient">{{ ing.item if ing }}</textarea>
@@ -129,6 +130,8 @@
   </div>
 </form>
 <form method="post" id="reopen-amounts" action="{{ url_for('screens.reopen_amounts', project_id=project.id, recipe_id=recipe.id) }}" hidden>{{ csrf() }}</form>
+<h2 class="section-title" id="photo">Dish photo</h2>
+<div class="card">{{ photo_card('r' ~ recipe.id, recipe.photo_key, 'A photo of the dish', 'Optional. It goes on this recipe\'s page in the book.', url_for('screens.recipe_photo', project_id=project.id, recipe_id=recipe.id), anchor='#photo') }}</div>
 <details class="more-actions">
   <summary>Something wrong with this recipe?</summary>
   <form method="post" action="{{ url_for('screens.restart', project_id=project.id, recipe_id=recipe.id) }}" data-confirm="Start over from the voice note? Your edits to this page will be lost.">{{ csrf() }}<button class="btn btn-secondary btn-block" type="submit">Write it again from the voice note</button></form>

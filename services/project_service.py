@@ -77,6 +77,22 @@ SETUP_FIELDS = {
 }
 
 
+# The R14 "Design your book" screen (module 18).
+DESIGN_FIELDS = {
+    "theme", "book_size", "book_accent", "cover_layout", "cook_photo_key", "family_photo_key",
+    "title", "subtitle", "dedication", "about_author", "introduction", "acknowledgement",
+}
+
+
+def update_design(project_id, **values):
+    unknown = set(values) - DESIGN_FIELDS
+    if unknown:
+        raise ValueError(f"Not a design field: {', '.join(sorted(unknown))}")
+    if values:
+        with get_engine().begin() as conn:
+            conn.execute(update(projects).where(projects.c.id == project_id).values(**values, updated_at=func.now()))
+
+
 def update_setup(project_id, **values):
     """Save onboarding answers (BUILD_PLAN module 5). Only the listed fields can be set this way."""
     unknown = set(values) - SETUP_FIELDS

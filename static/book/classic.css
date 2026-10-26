@@ -1,0 +1,60 @@
+/* Heirloom: cream paper, Garamond, gold hairlines, everything centred and calm. */
+:root {
+    --display-font: "Cormorant", "Tiro Deva", serif;
+    --body-font: "EB Garamond", "Tiro Deva", serif;
+    --label-font: "EB Garamond", "Tiro Deva", serif;
+    --ink: #2B2620;
+    --muted: #7A6E5E;
+    --rule: #C9AE7C;
+    --gold: #B08D57;
+}
+@page { background: #FBF6EC url(paper-cream.jpg); }
+@page cover { background: #FBF6EC url(paper-cream.jpg); }
+html { font-size: 11pt; }
+.kicker { letter-spacing: .28em; }
+
+/* Cover: a double gold frame; the photo sits in an oval above the title. */
+.cover-frame { top: 12mm; left: 12mm; right: 12mm; bottom: 12mm; border: 1.2pt solid var(--gold); }
+.cover-frame::before { content: ""; position: absolute; top: 2.5mm; left: 2.5mm; right: 2.5mm; bottom: 2.5mm;
+                       border: .5pt solid var(--gold); }
+.cover-title { color: var(--accent); font-size: 46pt; font-weight: 500; }
+.cover-subtitle { font-style: italic; color: var(--muted); }
+.cover.has-photo .cover-photo { left: 50%; top: 34mm; width: 92mm; height: 118mm; margin-left: -46mm;
+                                border-radius: 50%; overflow: hidden; border: 1.2pt solid var(--gold); }
+.cover.has-photo .cover-photo img { border-radius: 50%; }
+.size-a4 .cover.has-photo .cover-text { top: 168mm; }
+.size-wide .cover.has-photo .cover-photo { left: 30mm; top: 30mm; width: 104mm; height: 138mm; margin-left: 0; }
+.size-wide .cover.has-photo .cover-text { left: 150mm; right: 24mm; top: 58mm; }
+
+.about { text-align: center; }
+.about-photo img { margin: 0 auto; border-radius: 50%; width: 64mm; height: 80mm; border: 1pt solid var(--gold); }
+.size-wide .about { text-align: left; }
+.about p { margin-left: auto; margin-right: auto; }
+.family-photo img { border: 6mm solid #fff; box-shadow: 0 0 0 .6pt var(--rule); }
+
+.contents { text-align: left; }
+.contents h2, .contents > .kicker { text-align: center; }
+
+.divider { color: var(--accent); }
+.divider h2 { font-size: 50pt; font-weight: 500; }
+.divider::before { content: ""; position: absolute; top: 14mm; left: 14mm; right: 14mm; bottom: 14mm;
+                   border: .6pt solid var(--gold); }
+
+/* Recipe: centred head, small caps labels, gold rules. */
+.recipe-head { text-align: center; }
+.recipe-title { color: var(--accent); font-weight: 500; font-size: 34pt; }
+.recipe-head::after { content: ""; display: block; width: 30mm; margin: 5mm auto 0; border-top: .8pt solid var(--gold); }
+.recipe-photo img { border: 4mm solid #fff; box-shadow: 0 0 0 .6pt var(--rule); box-sizing: border-box; }
+.photo-page .recipe-photo { padding: 14mm; }
+.recipe-quote { text-align: center; }
+.recipe-quote p { font-family: var(--display-font); font-size: 15pt; color: var(--ink); }
+.recipe-quote p::before { content: "“"; } .recipe-quote p::after { content: "”"; }
+.recipe-body h2 { font-variant: small-caps; letter-spacing: .08em; color: var(--accent); font-size: 16pt;
+                  border-bottom: .6pt solid var(--gold); padding-bottom: 1mm; }
+.ingredients li { border-bottom-color: #E6D8BC; }
+.tips { border-top: .6pt solid var(--gold); border-bottom: .6pt solid var(--gold); padding: 3mm 0 1mm; }
+.tips h2 { border: 0; }
+.tips li { font-style: italic; }
+.method li::before { font-style: italic; font-size: 17pt; }
+.recipe-head { padding-left: 30mm; }
+.listen .qr { border: .6pt solid var(--gold); padding: 1.2mm; background: #fff; }

@@ -1,0 +1,74 @@
+/* Utsav: maroon and marigold, Rozha One headings, framed pages with rangoli corners. */
+:root {
+    --display-font: "Rozha", "Rozha Deva", serif;
+    --body-font: "Mukta", "Mukta Deva", sans-serif;
+    --label-font: "Mukta", "Mukta Deva", sans-serif;
+    --ink: #2E1A14;
+    --muted: #7D5A48;
+    --rule: #E3B868;
+    --marigold: #E0A13A;
+}
+@page {
+    background: url(motif.svg) no-repeat -3mm -3mm / 16mm, url(motif-flip.svg) no-repeat right -3mm bottom -3mm / 16mm,
+                #FFF8EA url(paper-ivory.jpg);
+    margin: 15mm 15mm 18mm;
+    border: 1.4pt solid var(--marigold); padding: 5mm 6mm;
+    @bottom-center { font-family: "Rozha"; font-size: 10pt; color: var(--marigold); }
+}
+@page quiet { border: 1.4pt solid var(--marigold); }
+@page cover { background: var(--accent); }
+@page full { background: var(--accent); }
+html { font-size: 10.5pt; }
+.kicker { font-weight: 700; color: var(--marigold); letter-spacing: .22em; }
+.ornament::before { border-top-color: var(--marigold); }
+.ornament span { background: var(--marigold); }
+
+/* Cover: deep colour, a marigold double frame, the photo in a round marigold ring. */
+.cover { color: #FFF3DC; }
+.cover-frame { top: 11mm; left: 11mm; right: 11mm; bottom: 11mm; border: 3pt double var(--marigold); }
+.cover-frame::before { content: url(motif.svg); position: absolute; top: 2mm; left: 2mm; }
+.cover-frame::after { content: url(motif-flip.svg); position: absolute; bottom: 2mm; right: 2mm; }
+.cover-title { font-size: 50pt; color: #FFF3DC; }
+.cover-subtitle, .cover-by { color: #F6D79B; }
+.cover.has-photo .cover-photo { left: 50%; top: 36mm; width: 108mm; height: 108mm; margin-left: -54mm;
+                                border-radius: 50%; overflow: hidden; border: 3pt solid var(--marigold); }
+.cover.has-photo .cover-photo img { border-radius: 50%; }
+.size-a4 .cover.has-photo .cover-text { top: 162mm; }
+.size-wide .cover.has-photo .cover-photo { left: 36mm; top: 46mm; margin-left: 0; }
+.size-wide .cover.has-photo .cover-text { left: 160mm; right: 22mm; top: 60mm; }
+.back { color: #FFF3DC; }
+.back .back-small { color: #F6D79B; }
+.back .qr { border: 3mm solid #FFF8EA; }
+
+.dedication p { color: var(--accent); }
+.about h2, .contents h2, .notes h2 { color: var(--accent); }
+.about-photo img { border-radius: 50%; width: 70mm; height: 70mm; border: 2pt solid var(--marigold); }
+.size-a4 .about { text-align: center; }
+.size-a4 .about-photo img { margin: 0 auto; }
+.family-photo img { height: 190mm; border: 2pt solid var(--marigold); }
+.size-wide .family-photo img { height: 120mm; }
+
+.contents li { border-bottom-color: #EBCB8F; }
+.contents li a::after { color: var(--accent); font-family: var(--display-font); }
+.contents h3 { color: var(--accent); font-family: var(--display-font); }
+
+.divider { background: var(--accent); color: #FFF3DC; }
+.divider::before { content: ""; position: absolute; top: 11mm; left: 11mm; right: 11mm; bottom: 11mm; border: 3pt double var(--marigold); }
+.divider h2 { font-size: 56pt; }
+.divider-count { color: #F6D79B; }
+
+.recipe-head { text-align: center; }
+.recipe-title { color: var(--accent); font-size: 34pt; }
+.recipe-meta li { margin: 0 4.5mm; }
+.recipe-photo img { border: 2pt solid var(--marigold); border-radius: 3mm; }
+.photo-page .recipe-photo { padding: 16mm; }
+.recipe-quote { text-align: center; }
+.recipe-quote p { font-family: var(--display-font); font-style: normal; color: var(--accent); font-size: 13pt; }
+.recipe-body h2 { color: var(--accent); font-size: 17pt; }
+.recipe-side { background: #FCEBCB; border-radius: 3mm; padding: 5mm 5mm 1mm; box-sizing: border-box; }
+.ingredients li { border-bottom-color: #EDCB8C; }
+.tips h2 { font-size: 14pt; }
+.method li::before { color: var(--marigold); font-size: 18pt; }
+.recipe-head { padding-left: 30mm; }
+.listen .qr { border: 1.2pt solid var(--marigold); padding: 1.2mm; background: #fff; border-radius: 2mm; }
+.listen-title { color: var(--accent); }
