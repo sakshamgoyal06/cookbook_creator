@@ -1,7 +1,8 @@
 """Small helpers shared by templates: status chips, names and dates (UX spec §3)."""
 from datetime import date
 
-DEFAULT_ADDRESS = "Mummy"
+# Only when the buyer hasn't said what they call the cook; the app is for any family cook, not just Mummy.
+DEFAULT_ADDRESS = "the cook"
 
 
 def status_chip(status, address_as=None):
@@ -26,14 +27,14 @@ def days_until(day, today=None):
 
 
 def cook_display_name(project):
-    """How our own messages address the cook: "Sunita ji", else what the buyer calls her, else Mummy."""
+    """How our own messages address the cook: "Sunita ji", else what the buyer calls them, else "the cook"."""
     if project.get("storyteller_name"):
         return f"{project['storyteller_name'].split()[0]} ji"
     return project.get("storyteller_address_as") or DEFAULT_ADDRESS
 
 
 def cook_label(project):
-    """How the buyer's screens name the cook: what the buyer calls her ("Mummy"), else "Sunita ji"."""
+    """How the buyer's screens name the cook: what the buyer calls them ("Nani"), else "Sunita ji"."""
     return project.get("storyteller_address_as") or cook_display_name(project)
 
 

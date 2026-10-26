@@ -1,5 +1,6 @@
 import io
 import json
+import re
 from datetime import date, timedelta
 from urllib.parse import parse_qs, urlparse
 
@@ -266,6 +267,21 @@ def test_phone_numbers_and_invite_copy():
     text = copy.invite_text(project, "Kadhi")
     assert text.startswith("Dadi,") and "Kadhi" in text and "बनाती" not in text  # no gendered verbs
     assert copy.wa_link("a b&c", "+919876543210") == "https://wa.me/919876543210?text=a%20b%26c"
+
+
+def test_the_cook_is_never_assumed_to_be_mummy():
+    """Any family cook (Saksham, 2026-10-26): with nothing said, messages greet instead of guessing."""
+    named = {"storyteller_language": "hinglish", "storyteller_name": "Ramesh Gupta", "title": "T"}
+    assert copy.invite_text(named, "Chai").startswith("Ramesh ji,")
+    nobody = {"storyteller_language": "hi", "title": "T"}
+    assert copy.nudge_text(nobody).startswith("नमस्ते,")
+    assert copy.question_text(dict(nobody, storyteller_language="en"), "dal", "How long?").startswith("Hi,")
+    assert "the family's recipes" in copy.reveal_text(dict(nobody, storyteller_language="en"), "https://x")
+    from services.ui import cook_label, status_chip
+    assert cook_label({}) == "the cook" and status_chip("awaiting_mom")["label"] == "Waiting on the cook"
+    for path in ("services/copy.py", "templates/app/start.html", "templates/app/welcome.html"):
+        text = open(path, encoding="utf-8").read()
+        assert not re.search(r"\b(she|her)\b", text, re.IGNORECASE) and '"Mummy"' not in text, path
 
 
 def test_editing_an_approved_page_asks_for_approval_again(auth_client, monkeypatch):

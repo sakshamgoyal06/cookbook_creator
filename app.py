@@ -334,7 +334,7 @@ def book_join(token):
         return render_template("listen_private.html"), 404
     joined = session.get("family", {})
     member = family_service.get_member(book["id"], joined.get(str(book["id"]))) if joined.get(str(book["id"])) else None
-    cook = book["storyteller_address_as"] or (book["storyteller_name"] or "").split(" ")[0] or "Mummy"
+    cook = book["storyteller_address_as"] or (book["storyteller_name"] or "").split(" ")[0] or "the cook"
     if request.method == "GET":
         wanted = [d["title"] for d in dish_service.list_dishes(book["id"]) if d["status"] == "wishlist"][:8]
         return render_template("book_join.html", book=book, member=member, cook=cook, wanted=wanted)

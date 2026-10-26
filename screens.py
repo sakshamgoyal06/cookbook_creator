@@ -42,8 +42,9 @@ SETUP_STEPS = {
     "assisted": ("tier", "cook", "occasion", "dishes", "pay"),
     "self": ("tier", "cook", "occasion", "dishes", "pay"),
 }
-ADDRESS_OPTIONS = ("Mummy", "Maa", "Mumma", "Dadi", "Nani", "Papa")
-OCCASIONS = ("Diwali", "Birthday", "Mother's Day", "Anniversary", "Wedding", "Just because")
+# What the buyer calls the cook. Any family cook, not only Mummy; "Something else" takes the rest.
+ADDRESS_OPTIONS = ("Mummy", "Maa", "Papa", "Dadi", "Nani", "Dada", "Nana", "Bua", "Mausi", "Chachi")
+OCCASIONS = ("Diwali", "Birthday", "Mother's Day", "Father's Day", "Anniversary", "Wedding", "Just because")
 DISH_SUGGESTIONS = ("Rajma", "Dal makhani", "Aloo paratha", "Kadhi pakora", "Chole", "Gajar ka halwa",
                     "Bhindi masala", "Paneer butter masala", "Besan ladoo", "Khichdi")
 MAX_IMPORT_FILES = 10
@@ -609,7 +610,7 @@ def recipe_page_pdf(project, recipe_id):
 
 
 def _questions_for(project, recipe):
-    """S4: open follow-up questions, each with a WhatsApp link to ask the cook when she isn't in the app."""
+    """S4: open follow-up questions, each with a WhatsApp link to ask the cook when they aren't in the app."""
     if recipe["status"] != "needs_review":
         return []
     questions = question_service.open_questions(recipe["id"])

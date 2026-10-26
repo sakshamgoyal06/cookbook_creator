@@ -33,9 +33,24 @@ FAMILY_SHARE = {
 }
 
 
+# Opening word when the buyer hasn't said what they call the cook: a greeting, never a guess at Mummy.
+GREETING = {"hi": "नमस्ते", "hinglish": "Namaste", "en": "Hi"}
+# Whose recipes, in the reveal message, when there's neither a name nor what the family calls them.
+FAMILY_FALLBACK = {"hi": "घर", "hinglish": "Ghar", "en": "the family"}
+
+
+def _who(project, language):
+    """What the family calls the cook (Mummy, Nani, Papa, Bua…), else their name with ji, else a greeting."""
+    if project.get("storyteller_address_as"):
+        return project["storyteller_address_as"]
+    if project.get("storyteller_name"):
+        return f"{project['storyteller_name'].split()[0]} ji"
+    return GREETING[language]
+
+
 def invite_text(project, first_dish=None):
     language = project.get("storyteller_language") or "hinglish"
-    who = project.get("storyteller_address_as") or ("मम्मी" if language == "hi" else "Mummy")
+    who = _who(project, language)
     dish = first_dish or FIRST_DISH_FALLBACK[language]
     return INVITE[language].format(who=who, dish=dish)
 
@@ -61,7 +76,7 @@ QUESTION = {
 def question_text(project, dish, question):
     """A follow-up question the buyer forwards from their own WhatsApp while the bot is off."""
     language = project.get("storyteller_language") or "hinglish"
-    who = project.get("storyteller_address_as") or ("मम्मी" if language == "hi" else "Mummy")
+    who = _who(project, language)
     return QUESTION[language].format(who=who, dish=dish, question=question)
 
 
@@ -76,7 +91,7 @@ REVEAL = {
 def reveal_text(project, url):
     """The family-group message on reveal day, sent from the buyer's WhatsApp."""
     language = project.get("storyteller_language") or "hinglish"
-    who = project.get("storyteller_address_as") or project.get("storyteller_name") or "Mummy"
+    who = project.get("storyteller_address_as") or project.get("storyteller_name") or FAMILY_FALLBACK[language]
     return REVEAL[language].format(title=project["title"], who=who, url=url)
 
 
@@ -93,7 +108,7 @@ NUDGE = {
 def nudge_text(project, dish=None):
     """A gentle reminder after a quiet stretch (module 11, in-app part), sent from the buyer's WhatsApp."""
     language = project.get("storyteller_language") or "hinglish"
-    who = project.get("storyteller_address_as") or ("मम्मी" if language == "hi" else "Mummy")
+    who = _who(project, language)
     return NUDGE[language].format(who=who, dish=dish or FIRST_DISH_FALLBACK[language])
 
 
@@ -110,5 +125,5 @@ AMOUNTS = {
 def amounts_text(project, dish, items):
     """One WhatsApp message asking for every vague amount at once (the amounts step)."""
     language = project.get("storyteller_language") or "hinglish"
-    who = project.get("storyteller_address_as") or ("मम्मी" if language == "hi" else "Mummy")
+    who = _who(project, language)
     return AMOUNTS[language].format(who=who, dish=dish, items=", ".join(items))

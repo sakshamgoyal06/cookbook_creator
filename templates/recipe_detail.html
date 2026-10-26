@@ -78,7 +78,7 @@
 
     {% if recipe.moms_tips and recipe.moms_tips | length > 0 %}
     <div class="tips-box">
-        <h2>Mom's Tips</h2>
+        <h2>The cook's tips</h2>
         <ul>
             {% for tip in recipe.moms_tips %}
             <li>{{ tip }}</li>
@@ -108,10 +108,10 @@
 </div>
 
 <div class="card listen-link">
-    <h2>Listen to Mom</h2>
+    <h2>Listen to the cook</h2>
     {% if listen_url %}
-    <img src="{{ qr_data_uri }}" alt="QR code that plays Mom's voice" width="160" height="160">
-    <p><a href="{{ listen_url }}" target="_blank">&#9654; Listen to Mom</a> &middot; played {{ play_count }} time{{ '' if play_count == 1 else 's' }}</p>
+    <img src="{{ qr_data_uri }}" alt="QR code that plays the cook's voice" width="160" height="160">
+    <p><a href="{{ listen_url }}" target="_blank">&#9654; Listen</a> &middot; played {{ play_count }} time{{ '' if play_count == 1 else 's' }}</p>
     <p>
         <a href="{{ url_for('recipe_qr', project_id=project.id, recipe_id=recipe.id, fmt='png', download=1) }}">Download QR (PNG)</a> &middot;
         <a href="{{ url_for('recipe_qr', project_id=project.id, recipe_id=recipe.id, fmt='svg', download=1) }}">SVG</a>
