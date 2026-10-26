@@ -197,6 +197,7 @@ img { display: block; }
 .extras { margin: 7mm 0 0; break-inside: avoid; }
 .extras dt { font-family: var(--label-font); font-size: 7pt; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
 .extras dd { margin: .5mm 0 3mm; font-size: 10pt; }
+.photo-credit { margin: 6mm 0 0; font-size: 6.5pt; color: var(--muted); }
 
 /* The QR sits in the top corner of the recipe, beside the title. */
 .recipe-head { position: relative; padding-right: 30mm; min-height: 30mm; }

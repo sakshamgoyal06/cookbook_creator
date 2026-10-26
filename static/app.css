@@ -86,7 +86,7 @@ hr.soft { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
 /* Forms */
 label { display: block; font-weight: 600; margin: 16px 0 6px; }
 .hint { font-weight: 400; color: var(--tawa-2); font-size: .9rem; }
-input[type=text], input[type=email], input[type=password], input[type=tel], input[type=date], input[type=number], select, textarea {
+input[type=text], input[type=search], input[type=email], input[type=password], input[type=tel], input[type=date], input[type=number], select, textarea {
   width: 100%; min-height: 48px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--steel); color: var(--tawa); font: inherit; }
 textarea { min-height: 96px; }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--leaf); outline-offset: 1px; }
@@ -224,3 +224,12 @@ a.chip-option { text-decoration: none; color: inherit; }
 .file-btn { position: relative; overflow: hidden; }
 .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 [data-photo-fit] input[type=range] { width: 100%; accent-color: var(--leaf); height: 28px; }
+.find-search { gap: 8px; }
+.find-search { align-items: center; }
+.find-search input { min-width: 0; margin: 0; }
+.find-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.find-tile { display: flex; flex-direction: column; gap: 4px; padding: 0; min-width: 0; border: 0; background: none; text-align: left;
+  cursor: pointer; font: inherit; color: inherit; }
+.find-tile img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; background: var(--line); }
+.find-tile span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.find-tile:focus-visible img { outline: 3px solid var(--leaf); outline-offset: 2px; }

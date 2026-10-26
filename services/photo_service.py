@@ -108,6 +108,16 @@ def data_uri(key, frame=None, crop=None):
         return None
 
 
+def thumbnail(key, side=480):
+    """JPEG bytes of a small copy, for picking from a grid."""
+    with storage_service.local_copy("photos", key) as path, Image.open(path) as image:
+        image = image.convert("RGB")
+        image.thumbnail((side, side), Image.LANCZOS)
+        buffer = io.BytesIO()
+        image.save(buffer, "JPEG", quality=80)
+    return buffer.getvalue()
+
+
 def _fitted(path, frame, crop):
     with Image.open(path) as image:
         image = image.convert("RGB")

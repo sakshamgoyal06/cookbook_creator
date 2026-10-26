@@ -33,6 +33,7 @@ The app uses **SQLite** on a laptop and in tests, and **Postgres** when hosted. 
 | `listen_events` | One row per QR play, with no personal data. | 0003 |
 | `generated_files` | PDFs and images made for a project or recipe. Ownership checks on downloads look here. | 0002 |
 | `pipeline_runs` | One row per worker step (transcribe, structure…): status, attempts, error, model, tokens and cost in paise. | 0002 |
+| `dish_images` | The shared library of free-licence dish photos, filed by `dish_key` (the dish name, lowercased). Holds the licence, the creator and the stored copy; `use_count` counts the books that used it. A recipe using one has `photo_image_id` and `photo_credit` set. Photo crops live on `projects.photo_crops` and `recipes.photo_crop`. | 0010, 0011 |
 
 Deleting a project deletes its recipes, audio rows, files rows, plays and pipeline runs (`ON DELETE CASCADE`). Public links never use database ids; tokens come from `secrets.token_urlsafe(16)` (128 bits).
 

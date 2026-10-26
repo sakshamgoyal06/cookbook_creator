@@ -577,7 +577,7 @@ Screens: **R14** Design your book (new; from the Book tab), with a live preview 
 
 ### Build
 - [x] 4 designed book styles, not colour swaps (2026-10-26): *Heirloom* (cream paper, Garamond, gold rules; key `classic`), *Rasoi diary* (kraft paper, Kalam headings, taped-in photos; `rustic`), *Modern kitchen* (white, Poppins, photo-led; `modern`), *Utsav* (maroon and marigold, Rozha One, rangoli corners; `festive`). Each has 3 accent colours and Devanagari-safe fonts bundled in `static/fonts/` (Fontsource, OFL)
-- [x] Cover: title, subtitle, the cook's photo, occasion line; 2 layouts (with photo, title only). Crop is centre-crop for now
+- [x] Cover: title, subtitle, the cook's photo, occasion line; 2 layouts (with photo, title only)
 - [x] Opening pages: dedication, "about the cook" with photo, a family photo page with caption, contents with page numbers
 - [x] Recipe pages: optional dish photo; tips styled per theme; the family note pulled out as a quote; QR with "Scan to hear Sunita ji" beside the title; a long recipe's photo moves to its own page automatically
 - [x] Sections by category (Breakfast, Dal, Sweets…) with divider pages, once a book has 4+ recipes in 2+ kinds
@@ -587,11 +587,55 @@ Screens: **R14** Design your book (new; from the Book tab), with a live preview 
 - [x] R14 screen (`/p/<id>/design`): style picker with previews, colour, size, cover layout, opening and closing words, cook, family and dish photos
 - [ ] R14 "Preview whole book" as page images (needs poppler in the image); for now "Make the book PDF" and open it
 - [x] Per-recipe PDF uses the same style as the book
-- [ ] Interactive photo crop; spreads forced to left/right pages for print
+- [x] Fit the photo (2026-10-26): every photo can be dragged and zoomed inside the exact shape of its spot (oval, round, band or full page, per style and size). The original is kept and the crop is applied when the book is made. The screen opens after each upload
+- [x] Dish photos from the internet (2026-10-26): "Find one online" searches Openverse (no key needed) and Pexels (with `PEXELS_API_KEY`). Only licences free to print in a sold book and to crop are shown: CC0, public domain, CC BY and the Pexels licence; never BY-SA, NC or ND. The credit line is printed on the recipe page
+- [x] Shared dish photo library (`dish_images`): a picked photo is stored once under the dish name; the next book with that dish sees it first and gets a copy, with no search
+- [ ] Library, next: families can choose to share their own dish photos (opt-in, with consent wording); dish synonyms (rajma = kidney bean curry); "report this photo"; an admin view to remove a photo
+- [ ] Spreads forced to left/right pages for print
 
 Decided by Saksham (2026-10-26): research-led styles (rustic, classy, modern, festive), print sizes A4 and a wider hardcover, photos in v1. Samples: `scripts/book_samples.py out/` (and `--previews` for the R14 images).
 
 **Acceptance:** five people shown the book PDF without context describe it as a "keepsake" or "gift", not a "printout"; it prints cleanly on a home inkjet and at a print shop.
+
+---
+
+## 19. Nutrition and calories (planned, not built)
+
+Asked by Saksham on 2026-10-26: an option to show calories and nutrition in the book, worked out from each recipe. Off by default, switched on per book on R14.
+
+### Approach
+- **Code does the maths; Claude does the matching.** Claude maps each ingredient line ("2 katori rajma, soaked") to a food in a composition table and an amount in grams, with a confidence for each. Code then adds up the nutrients from the table and divides by servings. The numbers can be repeated and checked, and the model never invents a calorie figure.
+- **Food data:**
+  - IFCT 2017 (Indian Food Composition Tables, NIN/ICMR, about 530 Indian foods) is the main table.
+  - USDA FoodData Central (public domain) fills the gaps.
+  - The terms for reusing IFCT inside the app need checking before the table is bundled.
+- **Indian measures:**
+  - A table converts measures to grams for each kind of ingredient: katori ≈ 150 ml, cup 240 ml, tbsp 15 ml, tsp 5 ml, mutthi (a handful) ≈ 30 g, chutki (a pinch) ≈ 0.5 g.
+  - It also holds densities, for example a cup of atta ≈ 120 g and a cup of rice ≈ 185 g.
+  - "Andaaze se" and "to taste" amounts are left out and noted.
+- **Shown as:** a small "Per serving, approx." box on the recipe page with kcal, protein, carbs, fat and fibre.
+  - The book carries one line: "Approximate values worked out from the recipe, not lab-tested. Not medical advice."
+- **Data:**
+  - `recipes.nutrition_json` holds the per-serving values, servings, each matched item (food id, grams, confidence) and the method version.
+  - `projects.show_nutrition` is the per-book switch.
+  - The values are worked out again when the ingredients or servings change.
+
+### Edge cases
+- Servings are missing: ask on the review screen and don't guess.
+- Deep frying: estimate the oil absorbed, about 10–15% of the food's weight, and flag it.
+- Ghee "as needed" and salt to taste.
+- Jaggery and sugar.
+- Regional names, for example toor, arhar and tuvar.
+- Low-confidence matches are listed on the review screen for the buyer to correct.
+
+### Events
+`nutrition_toggled{on}`, `nutrition_item_corrected`
+
+### Evaluation before it ships
+- On 30 recipes with known values (calculated by a dietitian, or from NIN's recipe book), 80% should come within ±15% on kcal.
+- A person checks the gram conversions on 50 ingredient lines from real pilot recipes.
+
+**Acceptance:** the evaluation passes; a buyer can switch nutrition off for the whole book; no page shows values without the "approximate" label.
 
 ---
 
@@ -610,6 +654,8 @@ Record decisions that change the plan (newest first).
 
 | Date | Decision | Why |
 |---|---|---|
+| 2026-10-26 | Dish photos from the internet only under CC0, public domain, CC BY or the Pexels licence, credited on the recipe page; picked photos go into a shared library | Saksham's call; the book is sold and photos are cropped, so share-alike, non-commercial and no-derivatives licences can't be used |
+| 2026-10-26 | Nutrition is a plan (module 19), not built yet; it will be off by default and marked approximate | Saksham asked for a plan; accuracy needs an evaluation first |
 | 2026-10-24 | Top 10 digital is ₹1,200 in India and about $22 abroad (nets about ₹2,000); Volume 2 and Family Edition prices still open | Saksham's call in the go-to-market work; PRD §9 and §11 updated |
 | 2026-10-25 | Mobile UX v1 approved as the starting point; plan reorganised into modules with data, events and edge cases per module | Saksham's call; build the new UX screen by screen instead of patching the old UI |
 | 2026-10-25 | One ordered `dishes` table with `requested_by` replaces the separate `dish_requests` table | The wishlist, family requests and nudges all need the same ordered list |

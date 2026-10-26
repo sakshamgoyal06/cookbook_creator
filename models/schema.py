@@ -181,6 +181,9 @@ recipes = Table(
     Column("cook_name", Text),
     Column("photo_key", Text),
     Column("photo_crop", JSONType),
+    # A photo picked from the internet or the shared library: its credit line, and where it came from.
+    Column("photo_credit", Text),
+    Column("photo_image_id", Integer, ForeignKey("dish_images.id", ondelete="SET NULL")),
     _created_at(),
     _updated_at(),
     CheckConstraint(_in("status", RECIPE_STATUSES), name="status"),
@@ -244,6 +247,28 @@ dishes = Table(
     _created_at(),
     CheckConstraint(_in("source", DISH_SOURCES), name="source"),
     CheckConstraint(_in("status", DISH_STATUSES), name="status"),
+)
+
+# Dish photos with a free licence, shared by every book (module 18). Each was picked once from a
+# photo search; later cooks of the same dish see it first and reuse the stored copy, no search needed.
+dish_images = Table(
+    "dish_images",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("dish_key", Text, nullable=False, index=True),
+    Column("source", Text, nullable=False),
+    Column("source_id", Text, nullable=False),
+    Column("title", Text),
+    Column("creator", Text),
+    Column("license", Text, nullable=False),
+    Column("license_url", Text),
+    Column("landing_url", Text),
+    Column("storage_key", Text, nullable=False),
+    Column("width", Integer),
+    Column("height", Integer),
+    Column("use_count", Integer, nullable=False, server_default="0"),
+    _created_at(),
+    UniqueConstraint("source", "source_id", name="uq_dish_images_source_id"),
 )
 
 # Chunked, resumable uploads from the in-app recorder (module 7).

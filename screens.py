@@ -18,6 +18,7 @@ from services import (
     amounts_service,
     book_design,
     copy,
+    dish_photo_service,
     dish_service,
     events_service,
     family_service,
@@ -1180,6 +1181,65 @@ def recipe_photo(project, recipe_id):
     if key:
         return redirect(url_for("screens.photo_fit", project_id=project["id"], slot=f"r{recipe_id}", next=nxt))
     return redirect(nxt)
+
+
+@bp.route("/p/<int:project_id>/r/<int:recipe_id>/photo/find", methods=["GET", "POST"])
+@owned_project
+def find_dish_photo(project, recipe_id):
+    """No photo of the dish? Pick one other books used, or a free-licence one from the internet."""
+    recipe = _recipe_or_404(project, recipe_id)
+    nxt = request.values.get("next")
+    nxt = nxt if _safe_next(nxt) else url_for("screens.review", project_id=project["id"], recipe_id=recipe_id)
+    query = (request.values.get("q") or recipe.get("recipe_title") or "").strip()[:80]
+    if request.method == "POST":
+        pick, prefix = request.form.get("pick") or "", f"p{project['id']}-r{recipe['id']}"
+        try:
+            if pick.startswith("lib-") and pick[4:].isdigit():
+                image = dish_photo_service.get_library_image(int(pick[4:])) or abort(404)
+            elif pick.startswith("web-") and pick.count("-") >= 2:
+                _, source, source_id = pick.split("-", 2)
+                image = dish_photo_service.add_web_photo(recipe.get("recipe_title") or query, source, source_id)
+            else:
+                abort(400)
+            key, credit = dish_photo_service.use_library_image(image, prefix)
+        except (dish_photo_service.DishPhotoError, photo_service.PhotoError) as exc:
+            flash(str(exc), "error")
+            return redirect(url_for("screens.find_dish_photo", project_id=project["id"], recipe_id=recipe_id,
+                                    q=query, next=nxt))
+        photo_service.delete_photo(recipe_service.set_photo(recipe["id"], key, credit=credit, image_id=image["id"]))
+        if recipe["status"] == "approved" and recipe.get("pdf_filename"):
+            _make_pdf(recipe["id"])
+        events_service.track("dish_photo_picked", project_id=project["id"], actor="buyer",
+                             source="library" if pick.startswith("lib-") else image["source"])
+        return redirect(url_for("screens.photo_fit", project_id=project["id"], slot=f"r{recipe_id}", next=nxt))
+
+    library = dish_photo_service.library_matches(query)
+    web, error = [], None
+    if request.args.get("q") or not library:  # the library alone answers the first look when it can
+        try:
+            web = dish_photo_service.search_web(query)
+        except dish_photo_service.DishPhotoError as exc:
+            error = str(exc)
+    used = {(i["source"], i["source_id"]) for i in library}
+    web = [w for w in web if (w["source"], w["source_id"]) not in used]
+    return _render("app/photo_find.html", project, tab="book", recipe=recipe, query=query, library=library,
+                   web=web, error=error, searched=bool(request.args.get("q")) or not library, next_url=nxt,
+                   back_url=nxt)
+
+
+@bp.route("/photos/library/<int:image_id>.jpg")
+@login_required
+def library_photo(image_id):
+    """A small copy of a shared library photo for the photo picker; the library is open to every signed-in buyer."""
+    image = dish_photo_service.get_library_image(image_id) or abort(404)
+    try:
+        data = photo_service.thumbnail(image["storage_key"])
+    except Exception:
+        abort(404)
+    response = current_app.response_class(data, mimetype="image/jpeg")
+    response.cache_control.private = True
+    response.cache_control.max_age = 86400
+    return response
 
 
 def _photo_spots(project, slot):

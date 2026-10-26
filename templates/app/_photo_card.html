@@ -1,8 +1,8 @@
-{# A photo with Add / Change / Fit to page / Remove, for the design screen and the review page. The file input
+{# A photo with Add / Change / Find one online (dishes) / Fit to page / Remove, for the design screen and the review page. The file input
    sends its form as soon as a photo is picked (app.js, data-autosubmit). #}
 {% from "components/icons.html" import icon %}
 {% from "components/ui.html" import csrf %}
-{% macro photo_card(slot, key, title, hint, action, anchor="#photos") -%}
+{% macro photo_card(slot, key, title, hint, action, anchor="#photos", find=None) -%}
 <div class="photo-slot">
   {% if key %}<img class="photo-thumb" src="{{ url_for('screens.book_photo_file', project_id=project.id, slot=slot) }}" alt="">
   {% else %}<div class="photo-thumb photo-empty" aria-hidden="true">{{ icon('plus') }}</div>{% endif %}
@@ -12,6 +12,7 @@
     <form method="post" action="{{ action }}" enctype="multipart/form-data" class="row wrap">{{ csrf() }}
       <input type="hidden" name="next" value="{{ request.path }}{{ anchor }}">
       <label class="btn btn-secondary file-btn">{{ 'Change' if key else 'Add a photo' }}<input type="file" name="photo" accept="image/*" data-autosubmit></label>
+      {% if find %}<a class="btn btn-secondary" href="{{ find }}">Find one online</a>{% endif %}
       {% if key %}<a class="btn btn-secondary" href="{{ url_for('screens.photo_fit', project_id=project.id, slot=slot, next=request.path ~ anchor) }}">Fit to page</a>
       <button class="btn btn-ghost" type="submit" name="remove" value="1">Remove</button>{% endif %}
     </form>
