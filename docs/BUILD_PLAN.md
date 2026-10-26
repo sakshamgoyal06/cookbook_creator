@@ -289,6 +289,7 @@ This module needs no WhatsApp approval, so it's the first full capture path to s
 - [x] Chunked, resumable upload: chunks every 10 s to `/uploads/<client_upload_id>/chunk` (idempotent by chunk index); `complete` assembles, stores via `storage_service`, creates the recipe and enqueues the pipeline
 - [x] Local safety copy in IndexedDB until the server confirms `complete`; on next open, unfinished recordings offer "Upload now"
 - [x] S3 import: Web Share Target (`audio/*`, Android) from WhatsApp → choose dish or "new dish"; file picker for iOS and desktop; several notes grouped into one dish in the order picked
+  - 2026-10-26: a share now lands on "Where does this go?" (wishlist dish, new dish, or instead of a page's voice note; book picker when there are several) instead of always making a new page in the latest book. Sign-in is remembered for 180 days so a share doesn't bounce to the login page. iPhone: Forward → Share → Save to Files, then pick the file (steps shown on the import screen)
 - [~] (content type stored; duration later) Duration (`recipe_audio.duration_s`) and content type stored for every clip
 - [~] S5 (uses the R10 review page for now): S5 approve: final page preview with Listen + QR, "Fix something" / "Looks right", share on WhatsApp (`wa.me` with the listen link)
 

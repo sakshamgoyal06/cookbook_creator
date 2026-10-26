@@ -201,6 +201,8 @@ textarea[rows="1"] { min-height: 48px; }
 .chip-option input:checked + span .swatch { border: 2px solid #fff; }
 .chip-options.stacked { flex-direction: column; }
 .chip-options[hidden] { display: none; }
+a.chip-option { text-decoration: none; color: inherit; }
+.chip-option span.on { background: var(--leaf); color: #fff; border-color: var(--leaf); }
 .chip-options.stacked .chip-option span { border-radius: 14px; display: block; padding: 10px 16px; line-height: 1.35; }
 .photo-slot { display: flex; gap: 12px; align-items: flex-start; }
 .photo-slot + .photo-slot { padding-top: 12px; border-top: 1px solid var(--line); }

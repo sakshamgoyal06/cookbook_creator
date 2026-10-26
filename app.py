@@ -2,6 +2,7 @@ import os
 import json
 import socket
 import tempfile
+from datetime import timedelta
 from flask import (
     Flask,
     render_template,
@@ -48,6 +49,12 @@ if not config.FLASK_DEBUG and config.FLASK_SECRET_KEY in config.PLACEHOLDER_SECR
 app = Flask(__name__)
 app.secret_key = config.FLASK_SECRET_KEY
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50 MB
+# Stay signed in on the phone: sharing a voice note from WhatsApp into the app (/share) must not
+# land on the sign-in page, which would drop the shared files.
+app.config["REMEMBER_COOKIE_DURATION"] = timedelta(days=180)
+app.config["REMEMBER_COOKIE_HTTPONLY"] = True
+app.config["REMEMBER_COOKIE_SAMESITE"] = "Lax"
+app.config["REMEMBER_COOKIE_SECURE"] = not config.FLASK_DEBUG
 csrf = CSRFProtect(app)
 
 login_manager = LoginManager()
@@ -119,7 +126,7 @@ def register():
 
     user_dict = user_service.create_user(email, name, password)
     if user_dict:
-        login_user(User(user_dict))
+        login_user(User(user_dict), remember=True)
         flash(f"Welcome, {name}!", "success")
         return redirect(url_for("dashboard"))
 
@@ -143,11 +150,12 @@ def login():
         flash("Invalid email or password.", "error")
         return redirect(url_for("login"))
 
-    login_user(User(user_dict))
+    login_user(User(user_dict), remember=True)
     flash(f"Welcome back, {user_dict['name']}!", "success")
 
-    next_page = request.args.get("next")
-    return redirect(next_page if next_page else url_for("dashboard"))
+    next_page = request.args.get("next") or ""
+    safe = next_page.startswith("/") and not next_page.startswith("//") and "\\" not in next_page
+    return redirect(next_page if safe else url_for("dashboard"))
 
 
 @app.route("/logout")
@@ -191,7 +199,7 @@ if config.GOOGLE_CLIENT_ID and config.GOOGLE_CLIENT_SECRET:
             provider="google",
             provider_id=userinfo["sub"],
         )
-        login_user(User(user_dict))
+        login_user(User(user_dict), remember=True)
         flash(f"Welcome, {user_dict['name']}!", "success")
         return redirect(url_for("dashboard"))
 
