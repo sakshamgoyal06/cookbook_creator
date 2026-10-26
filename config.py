@@ -97,10 +97,10 @@ SELLER_STATE = os.getenv("SELLER_STATE", "").strip()
 GST_RATE_PERCENT = float(os.getenv("GST_RATE_PERCENT", "18"))
 INVOICE_PREFIX = os.getenv("INVOICE_PREFIX", "AZ").strip() or "AZ"
 
+# The legacy /projects pages list these; the book styles themselves live in services/book_design.py.
 COOKBOOK_THEMES = {
-    "classic": {"name": "Classic Indian", "primary": "#5c1a1a", "accent": "#d4a84b", "bg": "#fdf8f0"},
-    "modern": {"name": "Modern Minimal", "primary": "#2c3e50", "accent": "#e74c3c", "bg": "#ffffff"},
-    "rustic": {"name": "Rustic Warmth", "primary": "#6b4226", "accent": "#d4a017", "bg": "#faf3e8"},
-    "elegant": {"name": "Elegant Gold", "primary": "#1a1a2e", "accent": "#c9a961", "bg": "#f8f6f0"},
-    "fresh": {"name": "Fresh & Green", "primary": "#2d6a4f", "accent": "#95d5b2", "bg": "#f0faf5"},
+    "classic": {"name": "Heirloom"},
+    "rustic": {"name": "Rasoi diary"},
+    "modern": {"name": "Modern kitchen"},
+    "festive": {"name": "Utsav"},
 }

@@ -69,6 +69,24 @@
   autogrow(document);
   window.addEventListener("resize", function () { document.querySelectorAll("textarea[data-autogrow]").forEach(grow); });
 
+  // Design your book: each style has its own colours; picking a style shows them.
+  document.querySelectorAll("input[name=theme]").forEach(function (radio) {
+    radio.addEventListener("change", function () {
+      document.querySelectorAll("[data-accents-for]").forEach(function (group) {
+        group.hidden = group.dataset.accentsFor !== radio.value;
+        if (!group.hidden) group.querySelector("input").checked = true;
+      });
+    });
+  });
+
+  // Photo pickers send their form as soon as a photo is chosen.
+  document.querySelectorAll("input[type=file][data-autosubmit]").forEach(function (input) {
+    input.addEventListener("change", function () {
+      if (!input.files.length) return;
+      if (input.form.requestSubmit) input.form.requestSubmit(); else input.form.submit();
+    });
+  });
+
   // "Add an ingredient": copy the last row, empty.
   document.querySelectorAll("[data-add-row]").forEach(function (button) {
     var rows = button.previousElementSibling;

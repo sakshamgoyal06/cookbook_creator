@@ -1,0 +1,43 @@
+Fonts in this folder come from Fontsource (https://fontsource.org) and are licensed under the SIL Open Font License 1.1.
+
+== kalam ==
+Copyright (c) 2014 Indian Type Foundry (info@indiantypefoundry.com) Kalam-Regular.ttf: Copyright (c) 2014 Indian Type Foundry (info@indiantypefoundry.com) Kalam-Bold.ttf: Copyright (c) 2014 Indian Type Foundry (info@indiantypefoundry.com)
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+
+== lora ==
+Copyright 2011 The Lora Project Authors (https://github.com/cyrealtype/Lora-Cyrillic), with Reserved Font Name "Lora". Lora-Italic[wght].ttf: Copyright 2011 The Lora Project Authors (https://github.com/cyrealtype/Lora-Cyrillic), with Reserved Font Name "Lora".
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+
+== cormorant-garamond ==
+Copyright 2015 The Cormorant Project Authors (github.com/CatharsisFonts/Cormorant) CormorantGaramond-Italic[wght].ttf: Copyright 2015 The Cormorant Project Authors (github.com/CatharsisFonts/Cormorant)
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+
+== eb-garamond ==
+Copyright 2017 The EB Garamond Project Authors (https://github.com/octaviopardo/EBGaramond12) EBGaramond-Italic[wght].ttf: Copyright 2017 The EB Garamond Project Authors (https://github.com/octaviopardo/EBGaramond12)
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+
+== tiro-devanagari-hindi ==
+Copyright 2020 The Indigo Project Authors (https://github.com/TiroTypeworks/Indigo) TiroDevanagariHindi-Italic.ttf: Copyright 2020 The Indigo Project Authors (https://github.com/TiroTypeworks/Indigo)
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+
+== poppins ==
+Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-ThinItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-ExtraLight.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-ExtraLightItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Light.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-LightItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Regular.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Italic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Medium.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-MediumItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-SemiBold.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-SemiBoldItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Bold.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-BoldItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-ExtraBold.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-ExtraBoldItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-Black.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins) Poppins-BlackItalic.ttf: Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins)
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+
+== mukta ==
+Copyright (c) 2014, Girish Dalvi, Ek Type. All rights reserved. Mukta-Light.ttf: Copyright (c) 2014, Girish Dalvi, Ek Type. All rights reserved. Mukta-Regular.ttf: Copyright (c) 2014, Girish Dalvi, Ek Type. All rights reserved. Mukta-Medium.ttf: Copyright (c) 2014, Girish Dalvi, Ek Type. All rights reserved. Mukta-SemiBold.ttf: Copyright (c) 2014, Girish Dalvi, Ek Type. All rights reserved. Mukta-Bold.ttf: Copyright (c) 2014, Girish Dalvi, Ek Type. All rights reserved. Mukta-ExtraBold.ttf: Copyright (c) 2014, Girish Dalvi, Ek Type. All rights reserved.
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+
+== rozha-one ==
+Copyright (c) 2014 Indian Type Foundry (info@indiantypefoundry.com)
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+
+Full licence text: https://openfontlicense.org

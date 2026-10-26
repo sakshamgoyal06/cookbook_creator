@@ -186,3 +186,27 @@ textarea[rows="1"] { min-height: 48px; }
   body { background: #fff; }
   .card { border: 0; box-shadow: none; }
 }
+
+/* Design your book (R14) */
+.style-cards { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 560px) { .style-cards { grid-template-columns: 1fr 1fr; } }
+.style-card { position: relative; display: block; cursor: pointer; }
+.style-card input { position: absolute; opacity: 0; }
+.style-body { display: flex; flex-direction: column; gap: 4px; padding: 10px; border: 2px solid var(--line); border-radius: var(--radius); background: var(--steel); }
+.style-body img { width: 100%; height: auto; border-radius: 6px; background: var(--line); }
+.style-body strong { margin-top: 6px; }
+.style-card input:checked + .style-body { border-color: var(--leaf); box-shadow: 0 0 0 2px var(--leaf) inset; }
+.style-card input:focus-visible + .style-body { outline: 3px solid var(--haldi); outline-offset: 3px; }
+.swatch { display: inline-block; width: 16px; height: 16px; border-radius: 50%; margin-right: 8px; border: 1px solid rgba(0, 0, 0, .15); }
+.chip-option input:checked + span .swatch { border: 2px solid #fff; }
+.chip-options.stacked { flex-direction: column; }
+.chip-options[hidden] { display: none; }
+.chip-options.stacked .chip-option span { border-radius: 14px; display: block; padding: 10px 16px; line-height: 1.35; }
+.photo-slot { display: flex; gap: 12px; align-items: flex-start; }
+.photo-slot + .photo-slot { padding-top: 12px; border-top: 1px solid var(--line); }
+.photo-thumb { width: 72px; height: 72px; flex: none; border-radius: 10px; object-fit: cover; background: var(--line); }
+.photo-empty { display: flex; align-items: center; justify-content: center; color: var(--tawa-2); }
+.photo-title { font-weight: 600; margin: 0; overflow-wrap: anywhere; }
+.photo-slot form { margin-top: 6px; }
+.file-btn { position: relative; overflow: hidden; }
+.file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }

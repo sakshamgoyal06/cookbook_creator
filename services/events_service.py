@@ -67,6 +67,9 @@ CATALOGUE = {
     "book_compiled": {"recipes"},
     "book_revealed": {"recipes"},
     "book_pdf_downloaded": set(),
+    # Book design (module 18)
+    "book_design_saved": {"style"},
+    "book_print_pdf_made": {"size"},
     "book_page_viewed": set(),
     # Upsell (module 16)
     "volume2_offer_shown": set(),

@@ -1,88 +1,78 @@
-{# One printed recipe page; used for a single page and inside the whole book. #}
-{% macro recipe_page(recipe, listen_url=None, qr_data_uri=None, voice_name=None, cook_label=None) -%}
-<div class="cookbook-page">
-    <header class="recipe-header">
+{# One recipe, used for the single-page PDF and inside the whole book. `page` carries the recipe,
+   its listen link, QR and photo; the style sheets in static/book/ decide how it looks. #}
+{% macro recipe_page(page, voice_name=None, cook_label=None) -%}
+{% set recipe = page.recipe %}
+{# The wide page is short, so there the tips go under the method and the serving notes under the
+   ingredients; on A4 it's the other way round. #}
+{% macro tips() -%}
+{% if recipe.moms_tips %}
+<section class="tips">
+    <h2>{{ cook_label ~ "'s tips" if cook_label else "Tips" }}</h2>
+    <ul>{% for tip in recipe.moms_tips %}<li>{{ tip }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+{%- endmacro %}
+{% macro extras() -%}
+{% if recipe.serving_suggestion or recipe.storage_notes %}
+<dl class="extras">
+    {% if recipe.serving_suggestion %}<dt>To serve</dt><dd>{{ recipe.serving_suggestion }}</dd>{% endif %}
+    {% if recipe.storage_notes %}<dt>To keep</dt><dd>{{ recipe.storage_notes }}</dd>{% endif %}
+</dl>
+{% endif %}
+{%- endmacro %}
+<article class="recipe{{ ' has-photo' if page.photo }}{{ ' photo-page' if page.photo_page }}" id="r-{{ recipe.id }}">
+    {% if page.photo %}<figure class="recipe-photo"><img src="{{ page.photo }}" alt=""></figure>{% endif %}
+
+    <header class="recipe-head">
+        {% if recipe.category %}<p class="kicker">{{ recipe.category }}</p>{% endif %}
         <h1 class="recipe-title">{{ recipe.recipe_title }}</h1>
-        {% if recipe.alternate_names and recipe.alternate_names | length > 0 %}
-        <p class="alternate-names">Also known as: {{ recipe.alternate_names | join(', ') }}</p>
+        {% if recipe.alternate_names %}<p class="recipe-aka">Also called {{ recipe.alternate_names | join(', ') }}</p>{% endif %}
+        {% set meta = [('Serves', recipe.serves), ('Prep', recipe.prep_time_minutes and (recipe.prep_time_minutes ~ ' min')),
+                       ('Cook', recipe.cook_time_minutes and (recipe.cook_time_minutes ~ ' min')), ('Level', recipe.difficulty)] | selectattr(1) | list %}
+        {% if page.listen_url %}
+        <div class="listen">
+            <img class="qr" src="{{ page.qr }}" alt="QR code">
+            <div>
+                <p class="listen-title"><a href="{{ page.listen_url }}">Scan to hear {{ voice_name or 'the cook' }}</a></p>
+            </div>
+        </div>
         {% endif %}
-        {% if recipe.family_note %}
-        <p class="family-note">"{{ recipe.family_note }}"</p>
-        {% endif %}
+        {% if meta %}<ul class="recipe-meta">{% for label, value in meta %}<li><span class="label">{{ label }}</span><span class="value">{{ value }}</span></li>{% endfor %}</ul>{% endif %}
     </header>
 
-    <div class="meta-strip">
-        {% if recipe.serves %}<span class="meta-item"><strong>Serves</strong><br>{{ recipe.serves }}</span>{% endif %}
-        {% if recipe.prep_time_minutes %}<span class="meta-item"><strong>Prep</strong><br>{{ recipe.prep_time_minutes }} min</span>{% endif %}
-        {% if recipe.cook_time_minutes %}<span class="meta-item"><strong>Cook</strong><br>{{ recipe.cook_time_minutes }} min</span>{% endif %}
-        {% if recipe.difficulty %}<span class="meta-item"><strong>Difficulty</strong><br>{{ recipe.difficulty }}</span>{% endif %}
-        {% if recipe.category %}<span class="meta-item"><strong>Category</strong><br>{{ recipe.category }}</span>{% endif %}
-    </div>
+    {% if recipe.family_note %}
+    <blockquote class="recipe-quote"><p>{{ recipe.family_note }}</p>{% if voice_name %}<cite>{{ voice_name }}</cite>{% endif %}</blockquote>
+    {% endif %}
 
-    <div class="two-column">
-        <div class="col-left">
-            <h2>Ingredients</h2>
+    <div class="recipe-body">
+        <aside class="recipe-side">
             {% if recipe.ingredients %}
-            <ul class="ingredients">
+            <section class="ingredients">
+                <h2>Ingredients</h2>
+                <ul>
                 {% for ing in recipe.ingredients %}
-                <li>{{ ing.quantity }} {{ ing.unit }} {{ ing.item }}{% if ing.preparation_note %}, {{ ing.preparation_note }}{% endif %}</li>
+                    {% set qty = ((ing.quantity or '') ~ ' ' ~ (ing.unit or '')) | trim %}
+                    <li>{% if qty %}<span class="qty">{{ qty }}</span> {% endif %}<span class="item">{{ ing.item }}</span>{% if ing.preparation_note %}<span class="prep">, {{ ing.preparation_note }}</span>{% endif %}</li>
                 {% endfor %}
-            </ul>
+                </ul>
+            </section>
             {% endif %}
-        </div>
-        <div class="col-right">
+            {% if page.wide %}{{ extras() }}{% else %}{{ tips() }}{% endif %}
+        </aside>
+
+        <section class="method">
             <h2>Method</h2>
             {% if recipe.method_steps %}
-            <ol class="method">
-                {% for step in recipe.method_steps %}
-                <li>
-                    {{ step.instruction }}
-                    {% if step.flame_level or step.timing or step.sensory_cue %}
-                    <div class="step-details">
-                        {% if step.flame_level %}<span>{{ step.flame_level }}</span>{% endif %}
-                        {% if step.timing %}<span>{{ step.timing }}</span>{% endif %}
-                        {% if step.sensory_cue %}<span>{{ step.sensory_cue }}</span>{% endif %}
-                    </div>
-                    {% endif %}
-                </li>
-                {% endfor %}
+            <ol>
+            {% for step in recipe.method_steps %}
+                <li><p>{{ step.instruction }}</p>
+                {% set cues = [step.flame_level, step.timing, step.sensory_cue] | select | list %}
+                {% if cues %}<p class="cues">{{ cues | join(' · ') }}</p>{% endif %}</li>
+            {% endfor %}
             </ol>
             {% endif %}
-        </div>
+            {% if page.wide %}{{ tips() }}{% else %}{{ extras() }}{% endif %}
+        </section>
     </div>
-
-    {% if recipe.moms_tips and recipe.moms_tips | length > 0 %}
-    <div class="tips-box">
-        <h2>{{ cook_label ~ "'s tips" if cook_label else "Tips" }}</h2>
-        <ul>
-            {% for tip in recipe.moms_tips %}
-            <li>{{ tip }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
-
-    <div class="bottom-section">
-        {% if recipe.serving_suggestion %}
-        <div class="serving"><strong>Serving Suggestion:</strong> {{ recipe.serving_suggestion }}</div>
-        {% endif %}
-        {% if recipe.storage_notes %}
-        <div class="storage"><strong>Storage:</strong> {{ recipe.storage_notes }}</div>
-        {% endif %}
-    </div>
-
-    {% if listen_url %}
-    <div class="listen-qr" style="display:flex;align-items:center;gap:0.4cm;margin:0.6cm 0;page-break-inside:avoid">
-        <img src="{{ qr_data_uri }}" alt="QR code" style="width:2.6cm;height:2.6cm;margin-right:0.4cm">
-        <div>
-            <p style="margin:0;font-weight:bold"><a href="{{ listen_url }}" style="color:#1a1a2e;text-decoration:none">&#9654; Listen{% if voice_name %} to {{ voice_name }}{% endif %}</a></p>
-            <p style="margin:0.1cm 0 0;font-size:0.8rem;color:#666">Scan with your phone camera to hear this recipe in {{ voice_name ~ "'s" if voice_name else "the cook's" }} own voice.</p>
-        </div>
-    </div>
-    {% endif %}
-
-    <footer class="cookbook-footer">
-        <p>{{ config.APP_NAME }}</p>
-    </footer>
-</div>
+</article>
 {%- endmacro %}

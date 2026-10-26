@@ -124,11 +124,20 @@ def _reset(conn, recipe_id):
                          updated_at=func.now()))
 
 
+def set_photo(recipe_id, key):
+    """Set (or with None, clear) the dish photo; returns the old key so its file can go."""
+    with get_engine().begin() as conn:
+        old = conn.execute(select(recipes.c.photo_key).where(recipes.c.id == recipe_id)).scalar_one_or_none()
+        conn.execute(update(recipes).where(recipes.c.id == recipe_id).values(photo_key=key, updated_at=func.now()))
+    return old
+
+
 def delete_recipe(recipe_id):
     """Remove a recipe, its voice notes and files. Its dish goes back on the list."""
     with get_engine().begin() as conn:
         keys = conn.execute(select(recipe_audio.c.storage_key)
                             .where(recipe_audio.c.recipe_id == recipe_id)).scalars().all()
+        photo = conn.execute(select(recipes.c.photo_key).where(recipes.c.id == recipe_id)).scalar_one_or_none()
         pdfs = conn.execute(select(generated_files.c.storage_key)
                             .where(generated_files.c.recipe_id == recipe_id)).scalars().all()
         conn.execute(update(dishes).where(dishes.c.recipe_id == recipe_id)
@@ -139,6 +148,7 @@ def delete_recipe(recipe_id):
         conn.execute(delete(recipes).where(recipes.c.id == recipe_id))
     _delete_files(keys)
     _delete_files(pdfs, namespace="pdfs")
+    _delete_files([photo] if photo else [], namespace="photos")
 
 
 def _delete_files(keys, namespace="audio"):

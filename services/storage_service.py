@@ -14,7 +14,7 @@ from flask import redirect, send_file
 
 import config
 
-NAMESPACES = ("audio", "pdfs")
+NAMESPACES = ("audio", "pdfs", "photos")
 
 
 def _check_namespace(namespace):
@@ -29,7 +29,8 @@ def _check_name(name):
 
 class LocalStorage:
     def _folder(self, namespace):
-        return {"audio": config.UPLOAD_FOLDER, "pdfs": config.OUTPUT_FOLDER}[namespace]
+        return {"audio": config.UPLOAD_FOLDER, "pdfs": config.OUTPUT_FOLDER,
+                "photos": os.path.join(config.UPLOAD_FOLDER, "photos")}[namespace]
 
     def _path(self, namespace, name):
         return os.path.join(self._folder(namespace), name)

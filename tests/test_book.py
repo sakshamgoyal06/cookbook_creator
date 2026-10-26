@@ -38,7 +38,7 @@ def test_whole_book_pdf_has_cover_contents_and_a_page_per_approved_recipe(auth_c
         reader = PdfReader(path)
         text = "\n".join(page.extract_text() for page in reader.pages)
     assert "The Sharma Kitchen" in text and "Contents" in text and "Sunita ji" in text
-    assert text.count("Listen to Sunita ji") == 2 and "Mummy's tips" in text
+    assert text.count("Scan to hear Sunita ji") == 2 and "Mummy's tips" in text
     assert len(reader.pages) >= 5  # cover, contents, 2 recipes, closing
     response = auth_client.get(f"/p/{pid}/book.pdf")
     assert response.status_code == 200 and response.data[:4] == b"%PDF"
