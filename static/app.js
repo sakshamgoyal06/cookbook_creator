@@ -58,6 +58,33 @@
     });
   });
 
+  // Text boxes grow with what's typed, so long ingredients and steps are never cut off.
+  function grow(el) { el.style.height = "auto"; el.style.height = el.scrollHeight + 2 + "px"; }
+  function autogrow(scope) {
+    scope.querySelectorAll("textarea[data-autogrow]").forEach(function (el) {
+      grow(el);
+      el.addEventListener("input", function () { grow(el); });
+    });
+  }
+  autogrow(document);
+  window.addEventListener("resize", function () { document.querySelectorAll("textarea[data-autogrow]").forEach(grow); });
+
+  // "Add an ingredient": copy the last row, empty.
+  document.querySelectorAll("[data-add-row]").forEach(function (button) {
+    var rows = button.previousElementSibling;
+    button.addEventListener("click", function () {
+      var last = rows.lastElementChild, row = last.cloneNode(true);
+      row.querySelectorAll("input, textarea").forEach(function (f) { f.value = ""; });
+      rows.appendChild(row); autogrow(row);
+      row.querySelector("textarea, input").focus();
+    });
+  });
+
+  // Ask before anything that can't be undone.
+  document.querySelectorAll("form[data-confirm]").forEach(function (form) {
+    form.addEventListener("submit", function (e) { if (!window.confirm(form.dataset.confirm)) e.preventDefault(); });
+  });
+
   // Pages that are waiting on the pipeline refresh themselves.
   var waiting = document.querySelector("[data-autorefresh]");
   if (waiting) setTimeout(function () { window.location.reload(); }, 1000 * Number(waiting.dataset.autorefresh));

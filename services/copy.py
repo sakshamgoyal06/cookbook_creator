@@ -95,3 +95,20 @@ def nudge_text(project, dish=None):
     language = project.get("storyteller_language") or "hinglish"
     who = project.get("storyteller_address_as") or ("मम्मी" if language == "hi" else "Mummy")
     return NUDGE[language].format(who=who, dish=dish or FIRST_DISH_FALLBACK[language])
+
+
+AMOUNTS = {
+    "hi": "{who}, {dish} का पन्ना पूरा करने के लिए बस इतना बता दीजिए, कितना डालते हैं: {items}। "
+          "अंदाज़े से हो तो वही लिख देंगे।",
+    "hinglish": ("{who}, {dish} ka page poora karne ke liye bas itna bata dijiye, kitna daalte hain: {items}. "
+                 "Andaaze se ho to wahi likh denge."),
+    "en": ("{who}, to finish the {dish} page, just tell me roughly how much of each: {items}. "
+           "If it's by eye, that's fine, we'll write that."),
+}
+
+
+def amounts_text(project, dish, items):
+    """One WhatsApp message asking for every vague amount at once (the amounts step)."""
+    language = project.get("storyteller_language") or "hinglish"
+    who = project.get("storyteller_address_as") or ("मम्मी" if language == "hi" else "Mummy")
+    return AMOUNTS[language].format(who=who, dish=dish, items=", ".join(items))

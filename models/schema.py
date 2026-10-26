@@ -164,6 +164,8 @@ recipes = Table(
     Column("section", Text),
     Column("sort_order", Integer, server_default="0"),
     Column("approved_at", DateTime(timezone=True)),
+    # When the buyer went through the amounts step (vague or missing quantities), the step before approval.
+    Column("amounts_checked_at", DateTime(timezone=True)),
     # Public token for the listen page /l/<token> (QR-3); revoking keeps the row.
     Column("listen_token", String(32), nullable=False, unique=True),
     Column("listen_revoked_at", DateTime(timezone=True)),

@@ -23,7 +23,7 @@ CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 MAX_CHUNK_BYTES = 4 * 1024 * 1024
 MAX_CHUNKS = 720  # an hour at 5-second chunks
 MAX_TOTAL_BYTES = 60 * 1024 * 1024
-KINDS = ("original", "story")
+KINDS = ("original", "story", "replace")
 STALE_HOURS = 24
 
 

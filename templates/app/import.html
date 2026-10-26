@@ -1,18 +1,27 @@
 {% extends "app/_shell.html" %}
 {% from "components/ui.html" import csrf %}
 {% block content %}
+{% if replacing %}
+<h1>A new voice note for {{ replacing.recipe_title }}</h1>
+<p class="muted">This replaces the old voice note, and we write the page again.</p>
+{% else %}
 <h1>Add voice notes</h1>
+{% endif %}
 <p class="muted">Pick all the notes for one dish. On WhatsApp, long-press a voice note, tap Share (or Forward to yourself), and save it to your phone.</p>
 <form method="post" enctype="multipart/form-data" class="stack">
   {{ csrf() }}
   <label for="audio_files">Voice notes <span class="hint">(up to {{ max_files }}; {{ formats }})</span></label>
   <input type="file" id="audio_files" name="audio_files" accept="audio/*,.opus,.ogg,.m4a,.mp3,.wav,.webm" multiple required>
+  {% if replacing %}
+  <input type="hidden" name="replace" value="{{ replacing.id }}">
+  {% else %}
   <label for="dish_id">Which dish is it?</label>
   <select id="dish_id" name="dish_id">
     {% for d in dishes %}<option value="{{ d.id }}" {% if d.id == selected %}selected{% endif %}>{{ d.title }}</option>{% endfor %}
     <option value="" {% if not dishes %}selected{% endif %}>Something else</option>
   </select>
   <input type="text" name="new_dish" placeholder="Dish name, if it's something else" maxlength="80" aria-label="Dish name">
-  <button class="btn btn-primary btn-block" type="submit">{{ icon('upload') }} Add to the book</button>
+  {% endif %}
+  <button class="btn btn-primary btn-block" type="submit">{{ icon('upload') }} {{ 'Use this voice note' if replacing else 'Add to the book' }}</button>
 </form>
 {% endblock %}

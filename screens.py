@@ -6,7 +6,7 @@ R = requester (the buyer), S = same person (the cook records in the app). The ol
 import json
 import os
 import tempfile
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from functools import wraps
 
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, url_for
@@ -14,6 +14,7 @@ from flask_login import current_user, login_required
 
 import config
 from services import (
+    amounts_service,
     copy,
     dish_service,
     events_service,
@@ -484,6 +485,8 @@ def review(project, recipe_id):
         if recipe["status"] not in ("needs_review", "approved"):
             flash("This page is still being written.", "error")
             return redirect(url_for("screens.review", project_id=project["id"], recipe_id=recipe_id))
+        if request.form.get("action") == "approve" and amounts_service.needs_step(recipe):
+            return redirect(url_for("screens.review", project_id=project["id"], recipe_id=recipe_id))
         data = _review_form_data(recipe)
         changed = _count_changes(recipe, data)
         recipe_service.update_recipe(recipe_id, data)
@@ -506,11 +509,100 @@ def review(project, recipe_id):
 
     clips = [url_for("screens.clip", project_id=project["id"], recipe_id=recipe_id, clip_number=n)
              for n in range(1, len(recipe["audio_clips"]) + 1)]
-    return _render("app/review.html", project, tab="recipes" if project["cook_mode"] != "self" else "home",
-                   recipe=recipe, clip_urls=clips,
+    questions = _questions_for(project, recipe)
+    amounts = not questions and amounts_service.needs_step(recipe)
+    return _render("app/amounts.html" if amounts else "app/review.html", project,
+                   tab="recipes" if project["cook_mode"] != "self" else "home",
+                   recipe=recipe, clip_urls=clips, questions=questions, blank_rows=1,
+                   unclear=amounts_service.unclear_amounts(recipe) if amounts else [],
+                   ask_link=_amounts_ask_link(project, recipe) if amounts else None,
+                   stuck=_is_stuck(recipe),
+                   failure=pipeline_service.failure_reason(recipe_id) if recipe["status"] == "failed" else None,
                    back_url=url_for("screens.recipes" if project["cook_mode"] != "self" else "screens.home",
-                                    project_id=project["id"]),
-                   blank_rows=3, questions=_questions_for(project, recipe))
+                                    project_id=project["id"]))
+
+
+STUCK_AFTER = timedelta(minutes=10)
+
+
+def _is_stuck(recipe):
+    """Still "writing it down" long after it should have finished (a lost job, a redeploy mid-way)."""
+    if recipe["status"] not in WRITING_STATUSES or not recipe.get("updated_at"):
+        return False
+    return datetime.now(timezone.utc) - _aware(recipe["updated_at"]) > STUCK_AFTER
+
+
+def _amounts_ask_link(project, recipe):
+    if project["cook_mode"] != "whatsapp":
+        return None
+    items = [ing["item"] for _, ing in amounts_service.unclear_amounts(recipe)]
+    return copy.wa_link(copy.amounts_text(project, recipe["recipe_title"], items), project.get("storyteller_phone"))
+
+
+@bp.route("/p/<int:project_id>/r/<int:recipe_id>/amounts", methods=["POST"])
+@owned_project
+def save_amounts(project, recipe_id):
+    """The amounts step: one answer per vague ingredient, all at once; blanks keep the cook's words."""
+    recipe = _recipe_or_404(project, recipe_id)
+    if recipe["status"] != "needs_review":
+        return redirect(url_for("screens.review", project_id=project["id"], recipe_id=recipe_id))
+    answers = {}
+    for index, _ in amounts_service.unclear_amounts(recipe):
+        answers[index] = (request.form.get(f"qty_{index}", ""), request.form.get(f"unit_{index}", ""))
+    changed = amounts_service.apply(recipe, answers)
+    if changed:
+        events_service.track("recipe_edited", project_id=project["id"], recipe_id=recipe_id, actor=_actor(project),
+                             fields_changed=changed)
+    return redirect(url_for("screens.review", project_id=project["id"], recipe_id=recipe_id))
+
+
+@bp.route("/p/<int:project_id>/r/<int:recipe_id>/amounts/edit", methods=["POST"])
+@owned_project
+def reopen_amounts(project, recipe_id):
+    recipe_service.reopen_amounts(_recipe_or_404(project, recipe_id)["id"])
+    return redirect(url_for("screens.review", project_id=project["id"], recipe_id=recipe_id))
+
+
+@bp.route("/p/<int:project_id>/r/<int:recipe_id>/restart", methods=["POST"])
+@owned_project
+def restart(project, recipe_id):
+    """Start a recipe over from its voice notes (stuck, or written up wrong)."""
+    recipe = _recipe_or_404(project, recipe_id)
+    if not recipe["audio_clips"]:
+        flash("This recipe has no voice note left to start from. Record or upload it again.", "error")
+        return redirect(url_for("screens.review", project_id=project["id"], recipe_id=recipe_id))
+    recipe_service.restart(recipe_id)
+    events_service.track("recipe_retry_requested", project_id=project["id"], recipe_id=recipe_id,
+                         actor=_actor(project), stage="transcribe")
+    pipeline_service.enqueue_processing(recipe_id)
+    flash("Starting over from the voice note.", "success")
+    return redirect(url_for("screens.review", project_id=project["id"], recipe_id=recipe_id))
+
+
+@bp.route("/p/<int:project_id>/r/<int:recipe_id>/delete", methods=["POST"])
+@owned_project
+def delete_recipe(project, recipe_id):
+    recipe = _recipe_or_404(project, recipe_id)
+    recipe_service.delete_recipe(recipe["id"])
+    flash(f"Deleted “{recipe['recipe_title']}”.", "success")
+    return redirect(url_for("screens.recipes" if project["cook_mode"] != "self" else "screens.home",
+                            project_id=project["id"]))
+
+
+@bp.route("/p/<int:project_id>/r/<int:recipe_id>/page.pdf")
+@owned_project
+def recipe_page_pdf(project, recipe_id):
+    """The printable page for one recipe: the approved one, or a fresh draft while it's being checked."""
+    recipe = _recipe_or_404(project, recipe_id)
+    if recipe["status"] not in ("needs_review", "approved"):
+        abort(404)
+    if recipe["status"] != "approved" or not recipe.get("pdf_filename"):
+        _make_pdf(recipe_id)
+        recipe = recipe_service.get_recipe(recipe_id)
+    if not recipe.get("pdf_filename"):
+        flash("We couldn't make the PDF just now. Please try again in a minute.", "error")
+        return redirect(url_for("screens.review", project_id=project["id"], recipe_id=recipe_id))
+    return storage_service.send("pdfs", recipe["pdf_filename"])
 
 
 def _questions_for(project, recipe):
@@ -571,8 +663,8 @@ def _review_form_data(recipe):
     for item, qty, unit, note in zip(form.getlist("ing_item"), form.getlist("ing_qty"), form.getlist("ing_unit"),
                                      form.getlist("ing_note")):
         if item.strip():
-            ingredients.append({"item": item.strip(), "quantity": qty.strip(), "unit": unit.strip(),
-                                "preparation_note": note.strip()})
+            ingredients.append({"item": _one_line(item), "quantity": _one_line(qty), "unit": _one_line(unit),
+                                "preparation_note": _one_line(note)})
     steps = []
     for text, extra in zip(form.getlist("step_text"), form.getlist("step_extra")):
         if text.strip():
@@ -586,7 +678,7 @@ def _review_form_data(recipe):
     kept = ("category", "difficulty", "serving_suggestion", "storage_notes")
     data = {field: recipe.get(field) or "" for field in kept}
     data.update({
-        "recipe_title": form.get("recipe_title", "").strip() or recipe["recipe_title"],
+        "recipe_title": _one_line(form.get("recipe_title", "")) or recipe["recipe_title"],
         "serves": form.get("serves", "").strip(),
         "family_note": form.get("family_note", "").strip(),
         "prep_time_minutes": recipe.get("prep_time_minutes"),
@@ -598,6 +690,10 @@ def _review_form_data(recipe):
     if form.get("clear_flags"):
         data["unclear_items_for_review_json"] = "[]"
     return data
+
+
+def _one_line(text):
+    return " ".join((text or "").split())
 
 
 def _count_changes(recipe, data):
@@ -622,7 +718,7 @@ def _make_pdf(recipe_id):
 @owned_project
 def retry(project, recipe_id):
     recipe = _recipe_or_404(project, recipe_id)
-    if recipe["status"] == "failed":
+    if recipe["status"] == "failed" or _is_stuck(recipe):
         recipe_service.set_status(recipe_id, "transcribed" if recipe.get("raw_transcript") else "received")
         events_service.track("recipe_retry_requested", project_id=project["id"], recipe_id=recipe_id, actor="buyer",
                              stage="structure" if recipe.get("raw_transcript") else "transcribe")
@@ -635,7 +731,8 @@ def retry(project, recipe_id):
 def make_pdf(project, recipe_id):
     _recipe_or_404(project, recipe_id)
     _make_pdf(recipe_id)
-    return redirect(url_for("screens.book", project_id=project["id"]))
+    nxt = request.form.get("next")
+    return redirect(nxt if _safe_next(nxt) else url_for("screens.book", project_id=project["id"]))
 
 
 # ─── Voice link and QR R13 ──────────────────────────────────────
@@ -662,9 +759,13 @@ def import_notes(project):
     pid = project["id"]
     wishlist = [d for d in dish_service.list_dishes(pid) if d["status"] == "wishlist"]
     if request.method == "GET":
-        return _render("app/import.html", project, tab="record", dishes=wishlist,
+        replacing = _recipe_or_404(project, request.args.get("replace", type=int)) if "replace" in request.args \
+            else None
+        return _render("app/import.html", project, tab="record", dishes=wishlist, replacing=replacing,
                        selected=request.args.get("dish", type=int), formats=SUPPORTED_FORMATS_LABEL,
-                       max_files=MAX_IMPORT_FILES, back_url=url_for("screens.home", project_id=pid))
+                       max_files=MAX_IMPORT_FILES,
+                       back_url=url_for("screens.review", project_id=pid, recipe_id=replacing["id"]) if replacing
+                       else url_for("screens.home", project_id=pid))
 
     files = [f for f in request.files.getlist("audio_files") if f and f.filename]
     if not files:
@@ -677,6 +778,14 @@ def import_notes(project):
     if bad:
         flash(f"“{bad[0]}” isn't a voice note we can read. Please use {SUPPORTED_FORMATS_LABEL}.", "error")
         return redirect(url_for("screens.import_notes", project_id=pid))
+    if request.form.get("replace"):
+        replacing = _recipe_or_404(project, request.form.get("replace", type=int))
+        recipe_service.replace_audio(replacing["id"], [_store_upload(f) for f in files], source="import")
+        events_service.track("recipe_retry_requested", project_id=pid, recipe_id=replacing["id"], actor="buyer",
+                             stage="transcribe")
+        pipeline_service.enqueue_processing(replacing["id"])
+        flash("Got it. We're writing it down again from the new voice note.", "success")
+        return redirect(url_for("screens.review", project_id=pid, recipe_id=replacing["id"]))
     over_quota = project_service.get_project_recipe_count(pid) >= (project.get("max_recipes") or 10)
 
     dish_id, title = _dish_choice(pid, wishlist)
@@ -751,16 +860,18 @@ PROMPTS = {
 def record(project):
     """S2: record a recipe (or the story behind one) in the app."""
     pid = project["id"]
-    kind = "story" if request.args.get("kind") == "story" else "original"
+    kind = request.args.get("kind") if request.args.get("kind") in ("story", "replace") else "original"
     recipe = None
-    if kind == "story":
+    if kind in ("story", "replace"):
         recipe = _recipe_or_404(project, request.args.get("recipe", type=int))
     wishlist = [d for d in dish_service.list_dishes(pid) if d["status"] == "wishlist"]
     dish = next((d for d in wishlist if d["id"] == request.args.get("dish", type=int)), None)
     if kind == "original" and dish is None and wishlist and "dish" not in request.args:
         dish = wishlist[0]
     return _render("app/record.html", project, tab="record", kind=kind, recipe=recipe, dish=dish, dishes=wishlist,
-                   prompts=PROMPTS[kind], back_url=url_for("screens.home", project_id=pid))
+                   prompts=PROMPTS["story" if kind == "story" else "original"],
+                   back_url=url_for("screens.review", project_id=pid, recipe_id=recipe["id"]) if recipe
+                   else url_for("screens.home", project_id=pid))
 
 
 @bp.route("/p/<int:project_id>/uploads", methods=["POST"])
@@ -769,7 +880,7 @@ def upload_open(project):
     body = request.get_json(silent=True) or {}
     kind = body.get("kind", "original")
     recipe_id = dish_id = None
-    if kind == "story":
+    if kind in ("story", "replace"):
         recipe_id = _recipe_or_404(project, _int(body.get("recipe_id")))["id"]
     elif body.get("dish_id"):
         dish = dish_service.get_dish(project["id"], _int(body.get("dish_id")))
@@ -817,6 +928,10 @@ def upload_complete(project, client_id):
             recipe_service.add_clip(session["recipe_id"], key, kind="story", source="app",
                                     content_type=session["content_type"])
             recipe_id = session["recipe_id"]
+        elif session["kind"] == "replace":
+            recipe_service.replace_audio(session["recipe_id"], [key], source="app",
+                                         content_type=session["content_type"])
+            recipe_id = session["recipe_id"]
         else:
             dish = dish_service.get_dish(pid, session["dish_id"]) if session["dish_id"] else None
             recipe_id = recipe_service.create_received_recipe(
@@ -832,7 +947,7 @@ def upload_complete(project, client_id):
     upload_service.mark_complete(session, recipe_id)
     events_service.track("recording_finished", project_id=pid, recipe_id=recipe_id, actor=_actor(project),
                          seconds=seconds, kind=session["kind"])
-    if session["kind"] == "original":
+    if session["kind"] in ("original", "replace"):
         pipeline_service.enqueue_processing(recipe_id)
     return jsonify(_session_json(project, upload_service.get_session(client_id)))
 

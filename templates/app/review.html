@@ -1,23 +1,46 @@
 {% extends "app/_shell.html" %}
 {% from "components/ui.html" import chip, player, csrf %}
+{% macro ing_row(ing) %}
+    <div class="ing-row">
+      <textarea name="ing_item" rows="1" data-autogrow placeholder="Ingredient" aria-label="Ingredient">{{ ing.item if ing }}</textarea>
+      <input type="text" name="ing_qty" value="{{ ing.quantity if ing }}" placeholder="Amount" aria-label="Amount">
+      <input type="text" name="ing_unit" value="{{ ing.unit if ing }}" placeholder="Measure" aria-label="Measure">
+      <textarea name="ing_note" rows="1" data-autogrow placeholder="Note (optional)" aria-label="Note">{{ ing.preparation_note if ing }}</textarea>
+    </div>
+{% endmacro %}
 {% block content %}
+{% if recipe.status == 'needs_review' and recipe.amounts_checked_at %}<div class="steps" aria-label="Step 2 of 2"><span class="on"></span><span class="on"></span></div><p class="section-title" style="margin-top:0">Step 2 of 2 · Check and approve</p>{% endif %}
 <div class="row between"><h1 class="grow">{{ recipe.recipe_title }}</h1>{{ chip(recipe) }}</div>
 {% if clip_urls %}
 <div class="card row">{{ player(clip_urls, 'Play ' ~ cook ~ "'s recording") }}<span class="muted small">{{ clip_urls | length }} voice note{{ 's' if clip_urls | length != 1 }}</span></div>
 {% endif %}
 
 {% if recipe.status in ('received', 'transcribed', 'structured') %}
+{% if stuck %}
+<div class="card needs-you stack">
+  <p><strong>This is taking much longer than it should.</strong></p>
+  <p class="muted">Something got stuck along the way. Try once more, or start again with a new voice note.</p>
+  <form method="post" action="{{ url_for('screens.retry', project_id=project.id, recipe_id=recipe.id) }}">{{ csrf() }}<button class="btn btn-primary btn-block" type="submit">Try again</button></form>
+  {% include "app/_redo_buttons.html" %}
+</div>
+{% else %}
 <div class="card center stack" data-autorefresh="15">
   <p><strong>Writing it down.</strong></p>
   <p class="muted">This usually takes about a minute. The page refreshes by itself.</p>
   <a class="btn btn-secondary" href="">Refresh</a>
 </div>
+{% endif %}
 {% elif recipe.status == 'failed' %}
 <div class="card needs-you stack">
+  {% if failure == 'missing_audio' %}
+  <p><strong>We lost the voice note for this one.</strong></p>
+  <p class="muted">The file didn't survive a server restart, so trying again won't help. Please record it again or upload the voice note once more.</p>
+  {% else %}
   <p><strong>We couldn't hear this one clearly.</strong></p>
   <p class="muted">Sometimes a second try works. If not, a fresh recording in a quieter spot usually does.</p>
-  <form method="post" action="{{ url_for('screens.retry', project_id=project.id, recipe_id=recipe.id) }}">{{ csrf() }}<button class="btn btn-primary" type="submit">Try again</button></form>
-  <a class="btn btn-secondary" href="{{ url_for('screens.record', project_id=project.id) }}">Record it again</a>
+  <form method="post" action="{{ url_for('screens.retry', project_id=project.id, recipe_id=recipe.id) }}">{{ csrf() }}<button class="btn btn-primary btn-block" type="submit">Try again</button></form>
+  {% endif %}
+  {% include "app/_redo_buttons.html" %}
 </div>
 {% else %}
 {% if questions %}
@@ -65,44 +88,32 @@
 <form method="post" id="page" data-pane="page">
   {{ csrf() }}
   <label for="recipe_title">Title</label>
-  <input type="text" id="recipe_title" name="recipe_title" value="{{ recipe.recipe_title }}" maxlength="120">
+  <textarea id="recipe_title" name="recipe_title" rows="1" data-autogrow maxlength="120">{{ recipe.recipe_title }}</textarea>
   <label for="serves">Serves</label>
   <input type="text" id="serves" name="serves" value="{{ recipe.serves or '' }}" placeholder="4 people">
 
   <h2 class="section-title">Ingredients</h2>
   <div class="rows" data-rows>
-  {% for ing in recipe.ingredients %}
-    <div class="ing-row">
-      <input type="text" name="ing_qty" value="{{ ing.quantity }}" placeholder="1" aria-label="Amount">
-      <input type="text" name="ing_unit" value="{{ ing.unit }}" placeholder="katori" aria-label="Measure">
-      <input type="text" name="ing_item" value="{{ ing.item }}" placeholder="Rajma" aria-label="Ingredient">
-      <input type="text" name="ing_note" value="{{ ing.preparation_note }}" placeholder="soaked overnight" aria-label="Note">
-    </div>
-  {% endfor %}
-  {% for _ in range(blank_rows) %}
-    <div class="ing-row">
-      <input type="text" name="ing_qty" placeholder="Amount" aria-label="Amount">
-      <input type="text" name="ing_unit" placeholder="Measure" aria-label="Measure">
-      <input type="text" name="ing_item" placeholder="Add an ingredient" aria-label="Ingredient">
-      <input type="text" name="ing_note" placeholder="Note" aria-label="Note">
-    </div>
-  {% endfor %}
+  {% for ing in recipe.ingredients %}{{ ing_row(ing) }}{% endfor %}
+  {% for _ in range(blank_rows) %}{{ ing_row(none) }}{% endfor %}
   </div>
+  <button class="btn btn-ghost" type="button" data-add-row>{{ icon('plus') }} Add an ingredient</button>
+  {% if recipe.amounts_checked_at %}<p class="small muted" style="margin:4px 0 0">Amounts checked. <button class="link-btn" type="submit" form="reopen-amounts">Go through the amounts again</button></p>{% endif %}
 
   <h2 class="section-title">Method</h2>
   <ol class="steps-list">
   {% for step in recipe.method_steps %}
-    <li><textarea name="step_text" rows="2" aria-label="Step {{ loop.index }}">{{ step.instruction }}</textarea>
+    <li><textarea name="step_text" rows="2" data-autogrow aria-label="Step {{ loop.index }}">{{ step.instruction }}</textarea>
       <input type="hidden" name="step_extra" value='{{ {"flame_level": step.flame_level, "timing": step.timing, "sensory_cue": step.sensory_cue} | tojson }}'>
       {% if step.sensory_cue %}<span class="small muted">Look for: {{ step.sensory_cue }}</span>{% endif %}</li>
   {% endfor %}
-    <li><textarea name="step_text" rows="2" placeholder="Add a step" aria-label="New step"></textarea><input type="hidden" name="step_extra" value=""></li>
+    <li><textarea name="step_text" rows="2" data-autogrow placeholder="Add a step" aria-label="New step"></textarea><input type="hidden" name="step_extra" value=""></li>
   </ol>
 
   <label for="tips">{{ "Your" if project.cook_mode == 'self' else cook ~ "'s" }} tips <span class="hint">(one per line)</span></label>
-  <textarea id="tips" name="tips" rows="3">{{ recipe.moms_tips | join('\n') }}</textarea>
+  <textarea id="tips" name="tips" rows="3" data-autogrow>{{ recipe.moms_tips | join('\n') }}</textarea>
   <label for="family_note">The story behind it <span class="hint">(optional)</span></label>
-  <textarea id="family_note" name="family_note" rows="3">{{ recipe.family_note or '' }}</textarea>
+  <textarea id="family_note" name="family_note" rows="3" data-autogrow>{{ recipe.family_note or '' }}</textarea>
   {% if recipe.unclear_items_for_review %}
   <label class="chip-option" style="margin-top:12px"><input type="checkbox" name="clear_flags" value="1"><span>I've checked the flagged items</span></label>
   {% endif %}
@@ -110,11 +121,18 @@
   <div class="actions">
     {% if recipe.status != 'approved' %}<button class="btn btn-primary btn-block" type="submit" name="action" value="approve">Looks right, approve</button>{% endif %}
     <button class="btn btn-secondary btn-block" type="submit" name="action" value="save">Save changes</button>
+    <a class="btn btn-ghost btn-block" href="{{ url_for('screens.recipe_page_pdf', project_id=project.id, recipe_id=recipe.id) }}" target="_blank" rel="noopener">{{ icon('book') }} {{ 'Download the page (PDF)' if recipe.status == 'approved' else 'Preview the page (PDF)' }}</a>
     <a class="btn btn-ghost btn-block" href="{{ url_for('screens.voice', project_id=project.id, recipe_id=recipe.id) }}">{{ icon('qr') }} Voice link and QR code</a>
     {% if not recipe.audio_clips | selectattr('kind', 'equalto', 'story') | list %}
     <a class="btn btn-ghost btn-block" href="{{ url_for('screens.record', project_id=project.id, kind='story', recipe=recipe.id) }}">{{ icon('plus') }} Add the story behind this dish</a>
     {% endif %}
   </div>
 </form>
+<form method="post" id="reopen-amounts" action="{{ url_for('screens.reopen_amounts', project_id=project.id, recipe_id=recipe.id) }}" hidden>{{ csrf() }}</form>
+<details class="more-actions">
+  <summary>Something wrong with this recipe?</summary>
+  <form method="post" action="{{ url_for('screens.restart', project_id=project.id, recipe_id=recipe.id) }}" data-confirm="Start over from the voice note? Your edits to this page will be lost.">{{ csrf() }}<button class="btn btn-secondary btn-block" type="submit">Write it again from the voice note</button></form>
+  {% include "app/_redo_buttons.html" %}
+</details>
 {% endif %}
 {% endblock %}
