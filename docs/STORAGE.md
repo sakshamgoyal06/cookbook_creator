@@ -19,7 +19,9 @@ app must use a storage bucket (`STORAGE_BACKEND=s3`).
 | `S3_SECRET_ACCESS_KEY` | the secret access key |
 | `S3_ADDRESSING_STYLE` | `virtual` for new buckets; `path` if the tab says path-style |
 
-3. Redeploy. `/healthz` reports `"storage": "s3"`. In the app service's shell,
+   Railway's own names from the bucket's Variables (`BUCKET`, `ENDPOINT`, `REGION`, `ACCESS_KEY_ID`,
+   `SECRET_ACCESS_KEY`) work too; an `S3_*` variable wins if both are set.
+3. Redeploy. `/healthz` reports `"storage": "s3", "bucket_set": true`. In the app service's shell,
    `python3 scripts/check_storage.py` writes, reads back, links and deletes a test file.
 
 The bucket is private: the app checks who may see a file, then redirects to a link that works for

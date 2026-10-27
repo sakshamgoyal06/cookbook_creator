@@ -5,6 +5,8 @@ The local backend keeps today's folder layout (uploads/, outputs/). The s3 backe
 AWS S3 and S3-compatible stores such as Railway storage buckets and Cloudflare R2, and serves files through short-lived
 signed URLs.
 """
+import functools
+import logging
 import os
 import shutil
 import tempfile
@@ -15,6 +17,30 @@ from flask import redirect, send_file
 import config
 
 NAMESPACES = ("audio", "pdfs", "photos")
+
+log = logging.getLogger(__name__)
+
+
+class StorageError(RuntimeError):
+    """The file store refused or couldn't be reached; the message says which, for the logs."""
+
+
+def _bucket_errors(func):
+    """Turn S3 client errors into StorageError, with the store's own error code in the message."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except StorageError:
+            raise
+        except Exception as exc:
+            if not type(exc).__module__.startswith(("botocore", "boto3", "s3transfer")):
+                raise
+            code = (getattr(exc, "response", None) or {}).get("Error", {}).get("Code")
+            message = f"Storage {func.__name__} failed: {code or type(exc).__name__}: {exc}"
+            log.error(message)
+            raise StorageError(message) from exc
+    return wrapper
 
 
 def _check_namespace(namespace):
@@ -64,7 +90,7 @@ class S3Storage:
         from botocore.config import Config
 
         if not config.S3_BUCKET:
-            raise ValueError("STORAGE_BACKEND is s3 but S3_BUCKET is empty; see docs/STORAGE.md")
+            raise StorageError("STORAGE_BACKEND is s3 but S3_BUCKET is empty; see docs/STORAGE.md")
         self.bucket = config.S3_BUCKET
         self.client = boto3.client(
             "s3",
@@ -136,6 +162,7 @@ def _get_backend():
     return _backend
 
 
+@_bucket_errors
 def save_file(namespace, name, local_path, content_type=None):
     """Store a local file. The local file is left in place."""
     _check_namespace(namespace)
@@ -143,6 +170,7 @@ def save_file(namespace, name, local_path, content_type=None):
     _get_backend().save_file(namespace, name, local_path, content_type)
 
 
+@_bucket_errors
 def exists(namespace, name):
     _check_namespace(namespace)
     _check_name(name)
@@ -156,12 +184,14 @@ def local_copy(namespace, name):
     return _get_backend().local_copy(namespace, name)
 
 
+@_bucket_errors
 def delete(namespace, name):
     _check_namespace(namespace)
     _check_name(name)
     _get_backend().delete(namespace, name)
 
 
+@_bucket_errors
 def send(namespace, name, download_name=None):
     """Flask response for the file: streamed locally, or a redirect to a signed URL on s3.
 
