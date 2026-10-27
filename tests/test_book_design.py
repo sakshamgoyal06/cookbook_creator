@@ -258,3 +258,18 @@ def test_dish_photo_fit_is_saved_on_the_recipe(auth_client, monkeypatch):
     assert recipe_service.get_recipe(rid)["photo_crop"] == {"x": 0.3, "y": 0.7, "zoom": photo_service.MAX_ZOOM}
     assert auth_client.get(f"/p/{pid}/photos/r999999/fit").status_code == 404
     assert auth_client.get(f"/p/{pid}/photos/family/fit").status_code == 302  # no photo yet: back
+
+
+def test_a_bucket_problem_shows_a_message_not_a_server_error(app, auth_client, monkeypatch):
+    pid = _onboard(auth_client)
+
+    def broken(*args, **kwargs):
+        raise storage_service.StorageError("Storage save_file failed: NoSuchBucket")
+
+    monkeypatch.setattr(storage_service, "save_file", broken)
+    page = f"http://localhost/p/{pid}/book"
+    response = auth_client.post(f"/p/{pid}/photos/cook", data={"photo": (_photo(), "cook.png")},
+                                content_type="multipart/form-data", headers={"Referer": page})
+    assert response.status_code == 302 and response.headers["Location"].endswith(f"/p/{pid}/book")
+    assert project_service.get_project(pid)["cook_photo_key"] is None
+    assert b"couldn&#39;t save that file just now" in auth_client.get(f"/p/{pid}/book").data

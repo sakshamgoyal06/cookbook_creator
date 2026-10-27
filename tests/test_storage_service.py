@@ -138,5 +138,29 @@ def test_s3_without_a_bucket_says_what_to_set(app, monkeypatch):
         monkeypatch.setattr(config, "STORAGE_BACKEND", "s3")
         monkeypatch.setattr(config, "S3_BUCKET", "")
         monkeypatch.setattr(storage_service, "_backend", None)
-        with pytest.raises(ValueError, match="S3_BUCKET"):
+        with pytest.raises(storage_service.StorageError, match="S3_BUCKET"):
             storage_service.exists("audio", "a.ogg")
+
+
+def test_railway_bucket_variable_names_are_accepted(monkeypatch):
+    for name in ("S3_BUCKET", "BUCKET", "AWS_S3_BUCKET_NAME", "AWS_BUCKET_NAME"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("BUCKET", "andaaz-x1y2")
+    assert config._first_env("S3_BUCKET", "BUCKET", "AWS_S3_BUCKET_NAME") == "andaaz-x1y2"
+    monkeypatch.setenv("S3_BUCKET", "ours-wins")
+    assert config._first_env("S3_BUCKET", "BUCKET") == "ours-wins"
+    assert config._first_env("NOT_SET_ANYWHERE", default="auto") == "auto"
+
+
+def test_bucket_errors_become_storage_errors(app, s3, monkeypatch, tmp_path):  # noqa: F811
+    monkeypatch.setattr(storage_service._get_backend(), "bucket", "no-such-bucket")
+    note = tmp_path / "a.ogg"
+    note.write_bytes(b"voice")
+    with pytest.raises(storage_service.StorageError, match="NoSuchBucket"):
+        storage_service.save_file("audio", "a.ogg", str(note))
+
+
+def test_healthz_says_whether_the_bucket_is_set(client, monkeypatch):
+    monkeypatch.setattr(config, "STORAGE_BACKEND", "s3")
+    monkeypatch.setattr(config, "S3_BUCKET", "")
+    assert client.get("/healthz").get_json() == {"status": "ok", "storage": "s3", "bucket_set": False}

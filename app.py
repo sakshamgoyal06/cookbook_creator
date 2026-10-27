@@ -211,7 +211,24 @@ if config.GOOGLE_CLIENT_ID and config.GOOGLE_CLIENT_SECRET:
 
 @app.route("/healthz")
 def healthz():
-    return {"status": "ok", "storage": config.STORAGE_BACKEND}
+    health = {"status": "ok", "storage": config.STORAGE_BACKEND}
+    if config.STORAGE_BACKEND == "s3":
+        health["bucket_set"] = bool(config.S3_BUCKET and config.S3_ACCESS_KEY_ID and config.S3_SECRET_ACCESS_KEY)
+    return health
+
+
+@app.errorhandler(storage_service.StorageError)
+def storage_failed(exc):
+    """A file couldn't be saved or fetched: say so plainly and keep the person where they were."""
+    app.logger.error("Storage error on %s %s: %s", request.method, request.path, exc)
+    message = "We couldn't save that file just now. Please try again in a minute."
+    if request.method == "POST":
+        flash(message, "error")
+        back = request.referrer
+        if not back or not back.startswith(request.host_url):
+            back = url_for("dashboard")
+        return redirect(back)
+    return Response("This file can't be opened just now. Please try again in a minute.", 503, mimetype="text/plain")
 
 
 @app.route("/sw.js")

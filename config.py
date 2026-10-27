@@ -35,11 +35,23 @@ FLASK_DEBUG = os.getenv("FLASK_DEBUG", "false").lower() in {"1", "true", "yes"}
 # File storage: "local" (uploads/ and outputs/ folders) or "s3" (AWS S3 or an
 # S3-compatible store such as a Railway storage bucket or Cloudflare R2; see docs/STORAGE.md).
 STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local").strip().lower()
-S3_BUCKET = os.getenv("S3_BUCKET", "")
-S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL", "") or None
-S3_REGION = os.getenv("S3_REGION", "auto")
-S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY_ID", "")
-S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY", "")
+
+
+def _first_env(*names, default=""):
+    """The first of these variables that is set. Our S3_* names win; Railway's bucket names
+    (BUCKET, ENDPOINT, ...) and the AWS SDK's are accepted so a pasted Credentials tab just works."""
+    for name in names:
+        value = os.getenv(name, "").strip()
+        if value:
+            return value
+    return default
+
+
+S3_BUCKET = _first_env("S3_BUCKET", "BUCKET", "AWS_S3_BUCKET_NAME", "AWS_BUCKET_NAME")
+S3_ENDPOINT_URL = _first_env("S3_ENDPOINT_URL", "ENDPOINT", "AWS_ENDPOINT_URL_S3", "AWS_ENDPOINT_URL") or None
+S3_REGION = _first_env("S3_REGION", "REGION", "AWS_REGION", "AWS_DEFAULT_REGION", default="auto")
+S3_ACCESS_KEY_ID = _first_env("S3_ACCESS_KEY_ID", "ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID")
+S3_SECRET_ACCESS_KEY = _first_env("S3_SECRET_ACCESS_KEY", "SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY")
 S3_KEY_PREFIX = os.getenv("S3_KEY_PREFIX", "")
 S3_SIGNED_URL_SECONDS = int(os.getenv("S3_SIGNED_URL_SECONDS", "900"))
 # "virtual" (bucket in the host name), "path" (bucket in the path) or "auto". New Railway storage
