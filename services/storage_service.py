@@ -2,7 +2,7 @@
 
 Files are addressed by (namespace, name), e.g. ("audio", "3f2a....m4a") or ("pdfs", "R1_rajma.pdf").
 The local backend keeps today's folder layout (uploads/, outputs/). The s3 backend works with
-AWS S3 and S3-compatible stores such as Cloudflare R2, and serves files through short-lived
+AWS S3 and S3-compatible stores such as Railway storage buckets and Cloudflare R2, and serves files through short-lived
 signed URLs.
 """
 import os
@@ -61,7 +61,10 @@ class LocalStorage:
 class S3Storage:
     def __init__(self):
         import boto3
+        from botocore.config import Config
 
+        if not config.S3_BUCKET:
+            raise ValueError("STORAGE_BACKEND is s3 but S3_BUCKET is empty; see docs/STORAGE.md")
         self.bucket = config.S3_BUCKET
         self.client = boto3.client(
             "s3",
@@ -69,6 +72,7 @@ class S3Storage:
             region_name=config.S3_REGION,
             aws_access_key_id=config.S3_ACCESS_KEY_ID,
             aws_secret_access_key=config.S3_SECRET_ACCESS_KEY,
+            config=Config(signature_version="s3v4", s3={"addressing_style": config.S3_ADDRESSING_STYLE}),
         )
 
     def _key(self, namespace, name):

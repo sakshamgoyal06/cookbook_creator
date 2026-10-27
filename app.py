@@ -48,6 +48,9 @@ if not config.FLASK_DEBUG and config.FLASK_SECRET_KEY in config.PLACEHOLDER_SECR
 
 app = Flask(__name__)
 app.secret_key = config.FLASK_SECRET_KEY
+if os.getenv("RAILWAY_ENVIRONMENT") and config.STORAGE_BACKEND == "local":
+    app.logger.warning("STORAGE_BACKEND is local on Railway: voice notes, photos and PDFs are lost on every "
+                       "redeploy. Set up the storage bucket (docs/STORAGE.md).")
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50 MB
 # Stay signed in on the phone: sharing a voice note from WhatsApp into the app (/share) must not
 # land on the sign-in page, which would drop the shared files.
@@ -208,7 +211,7 @@ if config.GOOGLE_CLIENT_ID and config.GOOGLE_CLIENT_SECRET:
 
 @app.route("/healthz")
 def healthz():
-    return {"status": "ok"}
+    return {"status": "ok", "storage": config.STORAGE_BACKEND}
 
 
 @app.route("/sw.js")
