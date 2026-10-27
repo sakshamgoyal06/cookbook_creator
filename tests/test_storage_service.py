@@ -118,3 +118,25 @@ def test_upload_and_pdf_go_through_s3(auth_client, s3, monkeypatch):
     response = auth_client.get(f"/projects/{project_id}/recipes/{row_id}/pdf")
     assert response.status_code == 302
     assert "Signature=" in response.headers["Location"]
+
+
+@pytest.mark.parametrize("style", ["virtual", "path"])
+def test_check_storage_script_passes_on_a_bucket(app, s3, monkeypatch, capsys, style):
+    from scripts import check_storage
+
+    monkeypatch.setattr(config, "S3_ADDRESSING_STYLE", style)
+    check_storage.main()
+    out = capsys.readouterr().out
+    assert "Signed link: ok" in out and "Storage works." in out
+    if style == "virtual":
+        assert "cookbook-test.s3" in out  # the bucket is in the host name
+    assert storage_service._get_backend().client.list_objects_v2(Bucket="cookbook-test").get("KeyCount") == 0
+
+
+def test_s3_without_a_bucket_says_what_to_set(app, monkeypatch):
+    with mock_aws():
+        monkeypatch.setattr(config, "STORAGE_BACKEND", "s3")
+        monkeypatch.setattr(config, "S3_BUCKET", "")
+        monkeypatch.setattr(storage_service, "_backend", None)
+        with pytest.raises(ValueError, match="S3_BUCKET"):
+            storage_service.exists("audio", "a.ogg")

@@ -88,6 +88,7 @@ Goal: a hosted, safe, testable base that every later module builds on.
 ### Infrastructure (§15)
 - [x] Postgres via SQLAlchemy Core + Alembic (`docs/DATABASE.md`, `scripts/migrate_sqlite_to_postgres.py`)
 - [x] `storage_service`: local backend and S3/R2 with signed URLs; upload, transcription and PDFs go through it
+- [x] Hosted files on a Railway storage bucket (2026-10-27): `S3_ADDRESSING_STYLE`, `scripts/check_storage.py`, `/healthz` shows the backend; steps in docs/STORAGE.md
 - [x] Background worker (RQ + Redis): upload returns at once with status `received`; inline when `REDIS_URL` is empty
 - [x] Retries with backoff (30 s / 2 min / 10 min); errors in `pipeline_runs`, never shown raw to users
 - [x] Railway deploy: Dockerfile, gunicorn on `$PORT`, migrations before start, `/healthz`
@@ -566,6 +567,7 @@ Screens: **C6** Cook's page · **C7** Speaking a recipe · **C8** Her finished p
 - [ ] Cost check: AI + messaging per 10-recipe book ≤ ₹250 on real pilot data (§11)
 - [ ] Support playbook: cook stuck, payment failed, QR doesn't scan, recording lost
 - [ ] Trademark and domain checked for the final name; `APP_NAME` and `PUBLIC_BASE_URL` set
+- [ ] QR codes keep playing for good (Saksham, 2026-10-27; parked until after the beta, raise before go-live): domain owned 10+ years on auto-renew before any real book is printed; revealed books moved to a cheaper rarely-read class that still plays instantly (R2 Infrequent Access, ~30 days after the reveal); a nightly second copy of every file with another provider; "download all voice notes" for the family; keep only the newest PDFs; record in the app at 32 kbps. See docs/STORAGE.md
 
 ---
 
@@ -654,6 +656,7 @@ Record decisions that change the plan (newest first).
 
 | Date | Decision | Why |
 |---|---|---|
+| 2026-10-27 | Files on a Railway storage bucket for the beta; forever-QR measures (cold storage, backups, domain) parked until before go-live | Saksham's call; one bill now, the permanence work before real books are printed |
 | 2026-10-26 | Dish photos from the internet only under CC0, public domain, CC BY or the Pexels licence, credited on the recipe page; picked photos go into a shared library | Saksham's call; the book is sold and photos are cropped, so share-alike, non-commercial and no-derivatives licences can't be used |
 | 2026-10-26 | Nutrition is a plan (module 19), not built yet; it will be off by default and marked approximate | Saksham asked for a plan; accuracy needs an evaluation first |
 | 2026-10-24 | Top 10 digital is ₹1,200 in India and about $22 abroad (nets about ₹2,000); Volume 2 and Family Edition prices still open | Saksham's call in the go-to-market work; PRD §9 and §11 updated |

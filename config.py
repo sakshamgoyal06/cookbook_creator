@@ -33,8 +33,7 @@ APP_NAME = os.getenv("APP_NAME", "Andaaz").strip() or "Andaaz"
 FLASK_DEBUG = os.getenv("FLASK_DEBUG", "false").lower() in {"1", "true", "yes"}
 
 # File storage: "local" (uploads/ and outputs/ folders) or "s3" (AWS S3 or an
-# S3-compatible store such as Cloudflare R2; for R2 set the endpoint to
-# https://<account-id>.r2.cloudflarestorage.com and the region to "auto").
+# S3-compatible store such as a Railway storage bucket or Cloudflare R2; see docs/STORAGE.md).
 STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local").strip().lower()
 S3_BUCKET = os.getenv("S3_BUCKET", "")
 S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL", "") or None
@@ -43,6 +42,9 @@ S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY_ID", "")
 S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY", "")
 S3_KEY_PREFIX = os.getenv("S3_KEY_PREFIX", "")
 S3_SIGNED_URL_SECONDS = int(os.getenv("S3_SIGNED_URL_SECONDS", "900"))
+# "virtual" (bucket in the host name), "path" (bucket in the path) or "auto". New Railway storage
+# buckets use virtual; older ones say path in their Credentials tab.
+S3_ADDRESSING_STYLE = os.getenv("S3_ADDRESSING_STYLE", "auto").strip().lower() or "auto"
 
 # Public base URL printed into QR codes, e.g. https://cookbook.example.com. Printed QRs
 # can't be updated, so set this to a domain you will keep (PRD QR-4). Empty = the URL

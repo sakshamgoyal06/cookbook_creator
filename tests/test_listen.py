@@ -1,7 +1,6 @@
 import io
 import os
 import re
-import time
 
 from conftest import SAMPLE_RECIPE, create_project, register
 from PIL import Image
@@ -124,9 +123,8 @@ def test_listen_audio_redirects_to_short_lived_signed_url_on_s3(auth_client, cli
     response = client.get(f"/l/{token}/audio/1")
     assert response.status_code == 302
     location = response.headers["Location"]
-    assert "Signature=" in location
-    expires = int(re.search(r"Expires=(\d+)", location).group(1))
-    assert 0 < expires - time.time() <= 301
+    assert "X-Amz-Signature=" in location  # SigV4, which Railway buckets and R2 require
+    assert int(re.search(r"X-Amz-Expires=(\d+)", location).group(1)) == 300
 
 
 def test_qr_codes_encode_the_public_listen_url(auth_client, monkeypatch):
